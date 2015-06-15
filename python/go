@@ -1,0 +1,1 @@
+PYTHONPATH=../shell/:$PYTHONPATH python nuc.py
