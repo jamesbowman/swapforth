@@ -28,6 +28,8 @@
 *.psr
 *.scr
 *.srp
+*.twr
+*.twx
 *.xml
 *.html
 _impactbatch.log

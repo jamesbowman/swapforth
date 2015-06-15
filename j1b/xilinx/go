@@ -1,20 +1,7 @@
 set -e
 
-# $HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -f j1-papilioduo.bit
-# python shell.py -h /dev/papilio -i ../build/nuc.hex -p ../toolchain/ swapforth.fs ; exit
-# exit
-
 # make clean
 make
-if false
-then
-  cp ../build/firmware/nuc.hex ../build/firmware/nuc.mem
-  data2mem -bm j1-papilioduo_bd.bmm -bd ../build/firmware/nuc.mem -bt j1-papilioduo.bit
-  trce -v 10 j1-papilioduo.ncd j1-papilioduo.pcf  -o j1-papilioduo.twr
-  DL=j1-papilioduo_rp.bit
-else
-  trce -v 10 j1-papilioduo.ncd j1-papilioduo.pcf  -o j1-papilioduo.twr
-  DL=j1-papilioduo.bit
-fi
-$HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -f $DL
+trce -v 10 j1-papilioduo.ncd j1-papilioduo.pcf  -o j1-papilioduo.twr
+
 cd .. ; sh go
