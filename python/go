@@ -1,2 +1,2 @@
-PYTHONPATH=../shell/:$PYTHONPATH python nuc.py &&
+echo | PYTHONPATH=../shell/:$PYTHONPATH python nuc.py
 echo PASSED

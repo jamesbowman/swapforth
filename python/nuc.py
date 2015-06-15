@@ -808,7 +808,6 @@ class Tethered(swapforth.TetheredFT900):
     def __init__(self):
         self.searchpath = ['.']
         self.log = open("log", "w")
-        self.sf = SwapForth()
         self.ser = None
 
         self.ready = threading.Event()
@@ -836,29 +835,6 @@ if __name__ == '__main__':
 
     dpans = {}
     allw = set()
-    if 0:
-        for l in open("dpansf.fs"):
-            (word, _, voc) = l.split()
-            if not voc in dpans:
-                dpans[voc] = set()
-            dpans[voc].add(word)
-            allw.add(word)
-        print dpans['CORE'] - set(s.dict.keys())
-        print set(s.dict.keys()) - allw
-
-    if 0:
-        ready = threading.Event()
-        cmdq = Queue.Queue()
-        sf = threading.Thread(target = AsyncSwapForth, args = (cmdq,ready))
-        sf.setDaemon(True)
-        sf.start()
-        ready.wait()
-        for i in range(10):
-            print '--- %d ----' % i
-            ready.clear()
-            cmdq.put((sys.stdout.write, '1000 ms %d dup * . cr 1000 ms' % i))
-            ready.wait()
-        sys.exit(0)
 
     t = Tethered()
     t.searchpath += ['../anstests', '../common']

@@ -243,7 +243,7 @@ class TetheredFT900:
                 # sys.stdout.write(l)
                 while l.endswith('\n') or l.endswith('\r'):
                     l = l[:-1]
-                print l
+                # print l
                 if l == "#bye":
                     raise Bye
                 l = l.expandtabs(4)
