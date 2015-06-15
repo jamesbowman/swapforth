@@ -1,0 +1,24 @@
+// BMM LOC annotation file.
+//
+// Release 14.6 -  P.20131013, build 3.0.10 Apr 3, 2013
+// Copyright (c) 1995-2015 Xilinx, Inc.  All rights reserved.
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Address space 'j1' 0x00000000:0x000007FF (2 KBytes).
+//
+///////////////////////////////////////////////////////////////////////////////
+
+// ADDRESS_SPACE j1 RAMB16 [0xffff0000:0xffff3FFF]
+//     BUS_BLOCK
+//         ram/nram/Mram_mem7 RAMB16 [3:0] [0:4095];
+//         ram/nram/Mram_mem6 RAMB16 [7:4] [0:4095];
+//         ram/nram/Mram_mem5 RAMB16 [11:8] [0:4095];
+//         ram/nram/Mram_mem4 RAMB16 [15:12] [0:4095];
+//         ram/nram/Mram_mem3 RAMB16 [19:16] [0:4095];
+//         ram/nram/Mram_mem2 RAMB16 [23:20] [0:4095];
+//         ram/nram/Mram_mem1 RAMB16 [27:24] [0:4095];
+//         ram/nram/Mram_mem0 RAMB16 [31:28] [0:4095];
+//     END_BUS_BLOCK;
+// END_ADDRESS_SPACE;
