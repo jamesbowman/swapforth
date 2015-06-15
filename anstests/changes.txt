@@ -1,0 +1,117 @@
+Record of changes to the ANS Forth and Forth 2012 test suite
+from version 0.9 onwards
+
+Version 0.11 25 April 2015
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+coreplus-test.fth
+   - Number prefixes # $ % and 'c' character input tested
+
+coreexttest.fth
+   - PARSE-NAME HOLDS tests added
+   - DEFER IS ACTION-OF DEFER! DEFER@ tests added
+   - S\" tests added
+   - BUFFER: tests added
+   - Empty CASE statements tested
+   - [COMPILE] tests removed as it is obsolescent in Forth 2012
+   
+doubletest.fth
+   - 2VALUE tests added
+
+errorreport.fth
+   - new file to display summary of errors at the end of a test run
+
+facilitytest.fth
+   - new test file, testing BEGIN-STRUCTURE END-STRUCTURE +FIELD CFIELD: FIELD:
+
+filetest.fth
+   - S\" in interpretation mode tested
+   - REQUIRED REQUIRE INCLUDE tested
+   - Two S" and/or S\" buffers availability tested
+
+localstest.fth
+   - first release, tests {: ... :} locals syntax and (LOCAL)
+
+memorytest.fth
+   - now tests memory region contents following RESIZE failure
+   - @ and ! work in allocated memory (contributed by Peter Knaggs)
+
+toolstest.fth
+   - added tests for [DEFINED] [UNDEFINED] N>R NR> SYNONYM
+     TRAVERSE-WORDLISTNAME>COMPILE NAME>INTERPRET NAME>STRING
+
+stringtest.fth
+   - REPLACES SUBSTITUTE UNESCAPE tested
+
+Version 0.10 3 August 2014
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+coreplustest.fth
+   - IMMEDIATE doesn't toggle a flag
+
+coreexttest.fth
+   - Added tests contributed by James Bowman for:
+     <> U> 0<> 0> NIP TUCK ROLL PICK 2>R 2R@ 2R>
+     HEX WITHIN UNUSED AGAIN MARKER
+   - Added tests for: .R U.R ERASE PAD REFILL SOURCE-ID 
+   - Removed ABORT from NeverExecuted to enable systems to continue after
+     failure of RESTORE-INPUT.
+   - Removed max-intx which is no longer used.
+   - additional CASE family test
+
+searchordertest.fth
+   - Name changes to remove redefinition messages
+
+Version 0.9 1 April 2012
+~~~~~~~~~~~~~~~~~~~~~~~~~
+All tests work with both tester.fr and ttester.fs
+
+coreplustest.fth
+   - multiple ELSE's in an IF statement
+   - DO +LOOP tests with large increments
+   - Ackermann function test for RECURSE added
+   - >IN manipulation in interpreter mode
+   - immediate CONSTANTs, VARIABLEs and CREATEd words tested
+   - recursive :NONAME definitions moved to core extension test file
+   - parsing behaviour of S" ." and ( tested
+
+coreexttest.fth
+   - SAVE-INPUT and RESTORE-INPUT tests modified to work with ttester.fs
+   - CONVERT test deleted, obsolete word removed from Forth 200X
+   - immediate VALUEs tested
+   - recursive :NONAME tests added
+   - PARSE and .( tests added
+   - Parsing behaviour of C" tested
+
+doubletest.fth
+   - immediate 2CONSTANTs and 2VARIABLEs tested
+
+memorytest.fth
+   - Definition of CHECKMEM modified to work with ttester.fs
+
+toolstest.fth
+   - Further tests on [IF] [ELSE] [THEN]
+
+Version 0.8
+~~~~~~~~~~~
+   - Tests added to stringtests.fth
+
+Version 0.7
+~~~~~~~~~~~
+   - Includes a readme.html.
+   - Name changes to avoid redefinition warnings.
+
+Version 0.6
+~~~~~~~~~~~
+   - corrected the case of some words to ensure the tests will run on a
+     case-sensitive system
+
+Version 0.5
+~~~~~~~~~~~
+   - includes a correction to the file-access tests.
+
+Version 0.4
+~~~~~~~~~~~
+   - to make some tests independent of cell size
+   - to use T{ and }T instead of { and } as the test words. This avoids
+     a clash with the Forth 200X use of { and } for Locals.

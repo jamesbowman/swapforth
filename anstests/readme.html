@@ -1,0 +1,315 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<!-- Start of Prologue -->
+<html>
+  <head>
+    <meta name="generator" content=
+    "HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <title>
+      FLAG - Forth Library Action Group
+    </title>
+    <meta name="keywords" content=
+    "Forth, Forth language, Test programs, in Forth, compiler, interpreter, library, libraries, shared, DLL">
+    <!--
+  If you add pages in further subdirectories, you must be careful
+  to add the correct number of '../' sequences here.
+-->
+
+    <script type="text/javascript" src="../flagscripts.js">
+</script>
+    <link rel="stylesheet" type="text/css" href="../flagstyle.css" media=
+    "screen">
+    <link rel="stylesheet" type="text/css" media="all" href=
+    "../dropdown_one.css">
+  </head>
+  <body>
+    <a name="top" id="top"></a>
+    <div id="wrap">
+      <script type="text/javascript">
+pagebanner("ANS Forth Test Programs");
+      </script>
+      <!-- horizontal menu for this page goes here, use from the scripts and/or yours -->
+      <script type="text/javascript">
+libmenu();
+      </script> <!-- end of horizontal menu -->
+      <div id="content">
+        <div class="right">
+          <!-- End of Prologue -->
+          <p>
+            <i>Last updated: 25 April 2015</i>
+          </p><br>
+          <h1>
+            ANS Forth and Forth 2012 Test Programs
+          </h1>
+          <hr>
+          <h2>
+            Introduction
+          </h2>
+          <p>
+            Checking that an ANS Forth/Forth 2012 system is compliant with the ANS Forth
+            and Forth 2012 standards requires a set of test programs. This download provides
+            some test programs that go some way towards meeting this
+            requirement. The tests are based on the widely known tester
+            developed by John Hayes and include his original core tests. The tests have
+            been updated from version 0.11 to include some new words in the Forth 2012
+            standard. The tests provided in the download are:
+          </p>
+          <ul>
+            <li>Core words (by John Hayes) plus some additional tests</li>
+            <li>Core extension words</li>
+            <li>The Double Number word set and extensions</li>
+            <li>The Exception word set and extensions</li>
+            <li>The Facility word set extensions (structures only)</li>
+            <li>The File-Access word set and extensions</li>
+            <li>The Locals word set</li>
+            <li>The Memory-Allocation word set</li>
+            <li>The Programming-Tools word set and extensions (incomplete - a
+                few words in each)</li>
+            <li>The Search-Order word set and extensions</li>
+            <li>The String word set</li>
+          </ul>
+          <p>Version 0.11 also includes an error report at the end of the tests</p>
+          <p>The download also includes this file as readme.html</p>
+          <p>
+            The tests are not comprehensive, no claim is made about their being
+            correct and no warranty is provided. However previous versions have been run
+            successfully with such widely used systems as GForth, VFX Forth,
+            SwiftForth and Win32 Forth, any failing tests being due to the
+            Forth system rather than the tests themselves. Any bugs in the tests should be
+            reported via the contact below or the comp.lang.forth newsgroup.
+          </p>
+          <p>Some provisional <a href="#fptests">floating point</a>
+          wordset tests are also available.
+          </p>
+          <h2>
+            Downloads
+          </h2>
+          <p>
+            Version 0.11, 25 April 2015, <a href=
+            "anstests0.11.zip">anstests0.11.zip</a>
+          </p>
+          <p>
+            See the file changes.txt for a summary of the changes to the tests.
+          </p>
+          <p>Floating point test programs,
+             <a href="fpanstests0.1.zip">fpanstests0.1.zip</a>, for more details
+             see <a href="#fptests">below</a>
+          </p>
+          <h2>
+            Running the tests
+          </h2>
+          <ol>
+            <li>Unzip the files into a suitable directory
+            </li>
+            <li>Start the Forth system and set the working directory/file path
+            to that directory
+            </li>
+            <li>Possibly edit the file paths in the file runtests.fth
+            </li>
+            <li>Select either tester.fr or ttester.fs by commenting out the
+                unwanted file. Note that tester.fr is better for developing a
+                new Forth system whereas ttester.fs is more suited for regression
+                testing of an existing system.
+            </li>
+            <li>Include the file runtests.fth to run all the tests
+            </li>
+          </ol>
+          <p>
+            There is a flag, called VERBOSE, in file tester.fr that can be set
+            to obtain more output from the test programs. When a test fails an
+            error message is displayed and the tests carry on. To stop on the
+            first failure uncomment the line marked *** in tester.fr
+          </p>
+          <h2>
+            Error Messages
+          </h2>
+          <p>
+            There are two possible error messages when a test fails:
+          </p>
+          <ol>
+            <li>"WRONG NUMBER OF RESULTS:" when the stack depth is wrong
+            </li>
+            <li>"INCORRECT RESULT:" when the stack contents are incorrect
+            </li>
+          </ol>
+          <p>
+            Both are followed by the offending line of source code.
+          </p>
+          <h2>Other Failures
+          </h2>
+          <p>A test may fail for some system not recognising a standard word, crashing,
+             refusing to compile some test code or other system fault. These failures
+             stop further tests from running.  
+          <h2>
+            Sample Output
+          </h2>
+          <p>
+            The output from running the tests under GForth 0.7.0 using
+            tester.fr with the VERBOSE flag clear are:
+          </p>
+          <table border="1" width="100%">
+            <tr>
+              <td width="100%">
+                <pre>
+<code>Gforth 0.7.0, Copyright (C) 1995-2008 Free Software Foundation, Inc.
+Gforth comes with ABSOLUTELY NO WARRANTY; for details type `license'
+Type `bye' to exit
+s" gwj\tests\runtests.fth" included
+Running ANS Forth test programs, version 0.10
+
+*********************YOU SHOULD SEE THE STANDARD GRAPHIC CHARACTERS:
+ !"#$%&'()*+,-./0123456789:;<=>?@
+ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`
+abcdefghijklmnopqrstuvwxyz{|}~
+YOU SHOULD SEE 0-9 SEPARATED BY A SPACE:
+0 1 2 3 4 5 6 7 8 9
+YOU SHOULD SEE 0-9 (WITH NO SPACES):
+0123456789
+YOU SHOULD SEE A-G SEPARATED BY A SPACE:
+A B C D E F G
+YOU SHOULD SEE 0-5 SEPARATED BY TWO SPACES:
+0  1  2  3  4  5
+YOU SHOULD SEE TWO SEPARATE LINES:
+LINE 1
+LINE 2
+YOU SHOULD SEE THE NUMBER RANGES OF SIGNED AND UNSIGNED NUMBERS:
+  SIGNED: -80000000 7FFFFFFF
+UNSIGNED: 0 FFFFFFFF
+*
+PLEASE TYPE UP TO 80 CHARACTERS:
+This is a test run on 3 August 2014
+RECEIVED: "This is a test run on 3 August 2014"
+*redefined GDX
+End of Core word set tests
+*********
+You should see 2345: 2345
+
+End of additional Core tests
+***********redefined ma1  ************
+
+Output from .(
+You should see -9876: -9876
+and again: -9876
+
+
+On the next 2 lines you should see First then Second messages:
+First message via .(
+Second message via ."
+
+*
+
+Output from .R and U.R
+You should see lines duplicated:
+indented by 0 spaces
+1984383623
+1984383623
+-2088648480
+-2088648480
+1984383623
+1984383623
+2206318816
+2206318816
+
+indented by 0 spaces
+1984383623
+1984383623
+-2088648480
+-2088648480
+1984383623
+1984383623
+2206318816
+2206318816
+
+indented by 5 spaces
+     1984383623
+     1984383623
+     -2088648480
+     -2088648480
+     1984383623
+     1984383623
+     2206318816
+     2206318816
+
+***
+End of Core Extension word tests
+*****************
+You should see lines duplicated:
+     8970676912557384689
+     8970676912557384689
+        8970676912557384689
+        8970676912557384689
+     -8522862768232894102
+     -8522862768232894102
+          -8522862768232894102
+          -8522862768232894102
+*
+End of Double-Number word tests
+***
+End of Exception word tests
+***********
+End of File-Access word tests
+***INCORRECT RESULT: T{ addr1 @ -1 RESIZE 0= -> addr1 @ FALSE }T
+
+End of Memory-Allocation word tests
+*****
+End of Programming Tools word tests
+**********
+ONLY FORTH DEFINITIONS search order and compilation wordlist
+Forth Root     Forth
+Plus another unnamed wordlist at the head of the search order
+??? Forth Root     ???
+End of Search Order word tests
+********
+End of String word tests
+
+
+Forth tests completed
+ ok</code>
+</pre>
+              </td>
+            </tr>
+          </table>
+          <p>
+            As can be seen GForth failed one test.
+          </p>
+          <p>
+            The output will differ for different Forth systems, e.g. warnings
+            of redefinitions, error messages and display of the search order.
+          </p>
+          <h2> Floating Point Tests</h2>
+          <p><a name="fptests"></a>Some floating point test programs from various
+             sources have been collected together and made available in this
+             <a href="fpanstests0.1.zip">download</a>. These tests are unproven
+             and provided in the hope that implementers of ANS Forth/Forth 200X
+             systems will try them and report back on any perceived deficiencies
+             which can then be resolved. When they are generally agreed to be
+             correct they can be incorporated into the above set of test
+             programs. For more details see the file readme.txt in the download.
+          </p>
+          <h2>
+            Additional tests
+          </h2>
+          <p>
+            As indicated above some of the word set tests are incomplete,
+            others are absent. If anyone wishes to contribute test programs to
+            cover these gaps, please contact me via the email address below.
+          </p>
+          <h2>
+            Contact
+          </h2>
+          <p>
+            <a href="mailto:gwj@southwalesldwa.org">Gerry Jackson</a>
+          </p><!-- Start of Epilogue -->
+        </div>
+      </div><!-- This is the left sidebar for library level pages -->
+      <script type="text/javascript">
+vlibsidebar();
+      </script>
+      <div style="clear: both;"></div>
+    </div><!-- This is the FLAG default library footer -->
+    <script type="text/javascript">
+libfooter();
+    </script>
+  </body>
+</html>
