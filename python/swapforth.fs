@@ -151,7 +151,6 @@ include tools-ext.fs
 include value.fs
 include exception.fs
 
-
 : LOCALWORDS ;
 : PUBLICWORDS ;
 : DONEWORDS ;

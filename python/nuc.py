@@ -1,4 +1,5 @@
 import sys
+import getopt
 import struct
 from functools import partial
 import operator
@@ -8,20 +9,6 @@ import time
 import re
 
 import swapforth
-
-ENDIAN = '<'
-CELL = 4
-CMASK = (256 ** CELL) - 1       # Cell mask
-CSIGN = (256 ** CELL) >> 1      # Sign bit mask
-
-def u32(x):
-    return x & CMASK
-
-def w32(x):
-    x += CSIGN
-    x &= CMASK
-    x -= CSIGN
-    return x
 
 def truth(pred):
     return [0, -1][pred]
@@ -39,7 +26,7 @@ class ForthException(Exception):
 
 class SwapForth:
 
-    def __init__(self):
+    def __init__(self, CELL = 4, ENDIAN = '<'):
         self.d = []                 # data stack
         self.r = []                 # return stack
         self.dict = {}              # the dictionary
@@ -51,6 +38,11 @@ class SwapForth:
         self.ram = array.array('B') # memory
         self.out = sys.stdout.write # default console output
 
+        self.CELL = CELL
+        self.CSIGN = (256 ** self.CELL) >> 1      # Sign bit mask
+        self.CMASK = (256 ** self.CELL) - 1       # Cell mask
+        self.cellfmt = ENDIAN + {2: 'h', 4: 'i', 8: 'q'}[self.CELL]
+
         def allot(n, d):
             r = partial(self.lit, len(self.ram))
             r.__doc__ = d
@@ -58,11 +50,11 @@ class SwapForth:
             return r
 
         self.tib = allot(256, "TIB")
-        self.sourcea = allot(CELL, "SOURCEA")
-        self.sourcec = allot(CELL, "SOURCEC")
-        self.to_in = allot(CELL, ">IN")
-        self.base = allot(CELL, "BASE")
-        self.state = allot(CELL, "STATE")
+        self.sourcea = allot(self.CELL, "SOURCEA")
+        self.sourcec = allot(self.CELL, "SOURCEC")
+        self.to_in = allot(self.CELL, ">IN")
+        self.base = allot(self.CELL, "BASE")
+        self.state = allot(self.CELL, "STATE")
 
         # Run through own bound methods, adding each to the dict
         isforth = re.compile(r"[A-Z0-9<>=\-\[\],@!:;+?/*]+$")
@@ -75,6 +67,15 @@ class SwapForth:
                 self.dict[name] = o
 
         self.DECIMAL()
+
+    def u32(self, x):
+        return x & self.CMASK
+
+    def w32(self, x):
+        x += self.CSIGN
+        x &= self.CMASK
+        x -= self.CSIGN
+        return x
 
     def lit(self, n):
         """ push literal N on the stack """
@@ -94,16 +95,16 @@ class SwapForth:
 
     def binary(self, op):
         b = self.d.pop()
-        self.d[-1] = w32(op(self.d[-1], b))
+        self.d[-1] = self.w32(op(self.d[-1], b))
 
     def dpop(self):
-        r = self.d.pop() << (8 * CELL)
-        r += self.d.pop() & CMASK
+        r = self.d.pop() << (8 * self.CELL)
+        r += self.d.pop() & self.CMASK
         return r
 
     def dlit(self, d):
-        self.lit(w32(d & CMASK))
-        self.lit(w32(d >> (8 * CELL)))
+        self.lit(self.w32(d & self.CMASK))
+        self.lit(self.w32(d >> (8 * self.CELL)))
 
     def pops(self):
         n = self.d.pop()
@@ -147,7 +148,7 @@ class SwapForth:
 
     def cell_plus(self):
         """ CELL+ """
-        self.d[-1] += CELL
+        self.d[-1] += self.CELL
 
     def DEPTH(self):
         self.lit(len(self.d))
@@ -158,12 +159,10 @@ class SwapForth:
         self.sourcec()
         self.fetch()
 
-    cellfmt = ENDIAN + {2: 'h', 4: 'i', 8: 'q'}[CELL]
-
     def fetch(self):
         """ @ """
         a = self.d.pop()
-        self.lit(*struct.unpack(self.cellfmt, self.ram[a:a + CELL]))
+        self.lit(*struct.unpack(self.cellfmt, self.ram[a:a + self.CELL]))
 
     def c_fetch(self):
         """ C@ """
@@ -174,7 +173,7 @@ class SwapForth:
         """ ! """
         a = self.d.pop()
         x = self.d.pop()
-        self.ram[a:a + CELL] = array.array('B', struct.pack(self.cellfmt, x))
+        self.ram[a:a + self.CELL] = array.array('B', struct.pack(self.cellfmt, x))
 
     def c_store(self):
         """ C! """
@@ -321,7 +320,7 @@ class SwapForth:
         self.binary(operator.__lshift__)
 
     def RSHIFT(self):
-        self.binary(lambda a, b: (a & CMASK) >> b)
+        self.binary(lambda a, b: (a & self.CMASK) >> b)
 
     def two_slash(self):
         """ 2/ """
@@ -337,13 +336,13 @@ class SwapForth:
 
     def u_less_than(self):
         """ U< """
-        self.binary(lambda a, b: truth((a & CMASK) < (b & CMASK)))
+        self.binary(lambda a, b: truth((a & self.CMASK) < (b & self.CMASK)))
 
     def NEGATE(self):
-        self.d[-1] = w32(-self.d[-1])
+        self.d[-1] = self.w32(-self.d[-1])
 
     def INVERT(self):
-        self.d[-1] = w32(self.d[-1] ^ CMASK)
+        self.d[-1] = self.w32(self.d[-1] ^ self.CMASK)
 
     def MIN(self):
         self.lit(min(self.d.pop(), self.d.pop()))
@@ -357,7 +356,7 @@ class SwapForth:
 
     def u_m_star(self):
         """ UM* """
-        self.dlit(u32(self.d.pop()) * u32(self.d.pop()))
+        self.dlit(self.u32(self.d.pop()) * self.u32(self.d.pop()))
 
     def star(self):
         """ * """
@@ -365,10 +364,10 @@ class SwapForth:
 
     def u_m_slash_mod(self):
         """ UM/MOD """
-        u1 = u32(self.d.pop())
-        ud = self.dpop() & (65536**CELL - 1)
-        self.lit(w32(ud % u1))
-        self.lit(w32(ud / u1))
+        u1 = self.u32(self.d.pop())
+        ud = self.dpop() & (65536**self.CELL - 1)
+        self.lit(self.w32(ud % u1))
+        self.lit(self.w32(ud / u1))
 
     def MS(self):
         time.sleep(0.001 * self.d.pop())
@@ -605,10 +604,10 @@ class SwapForth:
         self._xor()
 
     def doloop(self):
-        before = w32(self.loopC - self.loopL) < 0
+        before = self.w32(self.loopC - self.loopL) < 0
         inc = self.d.pop()
-        self.loopC = w32(self.loopC + inc)
-        after = w32(self.loopC - self.loopL) < 0
+        self.loopC = self.w32(self.loopC + inc)
+        after = self.w32(self.loopC - self.loopL) < 0
         if inc > 0:
             finish = before > after
         else:
@@ -779,8 +778,8 @@ import Queue
 
 class AsyncSwapForth(SwapForth):
 
-    def __init__(self, cmdq, ready):
-        SwapForth.__init__(self)
+    def __init__(self, cmdq, ready, *options):
+        SwapForth.__init__(self, *options)
         self.cmdq = cmdq
         self.ready = ready
         while True:
@@ -811,14 +810,14 @@ class AsyncSwapForth(SwapForth):
         self.lit(ns)
 
 class Tethered(swapforth.TetheredFT900):
-    def __init__(self):
+    def __init__(self, *options):
         self.searchpath = ['.']
         self.log = open("log", "w")
         self.ser = None
 
         self.ready = threading.Event()
         self.cmdq = Queue.Queue()
-        self.t = threading.Thread(target = AsyncSwapForth, args = (self.cmdq, self.ready))
+        self.t = threading.Thread(target = AsyncSwapForth, args = (self.cmdq, self.ready) + options)
         self.t.setDaemon(True)
         self.t.start()
         self.ready.wait()
@@ -839,10 +838,26 @@ class Tethered(swapforth.TetheredFT900):
 
 if __name__ == '__main__':
 
+    cellsize = 4
+    endian = '<'
+
+    try:
+        options,args = getopt.getopt(sys.argv[1:], 'c:b')
+        optdict = dict(options)
+        if '-c' in optdict:
+            cellsize = int(optdict['-c'])
+        if '-b' in optdict:
+            endian = '>'
+    except getopt.GetoptError:
+        print "usage:"
+        print " -c N    cell size, one of 2,4 or 8"
+        print " -b      big-endian. Default is little-endian"
+        sys.exit(1)
+
     dpans = {}
     allw = set()
 
-    t = Tethered()
+    t = Tethered(cellsize, endian)
     t.searchpath += ['../anstests', '../common']
     # print set(t.sf.dict.keys()) - dpans['CORE'] 
 
