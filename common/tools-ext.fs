@@ -81,5 +81,5 @@
 : cs-pick   pick ;
 : cs-roll   roll ;
 
-: [DEFINED] BL WORD FIND NIP 0<> ; IMMEDIATE
-: [UNDEFINED] postpone [DEFINED] 0= ; IMMEDIATE
+: [DEFINED] bl word find nip 0<> ; immediate
+: [UNDEFINED] postpone [DEFINED] 0= ; immediate
