@@ -55,8 +55,12 @@
 ( Pictured numeric output                    JCB 08:06 07/18/14)
 \ Adapted from hForth
 
+\ "The size of the pictured numeric output string buffer shall
+\ be at least (2*n) + 2 characters, where n is the number of
+\ bits in a cell."
+
 create BUF0
-130 allot here constant BUF     \ sized for base 2 64-bit double
+16 cells 2 + allot here constant BUF
 
 variable hld
 
