@@ -56,7 +56,7 @@
 \ Adapted from hForth
 
 create BUF0
-80 allot here constant BUF
+130 allot here constant BUF     \ sized for base 2 64-bit double
 
 variable hld
 

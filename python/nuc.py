@@ -9,19 +9,19 @@ import re
 
 import swapforth
 
-CMASK = (2 ** 32) - 1       # Cell mask
+ENDIAN = '<'
+CELL = 4
+CMASK = (256 ** CELL) - 1       # Cell mask
+CSIGN = (256 ** CELL) >> 1      # Sign bit mask
 
 def u32(x):
     return x & CMASK
 
 def w32(x):
-    if -0x80000000 <= x < 0x80000000:
-        return x
-    else:
-        x &= CMASK
-        if x & 0x80000000:
-            x -= 0x100000000
-        return x
+    x += CSIGN
+    x &= CMASK
+    x -= CSIGN
+    return x
 
 def truth(pred):
     return [0, -1][pred]
@@ -58,11 +58,11 @@ class SwapForth:
             return r
 
         self.tib = allot(256, "TIB")
-        self.sourcea = allot(4, "SOURCEA")
-        self.sourcec = allot(4, "SOURCEC")
-        self.to_in = allot(4, ">IN")
-        self.base = allot(4, "BASE")
-        self.state = allot(4, "STATE")
+        self.sourcea = allot(CELL, "SOURCEA")
+        self.sourcec = allot(CELL, "SOURCEC")
+        self.to_in = allot(CELL, ">IN")
+        self.base = allot(CELL, "BASE")
+        self.state = allot(CELL, "STATE")
 
         # Run through own bound methods, adding each to the dict
         isforth = re.compile(r"[A-Z0-9<>=\-\[\],@!:;+?/*]+$")
@@ -97,13 +97,13 @@ class SwapForth:
         self.d[-1] = w32(op(self.d[-1], b))
 
     def dpop(self):
-        r = self.d.pop() << 32
-        r += self.d.pop() & (2 ** 32 - 1)
+        r = self.d.pop() << (8 * CELL)
+        r += self.d.pop() & CMASK
         return r
 
     def dlit(self, d):
-        self.lit(w32(d & (2 ** 32 - 1)))
-        self.lit(w32(d >> 32))
+        self.lit(w32(d & CMASK))
+        self.lit(w32(d >> (8 * CELL)))
 
     def pops(self):
         n = self.d.pop()
@@ -145,6 +145,10 @@ class SwapForth:
         else:
             self.lit(0)
 
+    def cell_plus(self):
+        """ CELL+ """
+        self.d[-1] += CELL
+
     def DEPTH(self):
         self.lit(len(self.d))
 
@@ -154,10 +158,12 @@ class SwapForth:
         self.sourcec()
         self.fetch()
 
+    cellfmt = ENDIAN + {2: 'h', 4: 'i', 8: 'q'}[CELL]
+
     def fetch(self):
         """ @ """
         a = self.d.pop()
-        self.lit(*struct.unpack('i', self.ram[a:a + 4]))
+        self.lit(*struct.unpack(self.cellfmt, self.ram[a:a + CELL]))
 
     def c_fetch(self):
         """ C@ """
@@ -168,7 +174,7 @@ class SwapForth:
         """ ! """
         a = self.d.pop()
         x = self.d.pop()
-        self.ram[a:a + 4] = array.array('B', struct.pack('i', x))
+        self.ram[a:a + CELL] = array.array('B', struct.pack(self.cellfmt, x))
 
     def c_store(self):
         """ C! """
@@ -178,7 +184,7 @@ class SwapForth:
 
     def comma(self):
         """ , """
-        self.ram.extend(ba(struct.pack('i', self.d.pop())))
+        self.ram.extend(ba(struct.pack(self.cellfmt, self.d.pop())))
 
     def c_comma(self):
         """ C, """
@@ -360,7 +366,7 @@ class SwapForth:
     def u_m_slash_mod(self):
         """ UM/MOD """
         u1 = u32(self.d.pop())
-        ud = self.dpop() & (2**64 - 1)
+        ud = self.dpop() & (65536**CELL - 1)
         self.lit(w32(ud % u1))
         self.lit(w32(ud / u1))
 

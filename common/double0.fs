@@ -73,5 +73,7 @@
 ; 
 
 : d2/
-    >r 1 rshift r@ 31 lshift or r> 2/
+    >r 1 rshift r@
+    [ 8 cells 1- ] literal lshift
+    or r> 2/
 ;

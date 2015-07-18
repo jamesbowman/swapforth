@@ -1,2 +1,3 @@
-echo | PYTHONPATH=../shell/:$PYTHONPATH python nuc.py
+# time echo | PYTHONPATH=../shell/:$PYTHONPATH python nuc.py
+PYTHONPATH=../shell/:$PYTHONPATH python nuc.py
 echo PASSED

@@ -17,7 +17,6 @@
 : 1+        1 + ;
 : 1-        -1 + ;
 : 0=        0 = ;
-: cell+     4 + ;
 : <>        = invert ; 
 : >         swap < ; 
 : 0<        0 < ; 
@@ -30,7 +29,7 @@
 : abs       dup 0< if negate then ;
 : +!        tuck @ + swap ! ; 
 : 2*        dup + ;
-: cells     4 * ;
+: cells     0 cell+ * ;
 : count     dup 1+ swap c@ ;
 
 include core0.fs
