@@ -1,0 +1,3 @@
+set -e
+gforth cross.fs basewords.fs nuc.fs
+python mkrom.py
