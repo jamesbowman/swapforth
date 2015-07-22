@@ -23,6 +23,8 @@ class FT900Bootloader:
         self.verbose = False
         self.cumcrc = 0
 
+    cellsize = 4
+
     def rd1(self):
         """ Return the last incoming character, if any """
         n = self.ser.inWaiting()
@@ -155,6 +157,8 @@ def collect_screenshot(dest, ser):
     ser.write('k')
 
 class TetheredFT900:
+    interpreting = True
+    verbose = True
     def __init__(self, port):
         ser = serial.Serial(port, 115200, timeout=None, rtscts=0)
         self.ser = ser
@@ -229,7 +233,9 @@ class TetheredFT900:
             self.log.write(c.replace(chr(30), ''))
             r.append(c.replace(chr(30), ''))
             if chr(30) in c:
-                return "".join(r)
+                r = "".join(r)
+                self.interpreting = r.endswith(' ok\r\n')
+                return r
 
     def include(self, filename, write = sys.stdout.write):
 
@@ -243,13 +249,16 @@ class TetheredFT900:
                 # sys.stdout.write(l)
                 while l.endswith('\n') or l.endswith('\r'):
                     l = l[:-1]
-                # print l
+                if self.verbose:
+                    print repr(l)
                 if l == "#bye":
                     raise Bye
                 l = l.expandtabs(4)
                 rs = l.split()
                 if rs and rs[0] == 'include':
                     self.include(rs[1])
+                elif l.startswith('#'):
+                    self.shellcmd(l)
                 else:
                     r = self.command_response(l)
                     if r.startswith(' '):
@@ -270,7 +279,9 @@ class TetheredFT900:
 
     def shellcmd(self, cmd):
         ser = self.ser
-        if cmd.startswith('#include'):
+        if cmd.startswith('#noverbose'):
+            self.verbose = False
+        elif cmd.startswith('#include'):
             cmd = cmd.split()
             if len(cmd) != 2:
                 print 'Usage: #include <source-file>'
@@ -288,14 +299,18 @@ class TetheredFT900:
                 print 'please wait...'
                 dest = cmd[1]
                 l = self.command_response('serialize')
-                print l[:100]
-                print l[-100:]
                 d = [int(x, 36) for x in l.split()[:-1]]
-                print 'Image is', 4*len(d), 'bytes'
-                if dest.endswith('.hex'):
-                    open(dest, "w").write("".join(["%08x\n" % (x & 0xffffffff) for x in d]))
+                print 'Image is', self.cellsize*len(d), 'bytes'
+                if self.cellsize == 4:
+                    if dest.endswith('.hex'):
+                        open(dest, "w").write("".join(["%08x\n" % (x & 0xffffffff) for x in d]))
+                    else:
+                        open(dest, "wb").write(array.array("i", d).tostring())
                 else:
-                    open(dest, "wb").write(array.array("i", d).tostring())
+                    if dest.endswith('.hex'):
+                        open(dest, "w").write("".join(["%04x\n" % (x & 0xffff) for x in d]))
+                    else:
+                        open(dest, "wb").write(array.array("h", d).tostring())
         elif cmd.startswith('#setclock'):
             n = datetime.utcnow()
             cmd = "decimal %d %d %d %d %d %d >time&date" % (n.second, n.minute, n.hour, n.day, n.month, n.year)
@@ -303,6 +318,12 @@ class TetheredFT900:
             ser.readline()
         elif cmd.startswith('#bye'):
             sys.exit(0)
+        elif cmd.startswith('#time '):
+            t0 = time.time()
+            r = self.command_response(cmd[6:])
+            t1 = time.time()
+            print r
+            print 'Took %.6f seconds' % (t1 - t0)
         elif cmd.startswith('#measure'):
             ser = self.ser
             # measure the board's clock
@@ -374,7 +395,11 @@ class TetheredFT900:
         ser = self.ser
         while True:
             try:
-                cmd = raw_input('>').strip()
+                if self.interpreting:
+                    prompt = '>'
+                else:
+                    prompt = '+'
+                cmd = raw_input(prompt).strip()
                 self.shellcmd(cmd)
             except KeyboardInterrupt:
                 ser.write(chr(3))
