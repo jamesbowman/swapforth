@@ -1,12 +1,12 @@
 \ #######   CORE   ############################################
 
 : variable
-    create 1 cells allot
+    create 0 ,
 ;
 
 : constant  : postpone literal postpone ; ;
 
-: ensign ( u1 n1 -- n2 ) \ n2 is u1 with the sign of n1
+: sgn ( u1 n1 -- n2 ) \ n2 is u1 with the sign of n1
     0< if negate then
 ;
 
@@ -17,8 +17,8 @@
     over >r         \ sign of dividend, for remainder
     abs >r dabs r>
     um/mod          ( remainder quotient )
-    swap r> ensign  \ apply to remainder
-    swap r> ensign  \ apply to quotient
+    swap r> sgn     \ apply to remainder
+    swap r> sgn     \ apply to quotient
 ;
 
 \ Divide d1 by n1, giving the floored quotient n3 and the remainder n2.
@@ -106,7 +106,7 @@ variable hld
 : .
     s>d d.
 ;
-    
+
 : u.
     0 d.
 ;
