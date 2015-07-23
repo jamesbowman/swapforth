@@ -162,4 +162,4 @@ include forth2012.fs
 include structures.fs
 include memory.fs
 
-include runtests.fs
+\ include runtests.fs
