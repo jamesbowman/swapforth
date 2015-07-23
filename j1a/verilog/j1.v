@@ -33,8 +33,8 @@ module j1(
   // The D and R stacks
   wire [`WIDTH-1:0] st1, rst0;
   reg [1:0] dspI, rspI;
-  stack2 dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
-  stack2 rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
+  stack2 #(.DEPTH(16)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
+  stack2 #(.DEPTH(19)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
 
   always @*
   begin

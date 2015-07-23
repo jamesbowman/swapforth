@@ -867,7 +867,10 @@ header-imm unloop
     ['] (loopdone) compile,
 ;
 
-header decimal  :noname     d# 10 base ! ;
+header decimal
+: decimal
+    d# 10 base !
+;
 
 header cells
 header 2*       :noname     2*       ;
@@ -1046,7 +1049,7 @@ header evaluate
 
 : main
     cr cr
-
+    decimal
     begin
         refill drop
         interpret
