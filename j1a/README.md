@@ -1,23 +1,24 @@
 SwapForth on j1a
 ================
 
-SwapForth on j1a is a 16-bit version of SwapForth, intended as a very tiny
-CPU.
+SwapForth on j1a is a 16-bit version of SwapForth,
+intended as an interactive Forth system using very little logic and RAM.
 
 Running the binary
 ------------------
 
+After installing the
 [icestorm](http://www.clifford.at/icestorm/)
-on a
-[Lattice iCEstick](http://www.latticesemi.com/icestick),
-do this:
+tools, you can run on a
+[Lattice iCEstick](http://www.latticesemi.com/icestick)
+like this
 
     iceprog icestorm/j1a.bin
     PYTHONPATH=../shell:$PYTHONPATH python shell.py -h /dev/ttyUSB0 -p ../common/
 
 (where `/dev/ttyUSB0` is the appropriate port your iCEstick was assigned).
 
-You should get something like:
+You should get something like
 
     Contacting... established
     Loaded 196 words
@@ -35,14 +36,19 @@ running on the board, including a compiler.
 Some demos
 ----------
 
-You can control the five on-board LEDs:
+You can control the five on-board LEDs
 
     $00 leds
     $1f leds
 
-and to make a a short animated blink:
+and to make them blink
 
-    : blink 32 0 do i leds 100 ms loop ;
+    : blink
+      32 0 do
+        i leds
+        100 ms
+      loop
+    ;
     blink
 
 There is an
@@ -51,15 +57,19 @@ There is an
     new
     #include ../demos/easter.fs
     
-Now you can do:
+Now you can do
 
     >2015 .easter
     2015 April 5   ok
 
-Or even:
+Or even
 
-    >: 20easters  2035 2015 do cr i .easter loop ;
-      ok
+    >: 20easters
+    +  2035 2015 do
+    +    cr i .easter
+    +  loop
+    +;
+     ok
     >20easters
 
     2015 April 5 
@@ -92,7 +102,7 @@ After installing the icestorm tools, run
 
 this will produce `j1a.bin` - but it only contains the very bare-bones system;
 the rest of SwapForth still needs to be compiled.
-Load `j1a.bin` as above, and on connecting on the board you should see:
+Load `j1a.bin` as above, and on connecting on the board you should see
 
     Contacting... established
     Loaded 127 words
