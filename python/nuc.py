@@ -8,6 +8,7 @@ import copy
 import time
 import re
 
+sys.path.append("../shell")
 import swapforth
 
 def truth(pred):
