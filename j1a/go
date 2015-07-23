@@ -1,3 +1,4 @@
 set -e
-gforth cross.fs basewords.fs nuc.fs
-python mkrom.py
+make -C icestorm
+iceprog icestorm/j1a.bin
+PYTHONPATH=../shell:$PYTHONPATH python shell.py -h /dev/ttyUSB3 -p ../common -p ../demos

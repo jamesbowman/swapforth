@@ -1050,6 +1050,7 @@ header evaluate
 : main
     cr cr
     decimal
+    d# 1 io@ drop
     begin
         refill drop
         interpret
