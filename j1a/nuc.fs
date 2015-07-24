@@ -490,6 +490,11 @@ header cmove>
     drop 2drop
 ;
 
+
+header code@
+: code@
+    h# 2000 or
+;fallthru
 header execute
 : execute
     >r

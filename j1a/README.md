@@ -1,8 +1,9 @@
 SwapForth on j1a
 ================
 
-SwapForth on j1a is a 16-bit version of SwapForth,
+This is a 16-bit version of SwapForth,
 intended as an interactive Forth system using very little logic and RAM.
+See below for exactly *how* little.
 
 Running the binary
 ------------------
