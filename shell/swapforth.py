@@ -402,9 +402,11 @@ class TetheredFT900:
                 cmd = raw_input(prompt).strip()
                 self.shellcmd(cmd)
             except KeyboardInterrupt:
-                ser.write(chr(3))
-                ser.flush()
-                self.interactive_command()
+                print
+                self.interrupt()
+                # ser.write(chr(3))
+                # ser.flush()
+                # self.interactive_command()
             except EOFError:
                 # texlog.write(r"\end{Verbatim}" + '\n')
                 # texlog.write(r"\end{framed}" + '\n')

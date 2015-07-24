@@ -42,6 +42,15 @@ class TetheredJ1a(sf.TetheredFT900):
                 break
         print 'established'
 
+    def interrupt(self):
+        ser = self.ser
+        ser.setDTR(1)
+        ser.setDTR(0)
+        while 1:
+            c = ser.read(1)
+            if c == chr(30):
+                break
+        
 if __name__ == '__main__':
     port = '/dev/ttyUSB0'
 
