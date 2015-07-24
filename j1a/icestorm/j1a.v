@@ -3,54 +3,6 @@
 `default_nettype none
 `define WIDTH 16
 
-// module progmem #(
-//     parameter DATA = 16,
-//     parameter ADDR = 3
-// ) (
-//     input   wire                clk,
-//     input   wire    [ADDR-1:0]  addr,
-//     // input   wire                wr,
-//     // input   wire    [DATA-1:0]  din,
-//     output  reg     [DATA-1:0]  dout
-// );
-//  
-//   reg [DATA-1:0] mem [(2**ADDR)-1:0];
-//   initial begin
-//     $readmemh("compiler/build/nuc.hex", mem);
-//   end
-//  
-//   always @(posedge clk) begin
-//     dout      <= mem[addr];
-//   end
-// endmodule
-
-// module bootrom (
-//     input   wire           clk,
-//     input   wire    [2:0]  addr,
-//     output  reg     [15:0] dout
-// );
-//   always @(posedge clk)
-//     case (addr)
-// `include "compiler/build/nuc.v"
-//     endcase
-// 
-// endmodule
-
-module test (
-        input clk, we,
-        input [7:0] addr,
-        input [7:0] wdata,
-        output reg [7:0] rdata
-);
-        reg [7:0] mem [0:255];
-        // initial $readmemh("compiler/build/foo.hex", mem);
-        always @(posedge clk) begin
-                if (we)
-                        mem[addr] <= wdata;
-                rdata <= mem[addr];
-        end
-endmodule
-
 module SB_RAM2048x2(
 	output [1:0] RDATA,
 	input        RCLK, RCLKE, RE,
@@ -114,7 +66,7 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
            output TXD,
            input RXD,
            input resetq,
-           output J3_10
+           output reg J3_10
 );
   localparam MHZ = 12;
 
@@ -146,20 +98,18 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
 
   reg  io_wr_, io_rd_;
   reg [15:0] dout_;
-  reg [1:0] io_addr_;
+  reg [5:0] io_addr_;
 
   always @(posedge clk) begin
     {io_rd_, io_wr_, dout_} <= {io_rd, io_wr, dout};
     if (io_rd | io_wr)
-      io_addr_ <= mem_addr[1:0];
+      io_addr_ <= mem_addr[5:0];
   end
-
-  assign J3_10 = io_wr;
 
   wire uart0_valid, uart0_busy;
   wire [7:0] uart0_data;
-  wire uart0_wr = io_wr_ & (io_addr_ == 2'b1);
-  wire uart0_rd = io_rd_ & (io_addr_ == 2'b1);
+  wire uart0_wr = io_wr_ & (io_addr_ == 6'b1);
+  wire uart0_rd = io_rd_ & (io_addr_ == 6'b1);
   reg [31:0] uart_baud = 32'd115200;
   wire UART0_RX;
   buart #(.CLKFREQ(MHZ * 1000000)) _uart0 (
@@ -182,7 +132,8 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   always @(posedge clk)
     if (io_wr_)
       case (io_addr_)
-      2'd2: LEDS <= dout_[4:0];
+      6'd2:   LEDS <= dout_[4:0];
+      6'd30:  J3_10 <= dout_[0];
       endcase
 
   always @(negedge resetq or posedge clk)

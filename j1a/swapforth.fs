@@ -134,8 +134,8 @@ include core-ext.fs
 : serialize \ print out all of program memory as base-36 cells
     base @
     #36 base !
-    $3000 $2000 do
-        i execute .
+    $1000 $0000 do
+        i code@ .
     2 +loop
     $2000 $1000 do
         i @ .
@@ -177,4 +177,16 @@ marker |
         r> base !
     then
     drop
+;
+
+: (.s)
+    depth if
+        >r recurse r>
+        dup .
+    then
+;
+
+: .s
+    [char] < emit depth 0 .r [char] > emit space
+    (.s)
 ;
