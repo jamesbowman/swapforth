@@ -34,13 +34,12 @@ class TetheredJ1a(sf.TetheredFT900):
     def reset(self):
         ser = self.ser
         ser.setDTR(1)
-        time.sleep(.1)
         ser.setDTR(0)
-        time.sleep(.1)
 
         for c in ' 1 tth !\r':
             ser.write(c)
-            ser.read(1)
+            ser.flush()
+            ser.flushInput()
 
         sys.stdout.flush()
         while 1:
