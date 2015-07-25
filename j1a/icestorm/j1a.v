@@ -65,8 +65,7 @@ endmodule
 module top(input clk, output D1, output D2, output D3, output D4, output D5,
            output TXD,
            input RXD,
-           input resetq,
-           output reg J3_10
+           input resetq
 );
   localparam MHZ = 12;
 
@@ -96,21 +95,48 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
     .code_addr(code_addr),
     .insn(insn));
 
-  reg  io_wr_, io_rd_;
+  // ######   TICKS   #########################################
+
+  reg [15:0] ticks;
+  always @(posedge clk)
+    ticks <= ticks + 16'd1;
+
+  // ######   IO SYSTEM    ####################################
+
+  /*      READ            WRITE
+    0001  PMOD rd         PMOD wr
+    0002                  PMOD direction
+    0004                  LEDS
+    0800  ticks
+    1000  UART RX         UART TX
+    2000  UART status 
+
+    1010  master freq     snapshot clock
+    1014  clock[31:0]
+    1018  clock[63:32]
+  */
+
+  reg io_wr_, io_rd_;
   reg [15:0] dout_;
-  reg [5:0] io_addr_;
+  reg [15:0] io_addr_;
 
   always @(posedge clk) begin
     {io_rd_, io_wr_, dout_} <= {io_rd, io_wr, dout};
     if (io_rd | io_wr)
-      io_addr_ <= mem_addr[5:0];
+      io_addr_ <= mem_addr;
   end
+
+  // ######   PMOD   ##########################################
+
+  reg [7:0] pmod_dir;   // 1:output, 0:input
+
+  // ######   UART   ##########################################
 
   wire uart0_valid, uart0_busy;
   wire [7:0] uart0_data;
-  wire uart0_wr = io_wr_ & (io_addr_ == 6'b1);
-  wire uart0_rd = io_rd_ & (io_addr_ == 6'b1);
-  reg [31:0] uart_baud = 32'd115200;
+  wire uart0_wr = io_wr_ & io_addr_[12];
+  wire uart0_rd = io_rd_ & io_addr_[12];
+  reg [31:0] uart_baud = 31'd115200;
   wire UART0_RX;
   buart #(.CLKFREQ(MHZ * 1000000)) _uart0 (
      .clk(clk),
@@ -125,16 +151,26 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
      .tx_data(dout_[7:0]),
      .rx_data(uart0_data));
 
-  assign io_din = io_addr_[0] ? (uart0_valid ? {8'h01, uart0_data} : {16'h0000}) : {15'd0, !uart0_busy};
+  assign io_din =
+    (io_addr_[11] ? {8'd0, pmod_dir}                  : 16'd0) |
+    (io_addr_[12] ? {8'd0, uart0_data}                  : 16'd0) |
+    (io_addr_[13] ? {14'd0, uart0_valid, !uart0_busy}   : 16'd0);
 
   reg [4:0] LEDS;
   assign {D1,D2,D3,D4,D5} = LEDS;
-  always @(posedge clk)
-    if (io_wr_)
-      case (io_addr_)
-      6'd2:   LEDS <= dout_[4:0];
-      6'd30:  J3_10 <= dout_[0];
-      endcase
+  always @(posedge clk) begin
+    if (io_wr_ & io_addr_[2])
+      LEDS <= dout_[4:0];
+    if (io_wr_ & io_addr_[11])
+      pmod_dir <= dout_[7:0];
+  end
+
+  /*
+  SB_IO #(
+    .PIN_TYPE(6'b011001)
+  ) io0 (
+	.PACKAGE_PIN(PIO1_02));
+  */
 
   always @(negedge resetq or posedge clk)
     if (!resetq)

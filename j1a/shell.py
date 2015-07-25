@@ -34,10 +34,15 @@ class TetheredJ1a(sf.TetheredFT900):
                 L = L[:-1]
             return L.tostring()
 
+        for c in ' 1 tth !\r':
+            ser.write(c)
+            ser.read(1)
+
         sys.stdout.write('Contacting... ')
         sys.stdout.flush()
         while 1:
             c = ser.read(1)
+            print repr(c)
             if c == chr(30):
                 break
         print 'established'

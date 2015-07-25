@@ -33,15 +33,23 @@ header rshift
     drop
 ;
 
+: uart-stat ( mask -- f ) \ is bit in UART status register on?
+    h# 2000 io@ and
+;
+
+header key?
+: key?
+    d# 2 uart-stat 0<>
+;
+
 header key
 : key
     begin
-        d# 1 io@
-        dup 0=
-    while
-        drop
-    repeat
-    h# ff and
+        key?
+    until
+;fallthru
+: key>
+    h# 1000 io@
 ;
 
 header space
@@ -51,8 +59,10 @@ header space
 
 header emit
 : emit
-    begin d# 0 io@ until
-    d# 1 io!
+    begin
+        d# 1 uart-stat 
+    until
+    h# 1000 io!
 ;
 
 header cr
@@ -165,6 +175,7 @@ create state    0 ,
 create delim    0 ,
 create rO       0 ,
 create leaves   0 ,
+create tethered 0 ,
 create tib #128 allot
 
 header dp    :noname dp ;
@@ -173,6 +184,12 @@ header state :noname state ;
 header base  :noname base ;
 header >in   :noname >in  ;
 header forth :noname forth ;
+
+\ tethered mode flag
+header tth
+: tth
+    tethered
+;
 
 : nextword
     @ d# -2 and
@@ -338,7 +355,9 @@ header um/mod
 
 header accept
 : accept
-    d# 30 emit
+    tethered @ if
+        d# 30 emit
+    then
     drop dup
     begin
         key
@@ -347,6 +366,9 @@ header accept
         dup h# 0a = if
             drop
         else
+            tethered @ 0= if
+                dup emit
+            then
             over c! 1+
         then
     repeat
@@ -1053,9 +1075,13 @@ header evaluate
 ;
 
 : main
-    cr cr
     decimal
-    d# 1 io@ drop
+    d# 0 tethered !
+    \ d# 1 io@ drop
+
+    \ begin cr [char] A emit [char] . emit key .  again
+    key> drop
+
     begin
         refill drop
         interpret
