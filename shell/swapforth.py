@@ -13,6 +13,8 @@ except:
     print "This tool needs PySerial, but it was not found"
     sys.exit(1)
 
+import dpansf
+
 class FT900Bootloader:
     def __init__(self, ser):
         ser.setDTR(1)
@@ -229,11 +231,13 @@ class TetheredFT900:
             if ser.inWaiting() == 0:
                 sys.stdout.flush()
             c = ser.read(max(1, ser.inWaiting()))
-            sys.stdout.write(c.replace(chr(30), ''))
-            self.log.write(c.replace(chr(30), ''))
-            r.append(c.replace(chr(30), ''))
+            clean = c.replace(chr(30), '')
+            sys.stdout.write(clean)
+            r.append(clean)
             if chr(30) in c:
                 r = "".join(r)
+                self.log.write(r)
+                self.texlog(r)
                 self.interpreting = r.endswith(' ok\r\n')
                 return r
 
@@ -318,6 +322,17 @@ class TetheredFT900:
             ser.readline()
         elif cmd.startswith('#bye'):
             sys.exit(0)
+        elif cmd.startswith('#invent'):
+            def pp(s):
+                return " ".join(sorted(s))
+            words = sorted((self.command_response('words')).upper().split()[:-1])
+            print 'duplicates:', pp(set([w for w in words if words.count(w) > 1]))
+            print 'have CORE words: ', pp(set(dpansf.words['CORE']) & set(words))
+            print 'missing CORE words: ', pp(set(dpansf.words['CORE']) - set(words))
+            allwords = set()
+            for ws in dpansf.words.values():
+                allwords |= set(ws)
+            print 'unknown: ', pp(set(words) - allwords)
         elif cmd.startswith('#time '):
             t0 = time.time()
             r = self.command_response(cmd[6:])
@@ -361,7 +376,8 @@ class TetheredFT900:
                     collect_screenshot("%04d.png" % i, ser)
                 ser.write('\r\n')
         else:
-            # texlog.write(r"\underline{\textbf{%s}}" % cmd)
+            self.texlog(r"\underline{\textbf{%s}}" % cmd)
+            self.texlog('\n')
             self.interactive_command(cmd)
 
     def shell(self, autocomplete = True):
@@ -408,8 +424,8 @@ class TetheredFT900:
                 # ser.flush()
                 # self.interactive_command()
             except EOFError:
-                # texlog.write(r"\end{Verbatim}" + '\n')
-                # texlog.write(r"\end{framed}" + '\n')
+                self.texlog(r"\end{Verbatim}" + '\n')
+                self.texlog(r"\end{framed}" + '\n')
                 break
 
 if __name__ == '__main__':

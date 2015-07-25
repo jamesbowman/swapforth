@@ -22,39 +22,40 @@ class TetheredJ1a(sf.TetheredFT900):
         ser = serial.Serial(port, 115200, timeout=None, rtscts=0)
         self.ser = ser
         self.searchpath = ['.']
-        self.log = open("log", "w")
+        self.log = open("log", "wt")
 
-    def boot(self, bootfile = None):
+        self.tex = open("log.tex", "wt")
+        self.texlog(r"\begin{framed}" + '\n')
+        self.texlog(r"\begin{Verbatim}[commandchars=\\\{\}]" + '\n')
+
+    def texlog(self, s):
+        self.tex.write(s.replace('\r', '\n'))
+
+    def reset(self):
         ser = self.ser
         ser.setDTR(1)
+        time.sleep(.1)
         ser.setDTR(0)
-
-        def trim(L):
-            while L[-1] == 0:
-                L = L[:-1]
-            return L.tostring()
+        time.sleep(.1)
 
         for c in ' 1 tth !\r':
             ser.write(c)
             ser.read(1)
 
-        sys.stdout.write('Contacting... ')
         sys.stdout.flush()
         while 1:
             c = ser.read(1)
-            print repr(c)
+            # print repr(c)
             if c == chr(30):
                 break
+
+    def boot(self, bootfile = None):
+        sys.stdout.write('Contacting... ')
+        self.reset()
         print 'established'
 
     def interrupt(self):
-        ser = self.ser
-        ser.setDTR(1)
-        ser.setDTR(0)
-        while 1:
-            c = ser.read(1)
-            if c == chr(30):
-                break
+        self.reset()
         
 if __name__ == '__main__':
     port = '/dev/ttyUSB0'

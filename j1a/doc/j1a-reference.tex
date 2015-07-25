@@ -50,7 +50,15 @@
 \usepackage{epsfig} % for postscript graphics files
 \usepackage{tikz}
 \usetikzlibrary{arrows,decorations.pathmorphing,backgrounds,positioning,fit,petri,shapes.misc}
-\usepackage[linkbordercolor={.9 .9 .9}]{hyperref}
+\usepackage{hyperref}
+
+\usepackage{xcolor}
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
 
 \usepackage[dotinlabels]{titletoc}
 
@@ -94,6 +102,11 @@
 
 \newcommand{\word}[1]{
 \texttt{\textbf{#1}}
+}
+
+\newcommand{\wordidx}[1]{
+\texttt{\textbf{#1}}
+\index{#1@\mach{#1}}
 }
 
 \newcommand{\wl}[1]{\textbf{#1}}
@@ -219,20 +232,169 @@ Providing names from the \wl{Core Extensions} word set \\
 \includegraphics[width=0.8\textwidth]{iCEstick.jpg}
 \end{center}
 
-Connect to the SwapForth board using a terminal program of your choice.
-Set the serial parameters to:
-\begin{itemize}
-\item 115200 baud
-\item 8 data bits, no parity, no stop bit (often called ``8N1'', and often the default)
-\end{itemize}
+J1a SwapForth is a 16-bit version of SwapForth,
+intended as an interactive Forth system using minimal logic and RAM.
+The system currently fits on a Lattice HX20 FPGA,
+using 1100 logic elements and about 5Kbytes of RAM, leaving about 3K for application.
+
+After installing the \index{icestorm}
+\href{http://www.clifford.at/icestorm/}{icestorm}
+tools, you can run on a
+\href{http://www.latticesemi.com/icestick}{Lattice iCEstick}
+like this
 
 \begin{framed}
-\begin{Verbatim}[commandchars=\\\{\}]
-----------------------------------------------------------
-swapForth v0.1
+\begin{Verbatim}
+  git clone git@github.com:jamesbowman/swapforth.git
+  cd swapforth/j1a
+  iceprog icestorm/j1a.bin
+  python shell.py -h /dev/ttyUSB0
 \end{Verbatim}
 \end{framed}
 
+\noindent
+(where \mach{/dev/ttyUSB0} is the appropriate port your iCEstick was assigned).
+You should see something like
+
+\begin{framed}
+\begin{Verbatim}
+  Contacting... established
+  Loaded 196 words
+  >
+\end{Verbatim}
+\end{framed}
+
+And you can now try the usual Forth things, e.g.
+
+\begin{framed}
+\begin{Verbatim}[commandchars=\\\{\}]
+\underline{\textbf{1 2 + .}}
+3   ok
+\end{Verbatim}
+\end{framed}
+
+There is a fairly complete 
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm}{core ANS-compatible Forth system}
+running on the board, including a compiler.
+
+\section{Some demos}
+
+You can control the five on-board LEDs
+
+\begin{framed}
+\begin{Verbatim}[commandchars=\\\{\}]
+\underline{\textbf{-1 leds}}
+  ok
+
+\underline{\textbf{0 leds}}
+  ok
+\end{Verbatim}
+\end{framed}
+
+\noindent
+and to make them blink
+
+\begin{framed}
+\begin{Verbatim}[commandchars=\\\{\}]
+: blink
+  32 0 do
+    i leds
+    100 ms
+  loop
+;
+blink
+\end{Verbatim}
+\end{framed}
+
+There is an
+\href{http://www.wilbaden.com/neil_bawd/easter.txt}{Easter date calculator}
+
+\begin{framed}
+\begin{Verbatim}
+    new
+    #include ../demos/easter.fs
+\end{Verbatim}
+\end{framed}
+    
+Now you can do
+
+\begin{framed}
+\begin{Verbatim}
+    >2015 .easter
+    2015 April 5   ok
+\end{Verbatim}
+\end{framed}
+
+Or even
+
+\begin{framed}
+\begin{Verbatim}
+    >: 20easters
+    +  2035 2015 do
+    +    cr i .easter
+    +  loop
+    +;
+     ok
+    >20easters
+
+    2015 April 5 
+    2016 March 27 
+    2017 April 16 
+    2018 April 1 
+    2019 April 21 
+    2020 April 12 
+    2021 April 4 
+    2022 April 17 
+    2023 April 9 
+    2024 March 31 
+    2025 April 20 
+    2026 April 5 
+    2027 March 28 
+    2028 April 16 
+    2029 April 1 
+    2030 April 21 
+    2031 April 13 
+    2032 March 28 
+    2033 April 17 
+    2034 April 9   ok
+\end{Verbatim}
+\end{framed}
+
+\section{Building from Scratch}
+
+After installing the icestorm tools, run
+
+\begin{Verbatim}
+rm icestorm/build/*
+make -C icestorm
+\end{Verbatim}
+
+\noindent
+This will produce \mach{j1a.bin} - but it only contains the very bare-bones system;
+the rest of SwapForth still needs to be compiled.
+Load \mach{j1a.bin} and start the shell:
+
+\begin{framed}
+\begin{Verbatim}
+  $ iceprog icestorm/j1a.bin
+  $ python shell.py -h /dev/ttyUSB0 -p ../common/
+  Contacting... established
+  Loaded 127 words
+  >
+\end{Verbatim}
+\end{framed}
+
+Compile the rest of SwapForth and write the finished executable with these commands:
+
+\begin{framed}
+\begin{Verbatim}
+  #include swapforth.fs
+  #flash build/nuc.hex
+  #bye
+\end{Verbatim}
+\end{framed}
+
+Now run \mach{make} again - this compiles an FPGA image with the complete code base built-in.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -248,7 +410,7 @@ swapForth v0.1
 \vspace{1pt}
 
 \noindent \word{#1}
-\index{#1@\mach{#1()}}
+\index{#1@\mach{#1}}
 
 \vspace{4pt}
 
@@ -268,7 +430,7 @@ swapForth v0.1
 
 \chapter{Available Words}
 
-\section{ANS Core Words}
+\section{ANS Core Words} \index{ANS}
 
 J1a SwapForth implements most of the core ANS 94 Forth standard.
 Implemented words are:
@@ -420,20 +582,19 @@ These core words are not implemented:
 \noindent
 J1a SwapForth also implements the following standard words:
 
-\word{ahead }
-\word{dump}
-\word{.s}
-\word{/string }
-\word{parse-name }
-\word{sliteral }
-\word{throw }
-\word{words}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.0702}{\wordidx{ahead}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.1280}{\wordidx{dump}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.0220}{\wordidx{.s}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0245}{\wordidx{/string}}
+\href{http://forth.sourceforge.net/std/dpans/dpans.htm#}{\wordidx{parse-name}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.2212}{\wordidx{sliteral}}
+\href{http://forth.sourceforge.net/std/dpans/dpans9.htm#9.6.1.2275}{\wordidx{throw}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.2465}{\wordidx{words}}
 
 \newpage
 \section{Additional Words}
 
-The following words are not part of the standard,
-and are specific to J1a SwapForth.
+The following words are not standard.
 Some are traditional Forth words, others are specific to the J1a SwapForth implementation.
 
 \vspace{10pt}
@@ -457,7 +618,25 @@ Some are traditional Forth words, others are specific to the J1a SwapForth imple
 \chapter{The SwapForth Shell}
 
 \section{Command reference}
-\section{Notes on Tethered Mode}
+
+\section{Tethered Mode}
+
+J1a SwapForth supports
+\term{tethered mode},
+which makes the UART protocol easier to use for host programs.
+The SwapForth shell uses
+tethered mode.
+To enter tethered mode, write one to the variable \wordidx{tth}:
+
+\begin{framed}
+\begin{Verbatim}
+1 tth !
+\end{Verbatim}
+\end{framed}
+
+In tethered mode, \word{accept} transmits byte value 30 (hex \mach{1e}, ASCII code RS).
+This allows the listening program to know that the target machine is ready to accept a line of input.
+In addition, \word{accept} does not echo characters as they are typed.
 
 \chapter{Memory}
 
@@ -475,7 +654,7 @@ This RAM is writable and readable.
 The dictionary and all variables are located in this section.
 The variable \mach{DP} points into this area.
 
-\section{Dictionary Layout}
+\section{Dictionary Layout} \index{dictionary}
 
 The SwapForth dictionary is a linked list;
 the variable \mach{forth} holds the start of this list.
@@ -508,12 +687,12 @@ Each dictionary entry contains:
 
 The J1a for iCEstick includes connections to the iCEstick peripherals:
 \begin{itemize}
-\item SPI flash
-\item LEDs
-\item IrDA tranceiver
-\item Pmod connector
+\item SPI flash \index{SPI flash}
+\item LEDs \index{LEDs}
+\item IrDA tranceiver \index{IrDA}
+\item Pmod connector \index{Pmod}
 \item prototyping connectors
-\item UART
+\item UART \index{UART}
 \end{itemize}
 
 Access to peripherals is via the
@@ -584,7 +763,27 @@ Setting a bit to 1 lights the corresponding LED.
     \bitbox{1}{\tiny{LED1}}
 \end{bytefield}
 
+Built-in word
+\wordidx{leds}
+writes to this port.
+
 \subsection{\$1000: UART data}
+
+The read-write port at address \$1000 is for UART transmission or reception.
+Writing to the port starts transmission of a byte, reading the port returns
+the incoming byte.
+
+Standard words
+\wordidx{key}, \wordidx{key?} and \wordidx{emit}
+can be used to access this port.
+
+\vspace{10pt}
+\noindent
+\begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
+  \bitheader{0-15} \\
+    \bitbox{8}{} &
+    \bitbox{8}{byte}
+\end{bytefield}
 
 \subsection{\$2000: IrDA, flash and UART inputs}
 

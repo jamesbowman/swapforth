@@ -1,3 +1,7 @@
+
+\   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
+\               If the string is legal, give a single or double cell number
+\               and size of the number.
 header negate   : negate    invert ;fallthru
 header 1+       : 1+        d# 1 + ;
 header 1-       : 1-        d# -1 + ;
@@ -168,8 +172,7 @@ create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
 create syncpt   0 ,
-create sourceA  0 ,
-create sourceC  0 ,
+create sourceC  0 , 0 ,
 create >in      0 ,
 create state    0 ,
 create delim    0 ,
@@ -512,7 +515,6 @@ header cmove>
     drop 2drop
 ;
 
-
 header code@
 : code@
     h# 2000 or
@@ -524,7 +526,22 @@ header execute
 
 header source
 : source
-    sourceA @ sourceC @
+    sourceC
+;fallthru
+
+header 2@
+: 2@ \ ( a -- lo hi )
+    dup cell+ @ swap @
+;
+
+: source! ( addr u -- ) \ set the source
+    sourceC
+;fallthru
+
+header 2!
+: 2! \ ( lo hi a -- )
+    tuck !
+    cell+ !
 ;
 
 \ From Forth200x - public domain
@@ -927,9 +944,9 @@ header-imm r@   :noname     inline: r@ ;
 : jumptable ( u -- ) \ add u to the return address
     r> + >r ;
 
-\   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
-\               If the string is legal, give a single or double cell number
-\               and size of the number.
+: -throw ( a b -- ) \ if a is nonzero, throw -b
+    negate and
+;fallthru
 
 header throw
 : throw
@@ -944,10 +961,6 @@ header throw
         .
         d# 0 execute
     then
-;
-
-: -throw ( a b -- ) \ if a is nonzero, throw -b
-    negate and throw
 ;
 
 : isvoid ( caddr u -- ) \ any char remains, throw -13
@@ -986,6 +999,10 @@ header throw
     over c@ [char] ' = and
     swap d# 2 + c@ [char] ' = and
 ;
+
+\   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
+\               If the string is legal, give a single or double cell number
+\               and size of the number.
 
 : (doubleAlso)
     [char] $ consume1 if
@@ -1059,9 +1076,8 @@ header-imm postpone
 
 header refill
 : refill
-    tib d# 128 accept
-    sourceC !
-    tib sourceA !
+    tib dup d# 128 accept
+    source!
     d# 0 >in !
     true
 ;
@@ -1069,9 +1085,9 @@ header refill
 header evaluate
 :noname
     source >r >r >in @ >r
-    sourceC ! sourceA ! d# 0 >in !
+    source! d# 0 >in !
     interpret
-    r> >in ! r> sourceA ! r> sourceC !
+    r> >in ! r> r> source!
 ;
 
 : main
@@ -1082,6 +1098,7 @@ header evaluate
     \ begin cr [char] A emit [char] . emit key .  again
     key> drop
 
+header quit
     begin
         refill drop
         interpret

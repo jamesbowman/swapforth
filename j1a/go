@@ -1,4 +1,5 @@
 set -e
+
 make -C icestorm
 iceprog icestorm/j1a.bin
-PYTHONPATH=../shell:$PYTHONPATH python shell.py -h /dev/ttyUSB3 -p ../common -p ../demos # swapforth.fs
+PYTHONPATH=../shell:$PYTHONPATH python shell.py -h /dev/ttyUSB0 -p ../common -p ../demos swapforth.fs

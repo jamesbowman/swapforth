@@ -63,9 +63,29 @@ module SB_RAM2048x2(
 endmodule
 
 module top(input clk, output D1, output D2, output D3, output D4, output D5,
-           output TXD,
-           input RXD,
-           input resetq
+
+           output TXD,        // UART TX
+           input RXD,         // UART RX
+
+           output PIOS_00,    // flash SCK
+           input PIOS_01,     // flash MISO
+           output PIOS_02,    // flash MOSI
+           output PIOS_03,    // flash CS
+
+           output PIO1_02,    // PMOD 1
+           output PIO1_03,    // PMOD 1
+           output PIO1_04,    // PMOD 1
+           output PIO1_05,    // PMOD 1
+           output PIO1_06,    // PMOD 1
+           output PIO1_07,    // PMOD 1
+           output PIO1_08,    // PMOD 1
+           output PIO1_09,    // PMOD 1
+
+           output PIO1_18,    // IR TXD
+           input  PIO1_19,    // IR RXD
+           output PIO1_20,    // IR SD
+
+           input resetq,
 );
   localparam MHZ = 12;
 
@@ -76,7 +96,6 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   wire [15:0] dout;
   wire [15:0] io_din;
   wire [12:0] code_addr;
-
   wire [15:0] insn;
   reg unlocked = 0;
 
@@ -95,26 +114,15 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
     .code_addr(code_addr),
     .insn(insn));
 
+  /*
   // ######   TICKS   #########################################
 
   reg [15:0] ticks;
   always @(posedge clk)
     ticks <= ticks + 16'd1;
-
-  // ######   IO SYSTEM    ####################################
-
-  /*      READ            WRITE
-    0001  PMOD rd         PMOD wr
-    0002                  PMOD direction
-    0004                  LEDS
-    0800  ticks
-    1000  UART RX         UART TX
-    2000  UART status 
-
-    1010  master freq     snapshot clock
-    1014  clock[31:0]
-    1018  clock[63:32]
   */
+
+  // ######   IO SIGNALS   ####################################
 
   reg io_wr_, io_rd_;
   reg [15:0] dout_;
@@ -129,6 +137,7 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   // ######   PMOD   ##########################################
 
   reg [7:0] pmod_dir;   // 1:output, 0:input
+  assign {PIO1_09, PIO1_08, PIO1_07, PIO1_06, PIO1_05, PIO1_04, PIO1_03, PIO1_02} = pmod_dir;
 
   // ######   UART   ##########################################
 
@@ -151,18 +160,34 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
      .tx_data(dout_[7:0]),
      .rx_data(uart0_data));
 
-  assign io_din =
-    (io_addr_[11] ? {8'd0, pmod_dir}                  : 16'd0) |
-    (io_addr_[12] ? {8'd0, uart0_data}                  : 16'd0) |
-    (io_addr_[13] ? {14'd0, uart0_valid, !uart0_busy}   : 16'd0);
-
+  reg [4:0] PIOS;
+  assign {PIO1_20, PIO1_18, PIOS_00, PIOS_02, PIOS_03} = PIOS;
   reg [4:0] LEDS;
   assign {D1,D2,D3,D4,D5} = LEDS;
+
+  // ######   IO PORTS   ######################################
+
+  /*        bit READ            WRITE
+      0001  0   PMOD rd         PMOD wr
+      0002  1                   PMOD direction
+      0004  2                   LEDS
+      0008  3                   misc.out
+      1000  12  UART RX         UART TX
+      2000  13  misc.in
+  */
+
+  assign io_din =
+    (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0) |
+    (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
+    (io_addr_[13] ? {12'd0, PIO1_19, PIOS_01, uart0_valid, !uart0_busy} : 16'd0);
+
   always @(posedge clk) begin
+    if (io_wr_ & io_addr_[1])
+      pmod_dir <= dout_[7:0];
     if (io_wr_ & io_addr_[2])
       LEDS <= dout_[4:0];
-    if (io_wr_ & io_addr_[11])
-      pmod_dir <= dout_[7:0];
+    if (io_wr_ & io_addr_[3])
+      PIOS <= dout_[4:0];
   end
 
   /*

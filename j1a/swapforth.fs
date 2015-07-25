@@ -115,7 +115,7 @@ include core.fs
 include core-ext.fs
 
 : ms 0 do 1491 0 do loop loop ;
-: leds  2 io! ;
+: leds  4 io! ;
 
 : marker
     forth @
