@@ -1,0 +1,7 @@
+go
+*.aux
+*.ilg
+*.ind
+*.log
+*.out
+*.toc
