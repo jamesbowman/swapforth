@@ -104,7 +104,7 @@ module j1(
     7'b0_0_001_?_0:   pcN = insn[12:0];
     7'b0_1_???_?_?,
     7'b0_0_011_1_?:   pcN = rst0[13:1];
-    default:        pcN = pc_plus_1;
+    default:          pcN = pc_plus_1;
     endcase
   end
 
