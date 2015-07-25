@@ -12,8 +12,6 @@
 
 \ #######   CORE AND DOUBLE   #################################
 
-: abort     true throw ;
-
 : '
     parse-name
     sfind
