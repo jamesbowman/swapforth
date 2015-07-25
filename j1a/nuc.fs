@@ -963,6 +963,11 @@ header throw
     then
 ;
 
+header abort
+: abort
+    d# -1 throw
+;
+
 : isvoid ( caddr u -- ) \ any char remains, throw -13
     nip 0<> d# 13 -throw
 ;

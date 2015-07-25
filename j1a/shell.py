@@ -13,6 +13,7 @@ except:
     print "This tool needs PySerial, but it was not found"
     sys.exit(1)
 
+sys.path.append("../shell")
 import swapforth as sf
 
 class TetheredJ1a(sf.TetheredFT900):

@@ -380,6 +380,9 @@ class TetheredFT900:
             self.texlog('\n')
             self.interactive_command(cmd)
 
+    def texlog(self, s):
+        pass
+
     def shell(self, autocomplete = True):
         import readline
         import os

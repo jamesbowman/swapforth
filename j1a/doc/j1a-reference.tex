@@ -394,7 +394,7 @@ Compile the rest of SwapForth and write the finished executable with these comma
 \end{Verbatim}
 \end{framed}
 
-Now run \mach{make} again - this compiles an FPGA image with the complete code base built-in.
+Now run \mach{make -C icestorm} again - this compiles an FPGA image with the complete code base built-in.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -477,8 +477,8 @@ Implemented words are:
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0580}{\word{>r}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0630}{\word{?dup}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0650}{\word{@}}
-% \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0670}{\word{abort}}
-\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0680}{\word{abort"}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0670}{\word{abort}}
+% \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0680}{\word{abort"}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0690}{\word{abs}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0695}{\word{accept}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0705}{\word{align}}
@@ -610,7 +610,7 @@ Some are traditional Forth words, others are specific to the J1a SwapForth imple
 \longworddef{io@}{( a -- x )}{fetch from IO port \mach{a}}
 \longworddef{leds}{( x -- )}{write \mach{x} to the onboard LEDs}
 \longworddef{new}{( -- )}{restore code and data pointers to the power-up state}
-\longworddef{s,}{( a u -- )}{add \mach{u}-character the string \mach{a} to the data space}
+\longworddef{s,}{( a u -- )}{add the \mach{u}-character string \mach{a} to the data space}
 \longworddef{serialize}{( -- )}{display all of current memory in base 36}
 % \worddef{sfind}{( dir pin -- )}{Like standard word \mach{find}, but uses a
 \longworddef{tth}{( -- a )}{variable: tethered mode}
