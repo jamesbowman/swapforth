@@ -159,11 +159,11 @@ All rights reserved
 J1a SwapForth is an ANS Forth System
 
 Providing names from the \wl{Core Extensions} word set \\
-% Providing the \wl{Double-Number} word set \\
+Providing names from the \wl{Double-Number} word set \\
 % Providing the \wl{Double-Number Extensions} word set \\
 % Providing the \wl{Exception} word set \\
-% Providing the \wl{Facility} word set \\
-% Providing names from the \wl{Facility Extensions} word set \\
+Providing names from the \wl{Facility} word set \\
+Providing names from the \wl{Facility Extensions} word set \\
 % Providing names from the \wl{File Access} word set \\
 % Providing names from the \wl{File Access Extensions} word set \\
 % Providing names from the \wl{Floating-Point} word set \\
@@ -171,9 +171,9 @@ Providing names from the \wl{Core Extensions} word set \\
 % Providing the \wl{Memory-Allocation} word set \\
 % Providing the \wl{Search-Order} word set \\
 % Providing the \wl{Search-Order Extensions} word set \\
-% Providing the \wl{String} word set \\
-% Providing the \wl{Programming-Tools} word set \\
-% Providing names from the \wl{Programming-Tools Extensions} word set
+Providing names from the \wl{String} word set \\
+Providing names from the \wl{Programming-Tools} word set \\
+Providing names from the \wl{Programming-Tools Extensions} word set
 
 \end{framed}
 
@@ -233,12 +233,12 @@ Providing names from the \wl{Core Extensions} word set \\
 \end{center}
 
 J1a SwapForth is a 16-bit version of SwapForth,
-intended as an interactive Forth system using minimal logic and RAM.
-The system currently fits on a Lattice HX20 FPGA.
+intended as an interactive Forth system using very little logic and RAM.
+The system currently fits on a Lattice iCE40HX-1k FPGA.
 The J1a plus peripherals take 1100 logic elements.
 SwapForth uses 5Kbytes of RAM, leaving about 3K for the application.
 
-After installing the \index{icestorm}
+After installing the \index{icestorm} \index{icestorm} \index{git} \index{iceprog}
 \href{http://www.clifford.at/icestorm/}{icestorm}
 tools, you can run on a
 \href{http://www.latticesemi.com/icestick}{Lattice iCEstick}
@@ -280,7 +280,7 @@ running on the board, including a compiler.
 
 \section{Some demos}
 
-You can control the five on-board LEDs
+You can control the five on-board LEDs \index{LEDs}
 
 \begin{framed}
 \begin{Verbatim}[commandchars=\\\{\}]
@@ -309,6 +309,7 @@ blink
 
 There is an
 \href{http://www.wilbaden.com/neil_bawd/easter.txt}{Easter date calculator}
+\index{easter} \index{computus@\textit{computus}}
 
 \begin{framed}
 \begin{Verbatim}
@@ -636,15 +637,12 @@ J1a SwapForth also implements the following standard words:
 
 \noindent
 Double numbers are supported using the standard \mach{.} suffix.
-Forth 2012's number prefixes are supported, specifically
+The Forth 200x number prefixes are supported: \index{Forth 200x}
 \mach{\$} for hex,
 \mach{\#} for decimal,
-\mach{\%} for binary, and \mach{'x'} for character code \mach{x}.
-
-The Forth 200x standard word
+\mach{\%} for binary, and \mach{'c'} for character literals.
 \href{http://www.forth200x.org/parse-name.html}{\wordidx{parse-name}}
 is also implemented.
-
 
 \newpage
 \section{Additional Words}
@@ -702,7 +700,7 @@ The J1a implementation uses 8Kbytes of RAM in a split configuration.
 The lower 4K is for code.
 This RAM is writable, and executable, but not (directly) readable.
 The variable \mach{CP} (code pointer) points into this area.
-To read from this region, use the special word \mach{code@}.
+To read from this region, use the special word \wordidx{code@}.
 
 The upper 4K is for data.
 This RAM is writable and readable.
@@ -759,7 +757,7 @@ For read-only ports, writing to the port has no effect.
 For write-only ports, reading from the port gives zero.
 
 As an example of direct port access, this word
-blinks the on-board LEDs when a signal on IrDA is detected.
+blinks the on-board LEDs when a signal on IrDA is detected. \index{blink}
 
 \begin{framed}
 \begin{Verbatim}
