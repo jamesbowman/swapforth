@@ -365,14 +365,14 @@ Or even
 After installing the icestorm tools, run
 
 \begin{Verbatim}
-rm icestorm/build/*
+rm build/*
 make -C icestorm
 \end{Verbatim}
 
 \noindent
 This will produce \mach{j1a.bin} - but it only contains the very bare-bones system;
 the rest of SwapForth still needs to be compiled.
-Load \mach{j1a.bin} and start the shell:
+To do this, load \mach{j1a.bin} and start the shell:
 
 \begin{framed}
 \begin{Verbatim}
@@ -384,7 +384,7 @@ Load \mach{j1a.bin} and start the shell:
 \end{Verbatim}
 \end{framed}
 
-Compile the rest of SwapForth and write the finished executable with these commands:
+Then compile the rest of SwapForth and write the finished executable with these commands:
 
 \begin{framed}
 \begin{Verbatim}
