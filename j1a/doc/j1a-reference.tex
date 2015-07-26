@@ -234,8 +234,9 @@ Providing names from the \wl{Core Extensions} word set \\
 
 J1a SwapForth is a 16-bit version of SwapForth,
 intended as an interactive Forth system using minimal logic and RAM.
-The system currently fits on a Lattice HX20 FPGA,
-using 1100 logic elements and about 5Kbytes of RAM, leaving about 3K for application.
+The system currently fits on a Lattice HX20 FPGA.
+The J1a plus peripherals take 1100 logic elements.
+SwapForth uses 5Kbytes of RAM, leaving about 3K for the application.
 
 After installing the \index{icestorm}
 \href{http://www.clifford.at/icestorm/}{icestorm}
@@ -582,14 +583,68 @@ These core words are not implemented:
 \noindent
 J1a SwapForth also implements the following standard words:
 
-\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.0702}{\wordidx{ahead}}
-\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.1280}{\wordidx{dump}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0200}{\wordidx{.(}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0210}{\wordidx{.r}}
 \href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.0220}{\wordidx{.s}}
 \href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0245}{\wordidx{/string}}
-\href{http://forth.sourceforge.net/std/dpans/dpans.htm#}{\wordidx{parse-name}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0260}{\wordidx{0<>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0280}{\wordidx{0>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0455}{\wordidx{:noname}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0500}{\wordidx{<>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0620}{\wordidx{?do}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0700}{\wordidx{again}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.0702}{\wordidx{ahead}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0873}{\wordidx{case}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0910}{\wordidx{cmove}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0920}{\wordidx{cmove>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0945}{\wordidx{compile,}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1040}{\wordidx{d+}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1060}{\wordidx{d.}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1070}{\wordidx{d.r}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1080}{\wordidx{d0=}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1090}{\wordidx{d2*}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1160}{\wordidx{dabs}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1230}{\wordidx{dnegate}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.1280}{\wordidx{dump}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1342}{\wordidx{endcase}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1343}{\wordidx{endof}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1350}{\wordidx{erase}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1485}{\wordidx{false}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1660}{\wordidx{hex}}
+\href{http://forth.sourceforge.net/std/dpans/dpans10.htm#10.6.1.1755}{\wordidx{key?}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1830}{\wordidx{m+}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1850}{\wordidx{marker}}
+\href{http://forth.sourceforge.net/std/dpans/dpans10.htm#10.6.2.1905}{\wordidx{ms}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1930}{\wordidx{nip}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1950}{\wordidx{of}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2000}{\wordidx{pad}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2008}{\wordidx{parse}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2125}{\wordidx{refill}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2148}{\wordidx{restore-input}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2182}{\wordidx{save-input}}
 \href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.2212}{\wordidx{sliteral}}
 \href{http://forth.sourceforge.net/std/dpans/dpans9.htm#9.6.1.2275}{\wordidx{throw}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2298}{\wordidx{true}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2300}{\wordidx{tuck}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2330}{\wordidx{u.r}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2350}{\wordidx{u>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2395}{\wordidx{unused}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2440}{\wordidx{within}}
 \href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.2465}{\wordidx{words}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2530}{\wordidx{[compile]}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2535}{\wordidx{\textbackslash}}
+
+\noindent
+Double numbers are supported using the standard \mach{.} suffix.
+Forth 2012's number prefixes are supported, specifically
+\mach{\$} for hex,
+\mach{\#} for decimal,
+\mach{\%} for binary, and \mach{'x'} for character code \mach{x}.
+
+The Forth 200x standard word
+\href{http://www.forth200x.org/parse-name.html}{\wordidx{parse-name}}
+is also implemented.
+
 
 \newpage
 \section{Additional Words}
