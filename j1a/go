@@ -1,5 +1,5 @@
 set -e
-# python shell.py -h /dev/ttyUSB2 -p ../common -p ../demos spi.fs ; exit
+python shell.py -h /dev/ttyUSB2 -p ../common -p ../demos spi.fs ; exit
 
 make -C icestorm
 iceprog icestorm/j1a.bin
