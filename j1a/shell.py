@@ -28,6 +28,7 @@ class TetheredJ1a(sf.TetheredFT900):
         self.tex = open("log.tex", "wt")
         self.texlog(r"\begin{framed}" + '\n')
         self.texlog(r"\begin{Verbatim}[commandchars=\\\{\}]" + '\n')
+        self.verbose = False
 
     def texlog(self, s):
         self.tex.write(s.replace('\r', '\n'))
