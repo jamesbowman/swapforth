@@ -41,6 +41,7 @@ class TetheredJ1a(sf.TetheredFT900):
             ser.write(c)
             ser.flush()
             ser.flushInput()
+            # print repr(ser.read(ser.inWaiting()))
 
         sys.stdout.flush()
         while 1:

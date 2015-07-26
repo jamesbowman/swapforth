@@ -1096,11 +1096,9 @@ header evaluate
 ;
 
 : main
+    cr
     decimal
     d# 0 tethered !
-    \ d# 1 io@ drop
-
-    \ begin cr [char] A emit [char] . emit key .  again
     key> drop
 
 header quit

@@ -1,5 +1,6 @@
 set -e
+# python shell.py -h /dev/ttyUSB2 -p ../common -p ../demos spi.fs ; exit
 
 make -C icestorm
 iceprog icestorm/j1a.bin
-python shell.py -h /dev/ttyUSB2 -p ../common -p ../demos swapforth.fs
+python shell.py -h /dev/ttyUSB2 -p ../common -p ../demos # swapforth.fs
