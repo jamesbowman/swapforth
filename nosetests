@@ -1,0 +1,7 @@
+cd python
+echo | python nuc.py -c 2 runtests.fs
+echo | python nuc.py -c 4 runtests.fs
+echo | python nuc.py -c 8 runtests.fs
+echo | python nuc.py -c 2 -b runtests.fs
+echo | python nuc.py -c 4 -b runtests.fs
+echo | python nuc.py -c 8 -b runtests.fs

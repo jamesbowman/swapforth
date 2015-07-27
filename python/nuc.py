@@ -815,6 +815,7 @@ class Tethered(swapforth.TetheredFT900):
         self.searchpath = ['.']
         self.log = open("log", "w")
         self.ser = None
+        self.verbose = False
 
         self.ready = threading.Event()
         self.cmdq = Queue.Queue()
@@ -864,6 +865,7 @@ if __name__ == '__main__':
 
     try:
         t.include('swapforth.fs')
+        [t.include(a) for a in args]
     except swapforth.Bye:
         pass
     if 0:
