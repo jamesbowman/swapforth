@@ -234,9 +234,10 @@ Providing names from the \wl{Programming-Tools Extensions} word set
 
 J1a SwapForth is a 16-bit version of SwapForth,
 intended as an interactive Forth system using very little logic and RAM.
-The system currently fits on a Lattice iCE40HX-1k FPGA.
-The J1a plus peripherals take 1100 logic elements.
-SwapForth uses 5Kbytes of RAM, leaving about 3K for the application.
+The system currently fits on a Lattice iCE40HX-1k FPGA. \index{FPGA}
+The J1a and peripherals uses 1100 logic elements.
+SwapForth uses 5 Kbytes of RAM,
+leaving about 3 Kbytes for the application. \index{RAM}
 
 After installing the \index{icestorm} \index{icestorm} \index{git} \index{iceprog}
 \href{http://www.clifford.at/icestorm/}{icestorm}
@@ -278,7 +279,7 @@ There is a fairly complete
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm}{core ANS-compatible Forth system}
 running on the board, including a compiler.
 
-\section{Some demos}
+\section{Some demos} \index{demos}
 
 You can control the five on-board LEDs \index{LEDs}
 
@@ -695,7 +696,7 @@ In addition, \word{accept} does not echo characters as they are typed.
 
 \section{RAM Types}
 
-The J1a implementation uses 8Kbytes of RAM in a split configuration.
+The J1a implementation uses 8Kbytes of RAM in a split configuration. \index{RAM}
 
 The lower 4K is for code.
 This RAM is writable, and executable, but not (directly) readable.
