@@ -329,10 +329,18 @@ class TetheredFT900:
             print 'duplicates:', pp(set([w for w in words if words.count(w) > 1]))
             print 'have CORE words: ', pp(set(dpansf.words['CORE']) & set(words))
             print 'missing CORE words: ', pp(set(dpansf.words['CORE']) - set(words))
-            allwords = set()
+            print
+            print pp(words)
+            allwords = {}
             for ws in dpansf.words.values():
-                allwords |= set(ws)
-            print 'unknown: ', pp(set(words) - allwords)
+                allwords.update(ws)
+            print 'unknown: ', pp(set(words) - set(allwords))
+            print 'extra:', pp(set(allwords) & (set(words) - set(dpansf.words['CORE'])))
+            extra = (set(allwords) & (set(words) - set(dpansf.words['CORE'])))
+            for w in sorted(extra):
+                ref = allwords[w]
+                part = ref[:ref.index('.')]
+                print '\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower())
         elif cmd.startswith('#time '):
             t0 = time.time()
             r = self.command_response(cmd[6:])
