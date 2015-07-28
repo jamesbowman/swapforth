@@ -180,11 +180,11 @@ marker |
 : (.s)
     depth if
         >r recurse r>
-        dup .
+        dup .x
     then
 ;
 
 : .s
-    [char] < emit depth 0 .r [char] > emit space
+    [char] < emit depth .x [char] > emit space
     (.s)
 ;
