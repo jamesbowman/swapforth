@@ -19,7 +19,7 @@ variable lst        \ .lst output file handle
 
 131072 allocate throw constant tflash       \ bytes, target flash
 131072 allocate throw constant _tbranches   \ branch targets, cells
-tflash      31072 erase
+tflash      131072 erase
 _tbranches  131072 erase
 : tbranches cells _tbranches + ;
 

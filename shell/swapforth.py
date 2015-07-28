@@ -7,12 +7,6 @@ import array
 import struct
 import os
 
-try:
-    import serial
-except:
-    print "This tool needs PySerial, but it was not found"
-    sys.exit(1)
-
 import dpansf
 
 class FT900Bootloader:
@@ -162,6 +156,11 @@ class TetheredFT900:
     interpreting = True
     verbose = True
     def __init__(self, port):
+        try:
+            import serial
+        except:
+            print "This tool needs PySerial, but it was not found"
+            sys.exit(1)
         ser = serial.Serial(port, 115200, timeout=None, rtscts=0)
         self.ser = ser
         self.searchpath = ['.']
