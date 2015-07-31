@@ -202,6 +202,7 @@ T{ MAX-2INT -1. D< -> FALSE }T
 T{ MAX-2INT MIN-2INT D< -> FALSE }T
 T{ MAX-2INT 2DUP -1. D+ D< -> FALSE }T
 T{ MIN-2INT 2DUP  1. D+ D< -> TRUE  }T
+T{ MAX-INTD S>D 2DUP 1. D+ D< -> TRUE }T
 
 T{ -1. -1. D= -> TRUE  }T
 T{ -1.  0. D= -> FALSE }T
