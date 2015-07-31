@@ -91,6 +91,10 @@ include float2.fs
 
 include facilityext.fs
 
+: key?  ( -- f )
+    $10325 c@ 1 and 0<>
+;
+
 include ft900/dis.fs
 
 \ #############################################################
@@ -111,12 +115,6 @@ only forth definitions
 
 : POSSIBLY  ( "name" -- )  BL WORD FIND  ?dup AND IF  EXECUTE  THEN ;
 : ANEW  ( "name" -- )( Run: -- )  >IN @ POSSIBLY  >IN ! MARKER ;
-
-: on    true swap ! ;
-: off   false swap ! ;
-
-t{ pad off pad @ -> false }t
-t{ pad on pad @ -> true }t
 
 : bit
     1 swap lshift
@@ -141,8 +139,6 @@ t{ pad on pad @ -> true }t
 ;
 
 t{ 3 bit -> 8 }t
-t{ pad off  3 pad setbit pad @ -> 8 }t
-t{ pad on   3 pad clearbit pad @ -> $fffffff7 }t
 
 : io
     $10000 + constant
@@ -181,10 +177,6 @@ $08     io  regclkcfg
 include ft900/int.fs
 include ft900/flash.fs
 
-\ include net.fs
-\ include spi.fs
-\ include gd2.fs
-
 : .version
     cr ." swapForth v0.1"
 ;
@@ -199,10 +191,6 @@ only forth definitions
 ( FT900 operations                           JCB 16:14 07/21/14)
 
 decimal
-
-localwords  \ {
-set-current \ }{
-previous    \ }
 
 : pads  ( u pad -- ) \ set pad's function to u
     $1001c + c!
@@ -232,18 +220,12 @@ previous    \ }
     base !
 ;
 
-: key?  ( -- f )
-    $10325 c@ 1 and 0<>
-;
-
-
 depth 0<> throw
 
 include escaped.fs
 include forth2012.fs
 include structures.fs
 
-include fph.fs
 include comus.fs
 include mini-oof.fs
 

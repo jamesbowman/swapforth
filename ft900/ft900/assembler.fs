@@ -262,7 +262,8 @@ also assembler definitions
 
 : then     ( a -- )
     pmhere 2 rshift
-    swap pm+!
+    swap
+    tuck pm@ + swap pm!
 ;
 
 : else

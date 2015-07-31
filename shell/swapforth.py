@@ -155,6 +155,7 @@ def collect_screenshot(dest, ser):
 class TetheredFT900:
     interpreting = True
     verbose = True
+    cellsize = 4
     def __init__(self, port):
         try:
             import serial
@@ -336,10 +337,11 @@ class TetheredFT900:
             print 'unknown: ', pp(set(words) - set(allwords))
             print 'extra:', pp(set(allwords) & (set(words) - set(dpansf.words['CORE'])))
             extra = (set(allwords) & (set(words) - set(dpansf.words['CORE'])))
-            for w in sorted(extra):
-                ref = allwords[w]
-                part = ref[:ref.index('.')]
-                print '\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower())
+            if 0:
+                for w in sorted(extra):
+                    ref = allwords[w]
+                    part = ref[:ref.index('.')]
+                    print '\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower())
         elif cmd.startswith('#time '):
             t0 = time.time()
             r = self.command_response(cmd[6:])
@@ -466,7 +468,10 @@ if __name__ == '__main__':
                 print r.shellcmd(args[1])
                 args = args[2:]
             else:
-                r.include(a)
+                try:
+                    r.include(a)
+                except Bye:
+                    pass
                 args = args[1:]
     if not r:
         r = TetheredFT900(port)

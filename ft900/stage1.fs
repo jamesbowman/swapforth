@@ -1,124 +1,38 @@
+: bounds \ ( a u -- a+u a )
+    over + swap
+;
+
 : bl        32 ;
-: char      parse-name drop c@ ;
 
-: [char]
-    char postpone literal
-; immediate
-
-: (
-    [char] ) parse 2drop
-; immediate
-
-internal-wordlist set-current
-
-: ensign ( u1 n1 -- n2 ) \ n2 is u1 with the sign of n1
-    0< if negate then
+: type
+    bounds ?do
+        i c@ emit
+    loop
 ;
 
-forth-wordlist set-current
-
-\ Divide d1 by n1, giving the symmetric quotient n3 and the remainder
-\ n2.
-: sm/rem ( d1 n1 -- n2 n3 )
-    2dup xor >r     \ combined sign, for quotient
-    over >r         \ sign of dividend, for remainder
-    abs >r dabs r>
-    um/mod          ( remainder quotient )
-    swap r> ensign  \ apply to remainder
-    swap r> ensign  \ apply to quotient
-;
-
-\ Divide d1 by n1, giving the floored quotient n3 and the remainder n2.
-\ Adapted from hForth
-: fm/mod ( d1 n1 -- n2 n3 )
-    dup >r 2dup xor >r
-    >r dabs r@ abs
-    um/mod
-    r> 0< if
-        swap negate swap
-    then
-    r> 0< if
-        negate         \ negative quotient
-        over if
-            r@ rot - swap 1-
-        then
-    then
-    r> drop
-;
-
-: */mod
-    >r m* r> sm/rem
-;
-
-: */
-    */mod nip
-;
-
-: else
-    postpone ahead
-    swap
-    postpone then
-; immediate
-
-: while
-      postpone if
-      swap
-; immediate
-
-: repeat
-     postpone again
-     postpone then
-; immediate
-
-: variable
-    create 4 allot
-;
-
-\ : constant  create , does> @ ;
-: constant  : postpone literal postpone ; ;
+include core0.fs
+include core.fs
 
 \ #######   CORE EXT   ########################################
 
 : source-id (source-id) @ ;
 
 : tuck      swap over ;
-: erase     0 fill ;
-
-: pm+!
-    tuck pm@ + swap pm!
-;
 
 : -rot
     rot rot
 ;
 
-: bounds \ ( a u -- a+u a )
-    over + swap
-;
-
 internal-wordlist set-current
-: forstring
-    postpone bounds
-    postpone ?do
-; immediate
 
 : s,
     dup c,
-    forstring
+    bounds ?do
         i c@ c,
     loop
 ;
+
 forth-wordlist set-current
-
-: '
-    parse-name
-    sfind
-    0= -13 and throw
-;
-
-: [']
-    ' postpone literal
-; immediate
 
 : [compile]
     ' compile,
@@ -147,26 +61,6 @@ forth-wordlist set-current
     then
 ; immediate
 
-: find
-    dup
-    count sfind
-    dup 0= if
-        nip nip
-    else
-        rot drop
-    then
-;
-
-: type
-    forstring
-        i c@ emit
-    loop
-;
-
-: .(
-    [char] ) parse type
-; immediate
-
 : c"
     here postpone literal
     [char] " parse
@@ -177,18 +71,6 @@ forth-wordlist set-current
     here postpone literal
     postpone count
     s,
-; immediate
-
-create tmpbuf 80 allot  \ The "temporary buffer" in the ANS standard
-
-: s"
-    [char] " parse
-    state @ if
-        postpone sliteral
-    else
-        tuck tmpbuf swap cmove
-        tmpbuf swap
-    then
 ; immediate
 
 : pmcount
@@ -228,11 +110,7 @@ create tmpbuf 80 allot  \ The "temporary buffer" in the ANS standard
 ; immediate
 
 
-
-\ From the ANS specification
-: within  ( test low high -- flag )
-    over - >r - r> u<
-;
+include core-ext.fs
 
 \     here   80    pad
 \ -----|------------|-----
@@ -240,148 +118,6 @@ create tmpbuf 80 allot  \ The "temporary buffer" in the ANS standard
 
 : pad
     here 80 + aligned
-;
-
-: word
-    begin
-        source drop >in @ + c@ over =
-        source nip >in @ <> and
-    while
-        1 >in +!
-    repeat
-
-    parse
-    dup here c!
-    here 1+ swap cmove
-    here
-;
-
-( Pictured numeric output                    JCB 08:06 07/18/14)
-\ Adapted from hForth
-
-variable hld
-
-: <#
-    pad hld !
-;
-
-: hold
-    hld @ 1- dup hld ! c!
-;
-
-: sign
-    0< if
-        [char] - hold
-    then
-;
-
-: #
-    0 base @ um/mod >r base @ um/mod swap
-    9 over < [ char A char 9 1 + - ] literal and +
-    [ char 0 ] literal + hold r>
-;
-
-: #s
-    begin
-        #
-        2dup d0=
-    until
-;
-
-: #>
-    2drop hld @ pad over -
-;
-
-: move ( addr1 addr2 u -- )
-    >r 2dup < if
-        r> cmove>
-    else
-        r> cmove
-    then
-;
-: spaces
-    begin
-        dup 0>
-    while
-        space 1-
-    repeat
-    drop
-;
-
-internal-wordlist set-current
-
-: (d.)
-    dup >r dabs <# #s r> sign #>
-;
-
-forth-wordlist set-current
-
-: d.
-    (d.) type space
-;
-
-: .
-    s>d d.
-;
-    
-: u.
-    0 d.
-;
-
-: rtype ( caddr u1 u2 -- ) \ display character string specified by caddr u1
-                           \ in a field u2 characters wide.
-    over - spaces type
-;
-
-: d.r
-    >r (d.)
-    r> rtype
-;
-
-: .r
-    >r s>d r> d.r
-;
-
-: u.r
-    0 swap d.r
-;
-
-( CASE                                       JCB 09:15 07/18/14)
-\ From ANS specification A.3.2.3.2
-
-0 constant case immediate  ( init count of ofs )
-
-: of  ( #of -- orig #of+1 / x -- )
-    1+    ( count ofs )
-    >r    ( move off the stack in case the control-flow )
-          ( stack is the data stack. )
-    postpone over  postpone = ( copy and test case value)
-    postpone if    ( add orig to control flow stack )
-    postpone drop  ( discards case value if = )
-    r>             ( we can bring count back now )
-; immediate
-
-: endof ( orig1 #of -- orig2 #of )
-    >r   ( move off the stack in case the control-flow )
-         ( stack is the data stack. )
-    postpone else
-    r>   ( we can bring count back now )
-; immediate
-
-: endcase  ( orig1..orign #of -- )
-    postpone drop  ( discard case value )
-    0 ?do
-      postpone then
-    loop
-; immediate
-
-: save-input
-    >in @ 1
-;
-
-: restore-input
-    drop >in !
-    true
 ;
 
 : 2variable
@@ -444,27 +180,7 @@ forth-wordlist set-current
 
 : CONVERT   CHAR+ 65535 >NUMBER DROP ;
 
-
-\ #######   STRING   ##########################################
-
-: blank
-    dup 0> if
-        bl fill
-    else
-        2drop
-    then
-;
-
-: -trailing
-    dup 0> if
-        begin
-            2dup + 1- c@ bl =
-            over 0<> and
-        while
-            1-
-        repeat
-    then
-;
+include string.fs
 
 \ #######   SEARCH   ##########################################
 

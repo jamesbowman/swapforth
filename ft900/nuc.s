@@ -766,15 +766,6 @@ fheader "cells"
         ashl    $r0,$r0,2
         return
 
-# fheader "char"
-
-fheader "char+"
-        add     $r0,$r0,1
-        return
-        
-fheader "chars"
-        return
-
 header  "count",count
         add     $r1,$r0,1
         add     $r27,$r27,-4
@@ -875,7 +866,6 @@ header  "dup",dupe
         _dup
         return
 
-# fheader "else"
 # fheader "environment?"
 
 fheader "evaluate"
@@ -1375,19 +1365,9 @@ header  "false",false
         ldk     $r0,0
         return
 
-fheader "hex"
-        ldk     $r1,16
-        sta     _base,$r1
-        return
-
-# fheader "marker"
-
 header  "nip",nip
         add     $r27,$r27,4
         return
-
-# fheader "of"
-# fheader "pad"
 
 header  "parse",parse
         move    $r4,$r0

@@ -167,7 +167,7 @@ create dws
 ;
 
 : pmtype ( pmaddr u -- )
-    forstring
+    bounds ?do
         i pmc@ emit
     loop
 ;
