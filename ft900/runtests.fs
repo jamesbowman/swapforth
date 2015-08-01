@@ -16,7 +16,7 @@ include exceptiontest.fth
 include facilitytest.fth
 \ \ include filetest.fth
 \ \ include localstest.fth
-\ include memorytest.fth
+include memorytest.fth
 include toolstest.fth
 include searchordertest.fth
 include stringtest.fth

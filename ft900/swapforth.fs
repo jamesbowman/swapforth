@@ -226,6 +226,8 @@ include escaped.fs
 include forth2012.fs
 include structures.fs
 
+include memory.fs
+
 include comus.fs
 include mini-oof.fs
 
