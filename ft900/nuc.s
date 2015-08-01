@@ -2508,33 +2508,34 @@ isvoid:
         pop     $r1
 1:      return
 
-# consume1  ( caddr u ch -- caddr' u' ) and NZ if string starts with ch
+# consume1  ( caddr u -- caddr' u' )
+# if string starts with $r2, bump character and return NZ
 
 consume1:
-        ldi     $r1,$r27,4
-        ldi.b   $r1,$r1,0
-        cmp.b   $r0,$r1
+        ldi     $r3,$r27,0
+        ldi.b   $r1,$r3,0
+        cmp.b   $r2,$r1
         jmpc    z,1f
 0:
-        _drop
         cmp     $r0,$r0                 # Set Z
         return
 1:
-        ldi     $r1,$r27,0
-        cmp     $r1,0
+        cmp     $r0,0
         jmpc    z,0b
-        ldk     $r0,1
-        jmp     slash_string
+        sub     $r0,$r0,1
+        add     $r3,$r3,1
+        sti     $r27,0,$r3
+        return
 
 doubleAlso2:
         lit     0
         lit     0
         call    two_swap
-        lit     '-'
+        ldk     $r2,'-'
         call    consume1
         push    $cc
         call    to_number
-        lit     '.'
+        ldk     $r2,'.'
         call    consume1
         jmpc    z,1f
         call    isvoid
@@ -2562,17 +2563,17 @@ baseDoubleAlso2:
         jmp     throw
 
 doubleAlso1:
-        lit     '$'
+        ldk     $r2,'$'
         call    consume1
         ldk     $r2,16
         jmpc    nz,baseDoubleAlso2
 
-        lit     '#'
+        ldk     $r2,'#'
         call    consume1
         ldk     $r2,10
         jmpc    nz,baseDoubleAlso2
 
-        lit     '%'
+        ldk     $r2,'%'
         call    consume1
         ldk     $r2,2
         jmpc    nz,baseDoubleAlso2
