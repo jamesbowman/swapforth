@@ -28,8 +28,6 @@ module j1a(input wire clk,
       ram_prog[mem_addr[11:1]] <= dout;
   end
 
-  // always @(posedge clk) $display("code %x", code_addr);
-
   reg [15:0] ram_data[0:2047] /* verilator public_flat */;
   always @(posedge clk) begin
     mem_din <= ram_data[mem_addr[11:1]];

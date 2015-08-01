@@ -1,0 +1,3 @@
+set -e
+make
+( echo ; python expand.py ../swapforth.fs) | obj_dir/Vj1a ../build/nuc.hex

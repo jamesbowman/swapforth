@@ -68,6 +68,8 @@ int main(int argc, char **argv)
       if (top->uart0_rd) {
         int c = getchar();
         top->uart0_data = (c == '\n') ? '\r' : c;
+        if (c == EOF)
+          break;
       }
     }
     printf("Simulation ended after %d cycles\n", i);
