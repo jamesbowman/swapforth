@@ -3,7 +3,6 @@
 \ http://www.murphywong.net/hello/comus.htm
 
 : noop      ;
-: ul@       @ ;
 : off       false swap ! ;
 : on        true swap ! ;
 

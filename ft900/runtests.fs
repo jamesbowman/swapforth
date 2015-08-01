@@ -12,13 +12,13 @@ include coreplustest.fth
 include errorreport.fth
 include coreexttest.fth
 include doubletest.fth
-\ include exceptiontest.fth
+include exceptiontest.fth
 include facilitytest.fth
 \ \ include filetest.fth
 \ \ include localstest.fth
 \ include memorytest.fth
 include toolstest.fth
-\ \ include searchordertest.fth
+include searchordertest.fth
 include stringtest.fth
 REPORT-ERRORS
 

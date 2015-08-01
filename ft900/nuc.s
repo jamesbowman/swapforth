@@ -328,12 +328,7 @@ header  "!",store
         _2drop
         return
 
-# fheader "#"
-# fheader "#>"
-# fheader "#s"
 
-# fheader "'"
-# fheader "("
 
 fheader "*"
         _r1_n
@@ -341,8 +336,6 @@ fheader "*"
         return
 
 
-# fheader "*/"
-# fheader "*/mod"
 
 header  "+",plus
         _r1_n
@@ -404,7 +397,6 @@ header  "-",minus
         sub     $r0,$r1,$r0
         return
 
-# fheader ".\""
 
 header "/",slash
         _r1_n
@@ -517,7 +509,6 @@ fheader "<"
         bexts   $r0,$r30,(1<<5)|5
         return
 
-# fheader "<#"
 
 header  "=",equal
         _r1_n
@@ -613,8 +604,6 @@ header  "ul@",u_l_fetch
         ldi     $r0,$r0,0
         return
 
-# fheader "abort"
-# fheader "abort\""
 
 fheader "abs"
         cmp     $r0,0
@@ -717,7 +706,6 @@ throw_r1:
         call    push_r1
         jmp     throw
 
-# fheader "bl"
 
 header  "c!",c_store
         ldi     $r1,$r27,0
@@ -866,7 +854,6 @@ header  "dup",dupe
         _dup
         return
 
-# fheader "environment?"
 
 fheader "evaluate"
         push_source_spec
@@ -905,9 +892,7 @@ header  "fill",fill
         add     $r27,$r27,12
         return
 
-# fheader "find"
 
-# fheader "fm/mod"
 header  "here",here
         _dup
         lda     $r0,dp
@@ -933,7 +918,6 @@ header  "pmdp",__pmdp
         ldk     $r0,pmdp
         return
 
-# fheader "hold"
 
 fheader "i"
         _dup
@@ -983,7 +967,6 @@ fheader "j"
         add     $r1,$r1,$r2
         jmp     push_r1
 
-# fheader "key"
 
 header  "leave",leave,1
         call    sync
@@ -1104,7 +1087,6 @@ fheader "umod"
         umod    $r0,$r1,$r0
         return
 
-# fheader "move"
 
 header  "negate",negate
         sub     $r0,$r25,$r0
@@ -1148,7 +1130,6 @@ header  "recurse",recurse,1
         lda     $r0,thisxt
         jmp     compile_comma
 
-# fheader "repeat"
 
 header  "rot",rot
         exi     $r0,$r27,0
@@ -1160,22 +1141,17 @@ fheader "rshift"
         lshr    $r0,$r1,$r0
         return
 
-# fheader "s\""
 
 fheader "s>d"
         _dup
         ashr    $r0,$r0,31
         return
 
-# fheader "sign"
-# fheader "sm/rem"
-# fheader "source"
 
 header  "space",space
         lit     ' '
         jmp     emit
 
-# fheader "spaces"
 
 fheader "state"
         lit     _state
@@ -1200,7 +1176,6 @@ header  "then",then,1
 
 # header  "type",type
         
-# fheader "u."
 
 fheader "u<"
         _r1_n
@@ -1256,8 +1231,6 @@ header  "until",until,1
         call    check_compiling
         jmp     paren_if_paren
 
-# fheader "variable"
-# fheader "while"
 
 fheader "xor"
         _r1_n
@@ -1268,7 +1241,6 @@ header  "[",left_bracket,1
         sta     _state,$r25
         return
 
-# fheader "[char]"
 
 header "]",right_bracket
         ldk     $r1,1
@@ -1277,9 +1249,6 @@ header "]",right_bracket
 
 #######   ANS CORE EXT   #############################################
 
-# fheader "#tib"
-# fheader ".("
-# fheader ".r"
 
 fheader "0<>"
         cmp     $r0,0
@@ -1344,8 +1313,6 @@ header  "again",again,1
         call    check_compiling
         jmp     jmp_comma
 
-# fheader "c\""
-# fheader "case"
 
 header  "compile,",compile_comma
         jmp     1f
@@ -1354,11 +1321,6 @@ header  "compile,",compile_comma
         or      $r0,$r0,$r1
         jmp     pm_comma
 
-# fheader "convert"
-# fheader "endcase"
-# fheader "endof"
-# fheader "erase"
-# fheader "expect"
 
 header  "false",false
         _dup
@@ -1417,7 +1379,6 @@ header  "refill",refill
         sta     _in,$r25
         jmp     true
 
-# fheader "restore-input"
 
 header  "roll",roll
         ashl    $r1,$r0,2
@@ -1431,23 +1392,17 @@ header  "roll",roll
         jmpc    nz,1b
         return
 
-# fheader "save-input"
 
 header "(source-id)",paren_source_id_paren
         lit     _source_id
         return
 
-# fheader "span"
-# fheader "tib"
-# fheader "to"
 
 header  "true",true
         _dup
         ldk     $r0,-1
         return
 
-# fheader "tuck"
-# fheader "u.r"
 
 fheader "u>"
         _r1_n
@@ -1461,11 +1416,6 @@ fheader "unused"
         lda     $r1,dp
         sub     $r0,$r0,$r1
         return
-
-# fheader "value"
-# fheader "within"
-# fheader "[compile]"
-# fheader "\\"
 
 #######   DOUBLE AND DOUBLE EXT   ####################################
 
@@ -1575,9 +1525,6 @@ header  "dabs",d_abs
         cmp     $r0,0
         jmpc    lt,d_negate
         return
-
-# header  "dmax",d_max
-# header  "dmin",d_min
 
 header  "dnegate",d_negate
         ldi     $r1,$r27,0
@@ -1786,48 +1733,48 @@ header  "icompare",icompare
         or      $r0,$r0,1
         return
 
-header  "search",search
-       /* ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag ) */
-                               /* $r0: u2 */
-        ldi     $r1,$r27,0      /* $r1: addr2 */
-        ldi     $r2,$r27,4      /* $r2: u1 */
-        ldi     $r3,$r27,8      /* $r3: addr1 */
-        add     $r27,$r27,4
-
-        cmp     $r0,0
-        jmpc    z,search_find
-
-search_0:
-        move    $r4,$r1        /* r4,r5 is bounds */
-        add     $r5,$r1,$r0
-        move    $r6,$r3        /* r6 */
-
-                               /* compare from (r4..r5) against r6.. */
-search_1:
-        ldi.b   $r7,$r4,0
-        ldi.b   $r8,$r6,0
-        cmp.b   $r7,$r8
-        jmpc    nz,search_bump
-        add     $r4,$r4,1
-        add     $r6,$r6,1
-        cmp     $r4,$r5
-        jmpc    nz,search_1
-
-search_find:
-        sti     $r27,0,$r2
-        sti     $r27,4,$r3
-        ldk     $r0,-1
-        return
-
-
-search_bump:
-        sub     $r2,$r2,1
-        add     $r3,$r3,1
-        cmp     $r2,0
-        jmpc    nz,search_0
-                               /* not found */
-        ldk     $r0,0
-        return
+# header  "search",search
+#        /* ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag ) */
+#                                /* $r0: u2 */
+#         ldi     $r1,$r27,0      /* $r1: addr2 */
+#         ldi     $r2,$r27,4      /* $r2: u1 */
+#         ldi     $r3,$r27,8      /* $r3: addr1 */
+#         add     $r27,$r27,4
+# 
+#         cmp     $r0,0
+#         jmpc    z,search_find
+# 
+# search_0:
+#         move    $r4,$r1        /* r4,r5 is bounds */
+#         add     $r5,$r1,$r0
+#         move    $r6,$r3        /* r6 */
+# 
+#                                /* compare from (r4..r5) against r6.. */
+# search_1:
+#         ldi.b   $r7,$r4,0
+#         ldi.b   $r8,$r6,0
+#         cmp.b   $r7,$r8
+#         jmpc    nz,search_bump
+#         add     $r4,$r4,1
+#         add     $r6,$r6,1
+#         cmp     $r4,$r5
+#         jmpc    nz,search_1
+# 
+# search_find:
+#         sti     $r27,0,$r2
+#         sti     $r27,4,$r3
+#         ldk     $r0,-1
+#         return
+# 
+# 
+# search_bump:
+#         sub     $r2,$r2,1
+#         add     $r3,$r3,1
+#         cmp     $r2,0
+#         jmpc    nz,search_0
+#                                /* not found */
+#         ldk     $r0,0
+#         return
 
 #######   ASSEMBLER   ################################################
 

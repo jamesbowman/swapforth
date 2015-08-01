@@ -34,10 +34,6 @@ internal-wordlist set-current
 
 forth-wordlist set-current
 
-: [compile]
-    ' compile,
-; immediate
-
 : is
     '
     state @ if
@@ -120,65 +116,7 @@ include core-ext.fs
     here 80 + aligned
 ;
 
-: 2variable
-    create 8 allot
-;
-
-: 2constant
-    align create , ,
-    does> 2@
-;
-
-: dmax
-    2over 2over d< if
-        2swap
-    then
-    2drop
-;
-
-: dmin
-    2over 2over d< invert if
-        2swap
-    then
-    2drop
-;
-
-: m+
-    s>d d+
-;
-
-\ From Wil Baden's "FPH Popular Extensions"
-\ http://www.wilbaden.com/neil_bawd/fphpop.txt
-
-: TNEGATE                           ( t . . -- -t . . )
-    >R  2dup OR dup IF DROP  DNEGATE 1  THEN
-    R> +  NEGATE ;
-
-: T*                                ( d . n -- t . . )
-                                    ( d0 d1 n)
-    2dup XOR >R                     ( R: sign)
-    >R DABS R> ABS
-    2>R                             ( d0)( R: sign d1 n)
-    R@ UM* 0                        ( t0 d1 0)
-    2R> UM*                         ( t0 d1 0 d1*n .)( R: sign)
-    D+                              ( t0 t1 t2)
-    R> 0< IF TNEGATE THEN ;
-
-: T/                                ( t . . u -- d . )
-                                    ( t0 t1 t2 u)
-    over >R >R                      ( t0 t1 t2)( R: t2 u)
-    dup 0< IF TNEGATE THEN
-    R@ UM/MOD                       ( t0 rem d1)
-    ROT ROT                         ( d1 t0 rem)
-    R> UM/MOD                       ( d1 rem' d0)( R: t2)
-    NIP SWAP                        ( d0 d1)
-    R> 0< IF DNEGATE THEN ;
-
-: M*/  ( d . n u -- d . )  >R T*  R> T/ ;
-
-\ From ANS specification A.6.2.0970
-
-: CONVERT   CHAR+ 65535 >NUMBER DROP ;
+include double.fs
 
 include string.fs
 
@@ -192,23 +130,7 @@ include string.fs
     _wl !
 ;
 
-\ #######   FLOATING   ########################################
-
-\ : u>f   ( u -- f )
-\     dup if
-\         dup 1 rshift recurse    ( u f[u/2] )
-\         dup f+                  ( u 2*f[u/2] )
-\         swap 1 and if
-\             $3f800000 f+
-\         then
-\     then
-\ ;
-
 \ #######   EXCEPTION   #######################################
-
-: abort
-    true throw
-;
 
 internal-wordlist set-current
 : (abort")  ( x1 caddr -- )
@@ -314,10 +236,6 @@ forth-wordlist set-current
     cr
 ; is report
 
-
-\ #############################################################
-\   End of Forth words. Application words follow.
-\ #############################################################
 depth throw
 
 include tester.fs

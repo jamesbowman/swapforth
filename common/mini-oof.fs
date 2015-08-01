@@ -10,6 +10,6 @@
 : >vt ( class "name" -- addr )  ' >body @ + ;
 : bind ( class "name" -- xt )    >vt @ ;
 : defines ( xt class "name" -- ) >vt ! ;
-: new ( class -- o )  align here over @ allot tuck ! ;
+\ : new ( class -- o )  align here over @ allot tuck ! ;
 : :: ( class "name" -- ) bind compile, ;
 Create object  1 cells , 2 cells ,

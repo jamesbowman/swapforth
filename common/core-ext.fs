@@ -77,3 +77,6 @@ create tmpbuf 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
     drop >in !
     true
 ;
+
+\ From ANS specification A.6.2.0970
+: convert   char+ 65535 >number drop ;
