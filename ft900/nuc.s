@@ -423,11 +423,11 @@ fheader "1+"
         add     $r0,$r0,1
         return
 
-fheader "1-"
+header  "1-",one_minus
         sub     $r0,$r0,1
         return
 
-fheader "2!"
+header  "2!",two_store
         ldi     $r1,$r27,0
         sti     $r0,0,$r1
         ldi     $r1,$r27,4

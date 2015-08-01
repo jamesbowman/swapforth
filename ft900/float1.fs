@@ -166,9 +166,7 @@ FLT_1 FLT_10 f/     fconstant FLT_.1
     >inwas @ >in !
     parse-name
     finput if
-        state @ if
-            postpone fliteral
-        then
+        ['] fliteral
     else
         -13 throw
     then
