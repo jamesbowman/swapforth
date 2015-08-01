@@ -444,7 +444,7 @@ fheader "2/"
         ashr    $r0,$r0,1
         return
 
-fheader "2@"
+header  "2@",two_fetch
         ldi     $r1,$r0,4
         ldi     $r0,$r0,0
         sub     $r27,$r27,4
@@ -455,7 +455,7 @@ header "2drop",two_drop
         _2drop
         return
 
-fheader "2dup"
+header  "2dup",two_dupe
         ldi     $r1,$r27,0
         sub     $r27,$r27,8
         sti     $r27,4,$r0
@@ -585,7 +585,7 @@ to_number_2:
         sti     $r27,8,$r3
         return
 
-fheader ">r"
+header  ">r",to_r
         pop     $r1
         push    $r0
         _drop
@@ -1114,7 +1114,7 @@ header  "postpone",postpone,1
 _postpone_immed:
         jmp     compile_comma
 
-fheader "r>"
+header  "r>",r_from
         pop     $r1
         _dup
         pop     $r0
@@ -1243,14 +1243,14 @@ header  "[",left_bracket,1
 
 
 header "]",right_bracket
-        ldk     $r1,1
+        ldk     $r1,3
         sta     _state,$r1
         return
 
 #######   ANS CORE EXT   #############################################
 
 
-fheader "0<>"
+header  "0<>",zero_notequal
         cmp     $r0,0
         bexts   $r0,$r30,(1<<5)|0
         xor     $r0,$r0,-1
@@ -2494,34 +2494,121 @@ quit_ok:
         call    cr
         jmp     quit_0
 
-/*
-        : interpret
-            begin
-                parse-name dup
-            while
-                sfind
-                ?dup if
-                    0< state @ 0= or if
-                        execute
-                    else
-                        compile_comma
-                    then
-                else
-                    over c@ [char] - = if
-                        1 /string
-                    then
-                    0 0 2swap >number if
-                        abort
-                    else
-                        drop
-                        drop
-                        literal
-                    then
-                then
-            repeat
-        #
- */
+header  "hook-number",hook_number
+        lit     -13                    /* undefined word ( ANS spec. section 9.3.5 ) */
+        call    throw
 
+isvoid:
+        call    nip
+        call    do0cmp
+        jmpc    z,1f
+        call    two_drop
+        call    hook_number
+        pop     $r1
+        pop     $r1
+1:      return
+
+# consume1  ( caddr u ch -- caddr' u' ) and NZ if string starts with ch
+
+consume1:
+        ldi     $r1,$r27,4
+        ldi.b   $r1,$r1,0
+        cmp.b   $r0,$r1
+        jmpc    z,1f
+0:
+        _drop
+        cmp     $r0,$r0                 # Set Z
+        return
+1:
+        ldi     $r1,$r27,0
+        cmp     $r1,0
+        jmpc    z,0b
+        ldk     $r0,1
+        jmp     slash_string
+
+doubleAlso2:
+        lit     0
+        lit     0
+        call    two_swap
+        lit     '-'
+        call    consume1
+        push    $cc
+        call    to_number
+        lit     '.'
+        call    consume1
+        jmpc    z,1f
+        call    isvoid
+        pop     $cc
+        callc   nz,d_negate
+        lit     two_literal
+        return
+1:
+        call    isvoid
+        _drop
+        pop     $cc
+        callc   nz,negate
+        lit     literal
+        return
+
+# Set BASE to $r2, call doubleAlso2, restore BASE
+baseDoubleAlso2:
+        lda     $r1,_base
+        push    $r1
+        sta     _base,$r2
+        lit     doubleAlso2
+        call    catch
+        pop     $r1
+        sta     _base,$r1
+        jmp     throw
+
+doubleAlso1:
+        lit     '$'
+        call    consume1
+        ldk     $r2,16
+        jmpc    nz,baseDoubleAlso2
+
+        lit     '#'
+        call    consume1
+        ldk     $r2,10
+        jmpc    nz,baseDoubleAlso2
+
+        lit     '%'
+        call    consume1
+        ldk     $r2,2
+        jmpc    nz,baseDoubleAlso2
+
+        cmp     $r0,3
+        jmpc    nz,doubleAlso2
+        ldi     $r1,$r27,0
+        ldi.b   $r2,$r1,0
+        cmp     $r2,'\''
+        jmpc    nz,doubleAlso2
+        ldi.b   $r2,$r1,2
+        cmp     $r2,'\''
+        jmpc    nz,doubleAlso2
+
+        call    drop
+        ldi.b   $r0,$r0,1
+        lit     literal
+        return
+
+doubleAlso:
+        call    doubleAlso1
+        jmp     drop
+
+doubleAlso_comma:
+        call    doubleAlso1
+        jmp     execute
+
+dispatch:
+        jmp     execute                 #      -1      0       non-immediate
+        jmp     doubleAlso              #      0       0       number
+        jmp     execute                 #      1       0       immediate
+
+        jmp     compile_comma           #      -1      2       non-immediate
+        jmp     doubleAlso_comma        #      0       2       number
+        jmp     execute                 #      1       2       immediate
+        
 guardian:
         .long   0x70617773
 
@@ -2533,140 +2620,18 @@ header  "interpret",interpret
         jmpc    z,two_drop
 
         call    sfind
-        cmp     $r0,0
-        jmpc    nz,gotword
-
-        call    drop                   /* ( caddr u ) */
-
-       /* try to interpret as number */
-        lda     $r1,_base
-        push    $r1                    /* { */
-        ldi     $r1,$r27,0
-1:      ldi.b   $r1,$r1,0
-        cmp     $r1,'$'
-        jmpc    nz,2f
-        ldk     $r2,16
-        sta     _base,$r2
-        lit     1
-        call    slash_string
-        jmp     1b
-
-2:
-        cmp     $r1,'#'
-        jmpc    nz,3f
-        ldk     $r2,10
-        sta     _base,$r2
-        lit     1
-        call    slash_string
-        jmp     1b
-
-3:
-        cmp     $r1,'%'
-        jmpc    nz,4f
-        ldk     $r2,2
-        sta     _base,$r2
-        lit     1
-        call    slash_string
-        jmp     1b
-
-4:      cmp     $r1,'\''
-        jmpc    nz,5f
-        ldi     $r2,$r27,0
-        ldi.b   $r2,$r2,2
-        cmp     $r2,'\''
-        jmpc    nz,5f
-        cmp     $r0,3
-        jmpc    nz,5f
-
-        _drop
-        ldi.b   $r0,$r0,1
-        call    false
-        jmp     havenum
-
-5:      cmp     $r1,'-'
-        push    $cc                    /* { */
-        jmpc    nz,not_minus
-        lit     1
-        call    slash_string
-not_minus:
-
-        lit     0
-        lit     0
-        call    two_swap
-        call    to_number
-
-       /* so if one char left, and it is '.', we have a double */
-        cmp     $r0,1
-        jmpc    nz,not_double
-        ldi     $r1,$r27,0
-        ldi.b   $r1,$r1,0
-        cmp     $r1,'.'
-        jmpc    nz,not_double
-        call    two_drop
-
-        pop     $cc                    /*  */
-        callc   z,d_negate
-havenum:
-        pop     $r1                    /*  */
-        sta     _base,$r1
-
-        lda     $r2,_state
-        cmp     $r2,0
-        jmpc    z,interpret
-        call    two_literal
-        jmp     interpret
-
-not_double:
-        cmp     $r0,0
-        jmpc    nz,badnumber
-        call    two_drop
-        call    drop
-
-        pop     $cc                    /* } */
-        callc   z,negate
-        pop     $r1                    /* } */
-        sta     _base,$r1
-
-        lda     $r2,_state
-        cmp     $r2,0
-        jmpc    z,interpret
-        call    literal
-        jmp     interpret
-
-badnumber:
-        pop     $cc                    /* } */
-        pop     $r1                    /* } */
-        sta     _base,$r1
-
-        call    two_drop
-        call    two_drop
-        call    hook_number
-        jmp     interpret
-
-gotword:
-        lda     $r2,_state
-        cmp     $r2,0
-        jmpc    z,isimmediate
-        cmp     $r0,1
-        jmpc    z,isimmediate
-compileit:
-        call    drop
-        call    compile_comma
-        jmp     interpret
-isimmediate:
-        call    drop
-        move    $r1,$r0
-        call    drop
-
-        lpm     $r2,guardian
-        sta     0,$r2
-
-        calli   $r1
+        lda     $r1,_state
+        add     $r0,$r0,$r1
+        ashl    $r0,$r0,2
+        ldk     $r1,(dispatch+4)
+        add     $r0,$r0,$r1
+        call    execute
 
         ldk     $r1,DSTACK_TOP
         cmp     $r27,$r1
         ldk     $r1,-4                 /* stack underflow */
         jmpc    a,throw_r1
+        jmp     interpret
 
         lda     $r1,0
         lpm     $r2,guardian
@@ -2675,10 +2640,6 @@ isimmediate:
         jmpc    nz,throw_r1
 
         jmp     interpret
-
-header  "hook-number",hook_number
-        lit     -13                    /* undefined word ( ANS spec. section 9.3.5 ) */
-        call    throw
 
 /*
  *      PARSE-NAME  ( <spaces>name -- c-addr u )

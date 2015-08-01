@@ -1,7 +1,7 @@
 set -e
-ft32-elf-as -o nuc.o nuc.s
+ft32-elf-as -norelax -a=lst -o nuc.o nuc.s
 ft32-elf-ld --oformat binary -o nuc.bin nuc.o
 chmod a-x nuc.bin
 
-PORT=/dev/orange
+PORT=/dev/blue
 python ../shell/swapforth.py -i nuc.bin -p ../common -p ../anstests swapforth.fs
