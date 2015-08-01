@@ -79,4 +79,4 @@ create tmpbuf 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
 ;
 
 \ From ANS specification A.6.2.0970
-: convert   char+ 65535 >number drop ;
+: convert   1+ 65535 >number drop ;

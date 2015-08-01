@@ -96,6 +96,7 @@ include double.fs
 
 include core.fs
 
+: /mod      >r s>d r> sm/rem ;
 : /         /mod nip ;
 : mod       /mod drop ;
 

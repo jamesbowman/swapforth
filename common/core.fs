@@ -39,7 +39,6 @@
     r> drop
 ;
 
-: /mod      >r s>d r> sm/rem ;
 : */mod     >r m* r> sm/rem ;
 : */        */mod nip ;
 

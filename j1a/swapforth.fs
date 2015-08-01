@@ -81,6 +81,7 @@
 
 include core.fs
 
+: /mod      >r s>d r> sm/rem ;
 : /         /mod nip ;
 : mod       /mod drop ;
 
@@ -188,3 +189,6 @@ marker |
     [char] < emit depth .x [char] > emit space
     (.s)
 ;
+
+: chars ;
+: char+ 1+ ;
