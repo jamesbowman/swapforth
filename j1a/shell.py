@@ -14,24 +14,10 @@ except:
     sys.exit(1)
 
 sys.path.append("../shell")
-import swapforth as sf
+import swapforth
 
-class TetheredJ1a(sf.TetheredFT900):
+class TetheredJ1a(swapforth.TetheredTarget):
     cellsize = 2
-
-    def __init__(self, port):
-        ser = serial.Serial(port, 115200, timeout=None, rtscts=0)
-        self.ser = ser
-        self.searchpath = ['.']
-        self.log = open("log", "wt")
-
-        self.tex = open("log.tex", "wt")
-        self.texlog(r"\begin{framed}" + '\n')
-        self.texlog(r"\begin{Verbatim}[commandchars=\\\{\}]" + '\n')
-        self.verbose = False
-
-    def texlog(self, s):
-        self.tex.write(s.replace('\r', '\n'))
 
     def reset(self):
         ser = self.ser

@@ -1,0 +1,11 @@
+set -e
+ft32-elf-as -norelax -a=lst -o nuc.o nuc.s
+ft32-elf-ld --oformat binary -o nuc.bin nuc.o
+PORT=/dev/blue
+
+echo |
+python shell.py -h $PORT -i nuc.bin -p ../common -p ../anstests swapforth.fs \
+  runtests.fs \
+  -e '#include ../demos/factorials.fs' \
+  -e '42 FAC .FAC' |
+grep 1,405,006,117,752,879,898,543,142,606,244,511,569,936,384,000,000,000

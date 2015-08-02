@@ -810,12 +810,13 @@ class AsyncSwapForth(SwapForth):
         self.ram[a:a + ns] = ba(s)
         self.lit(ns)
 
-class Tethered(swapforth.TetheredFT900):
+class Tethered(swapforth.TetheredTarget):
     def __init__(self, *options):
         self.searchpath = ['.']
         self.log = open("log", "w")
         self.ser = None
         self.verbose = False
+        self.interpreting = False
 
         self.ready = threading.Event()
         self.cmdq = Queue.Queue()
