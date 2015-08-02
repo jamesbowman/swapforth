@@ -288,7 +288,7 @@ PUBLICWORDS     \ }{
     '
     begin
         cr dis1
-        dup atlink over pmdp @ = or
+        dup atlink over cp @ = or
     until
     drop
 ;

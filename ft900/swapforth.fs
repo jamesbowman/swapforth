@@ -41,7 +41,7 @@
 marker --base--
 
 $8000 dp !
-$20000 pmdp !
+$20000 cp !
 
 include stage1.fs
 --base--

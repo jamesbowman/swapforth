@@ -293,7 +293,7 @@ mkheader:      /*               ( <spaces>name -- ) */
         call    lower_aname
         lda     $r4,cwl        /* $r4 -> cwl */
         ldi     $r1,$r4,4      /* $r1 -> previous word */
-        lda     $r2,pmdp       /* $r2 -> new header */
+        lda     $r2,cp         /* $r2 -> new header */
         sti     $r4,4,$r2
 
         sta     PM_ADDR,$r2    /* start writing */
@@ -308,10 +308,10 @@ mkheader:      /*               ( <spaces>name -- ) */
         ldk     $r1,PM_DATA
         streamout $r1,$r2,$r3  /* write name */
 
-        lda     $r2,pmdp
+        lda     $r2,cp
         add     $r2,$r2,4
         add     $r2,$r2,$r3
-        sta     pmdp,$r2
+        sta     cp,$r2
         sta     thisxt,$r2
         return
 
@@ -382,7 +382,7 @@ header  ",",comma
 header  "pm,",pm_comma
         call    pmhere
         add     $r1,$r0,4
-        sta     pmdp,$r1
+        sta     cp,$r1
         jmp     pm_store
 
 
@@ -693,7 +693,7 @@ fheader "base"
 header  "begin",begin,1
         call    check_compiling
         call    sync
-        lda     $r1,pmdp
+        lda     $r1,cp
         jmp     push_r1
 
 check_compiling:               /* Throw -14 if interpreting */
@@ -774,7 +774,7 @@ fheader "create"
         lda     $r0,dp
         call    literal
         call    sync
-        lda     $r1,pmdp
+        lda     $r1,cp
         sta     recent,$r1
         jmp     exit
 
@@ -913,9 +913,9 @@ header  "dp",__dp
         ldk     $r0,dp
         return
 
-header  "pmdp",__pmdp
+header  "cp",__pmdp
         _dup
-        ldk     $r0,pmdp
+        ldk     $r0,cp
         return
 
 
@@ -942,7 +942,7 @@ fheader "if",1
         call    paren_if_paren
 forward:                               /* forward ref to the just-compiled jmp */
         call    sync
-        lda     $r1,pmdp
+        lda     $r1,cp
         sub     $r1,$r1,4
         jmp     push_r1
 
@@ -971,7 +971,7 @@ fheader "j"
 header  "leave",leave,1
         call    sync
         lda     $r1,leaves
-        lda     $r2,pmdp
+        lda     $r2,cp
         sta     leaves,$r2
 
         ashr    $r1,$r1,2
@@ -1164,7 +1164,7 @@ header  "swap",swap
 header  "then",then,1
         call    check_compiling
         call    sync
-        lda     $r1,pmdp
+        lda     $r1,cp
         lshr    $r1,$r1,2
         lpmi    $r2,$r0,0
         ldk     $r3,~0xffff
@@ -1286,7 +1286,7 @@ _dummy: .long   0
 header  ":noname",colon_noname
         ldk     $r1,_dummy             /* So that ';' will unsmudge nothing */
         sta     tosmudge,$r1
-        lda     $r1,pmdp
+        lda     $r1,cp
         sta     thisxt,$r1
         call    push_r1
         jmp     right_bracket
@@ -1303,7 +1303,7 @@ header  "?do",question_do,1
         call    compile_comma
 
         call    sync
-        lda     $r1,pmdp
+        lda     $r1,cp
         sta     leaves,$r1
         call    false
         call    jz_comma
@@ -2422,7 +2422,7 @@ header  "f>d",f_to_d
         allot   guardian,4     /*  */
         allot   context_0,0
         allot   dp,4           /* RAM data pointer */
-        allot   pmdp,4         /* PM data pointer */
+        allot   cp,4         /* PM data pointer */
         allot   cwl,4          /* Compilation word list */
         allot   wordlists,4    /* All word lists */
         allot   nsearch,4      /* Number of word lists in searchlist */
@@ -2859,7 +2859,7 @@ header  "commit",commit        /* ( -- pmend ) */
         call    pm_store
         
         call    dupe
-        lda     $r0,pmdp
+        lda     $r0,cp
         sta     PM_ADDR,$r0
 
         ldk     $r0,PM_DATA
@@ -2868,14 +2868,14 @@ header  "commit",commit        /* ( -- pmend ) */
 
         streamout $r0,$r1,$r2
 
-        lda     $r0,pmdp
+        lda     $r0,cp
         add     $r0,$r0,$r2
 
         return
 
 header  "pmhere",pmhere
         call    dupe
-        lda     $r0,pmdp
+        lda     $r0,cp
         return
 
 header  "int-caller",int_caller
@@ -2908,11 +2908,11 @@ codestart:
         ldk     $r25,0                 /* constant 0 */
 
         lpm     $r1,saved_pmdp
-        sta     pmdp,$r1
+        sta     cp,$r1
         lpm     $r2,saved_dp
         sta     dp,$r2
 
-       /* copy all of RAM from pm[pmdp to pmdp+dp] */
+       /* copy all of RAM from pm[cp to cp+dp] */
         ldk     $r0,0                  /* dest */
 ramloader:
         lpmi    $r3,$r1,0
@@ -2970,9 +2970,9 @@ coldname:
         .ascii "cold"
 
 # RAM is initialized from PM as follows:
-#   pmdp is loaded from saved_pmdp
+#   cp is loaded from saved_pmdp
 #   dp is loaded from saved_dp
-#   Then RAM is copied from pm[pmdp .. pmdp+dp]
+#   Then RAM is copied from pm[cp .. cp+dp]
 
 saved_pmdp:     .long   endcode
 saved_dp:       .long   ramhere
@@ -2981,7 +2981,7 @@ saved_dp:       .long   ramhere
 endcode:
         .long   0x70617773     /* guardian */
         .long   ramhere        /* dp */
-        .long   endcode        /* pmdp */
+        .long   endcode        /* cp */
         .long   forth          /* cwl */
         .long   forth          /* word lists */
         .long   2              /* nsearch */
