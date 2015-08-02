@@ -913,7 +913,7 @@ header  "dp",__dp
         ldk     $r0,dp
         return
 
-header  "cp",__pmdp
+header  "cp",__cp
         _dup
         ldk     $r0,cp
         return
@@ -1174,9 +1174,6 @@ header  "then",then,1
         sta     PM_DATA,$r1
         jmp     drop
 
-# header  "type",type
-        
-
 fheader "u<"
         _r1_n
         cmp     $r0,$r1
@@ -1419,8 +1416,6 @@ fheader "unused"
 
 #######   DOUBLE AND DOUBLE EXT   ####################################
 
-# header  "2constant",two_constant
-
 header  "2literal",two_literal,1
         call    swap
         call    literal
@@ -1437,8 +1432,6 @@ header  "2rot",two_rote        /* ( x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2 ) */
         sti     $r27,0,$r1
         return
         
-# header  "2variable",two_variable
-
 header  "d+",d_plus
                                /* $r0: ud2.hi */
         ldi     $r1,$r27,0      /* $r1: ud2.lo */
@@ -1456,9 +1449,6 @@ header  "d+",d_plus
 header  "d-",d_minus
         call    d_negate
         jmp     d_plus
-
-# header  "d.",d_dot
-# header  "d.r",d_dot_r
 
 header  "d0<",d_zero_less
         add     $r27,$r27,4
@@ -1550,8 +1540,6 @@ known$:
         add     $r27,$r27,12
         bexts   $r0,$cc,(1<<5)|1
         return
-
-# header  "m*/",m_star_slash
 
 #######   ANS TOOLS AND TOOLS EXT   ##################################
 
@@ -1733,49 +1721,6 @@ header  "icompare",icompare
         or      $r0,$r0,1
         return
 
-# header  "search",search
-#        /* ( c-addr1 u1 c-addr2 u2 -- c-addr3 u3 flag ) */
-#                                /* $r0: u2 */
-#         ldi     $r1,$r27,0      /* $r1: addr2 */
-#         ldi     $r2,$r27,4      /* $r2: u1 */
-#         ldi     $r3,$r27,8      /* $r3: addr1 */
-#         add     $r27,$r27,4
-# 
-#         cmp     $r0,0
-#         jmpc    z,search_find
-# 
-# search_0:
-#         move    $r4,$r1        /* r4,r5 is bounds */
-#         add     $r5,$r1,$r0
-#         move    $r6,$r3        /* r6 */
-# 
-#                                /* compare from (r4..r5) against r6.. */
-# search_1:
-#         ldi.b   $r7,$r4,0
-#         ldi.b   $r8,$r6,0
-#         cmp.b   $r7,$r8
-#         jmpc    nz,search_bump
-#         add     $r4,$r4,1
-#         add     $r6,$r6,1
-#         cmp     $r4,$r5
-#         jmpc    nz,search_1
-# 
-# search_find:
-#         sti     $r27,0,$r2
-#         sti     $r27,4,$r3
-#         ldk     $r0,-1
-#         return
-# 
-# 
-# search_bump:
-#         sub     $r2,$r2,1
-#         add     $r3,$r3,1
-#         cmp     $r2,0
-#         jmpc    nz,search_0
-#                                /* not found */
-#         ldk     $r0,0
-#         return
-
 #######   ASSEMBLER   ################################################
 
 _template_jmp:          jmp     0
@@ -1922,31 +1867,6 @@ digit:
         ldk     $r1,'a'-10
 hex1a:  add     $r0,$r0,$r1
         jmp     emit
-
-# header  ".s",dot_s
-#         lit     '<'
-#         call    emit
-#         call    depth
-#         call    hex2
-#         lit     '>'
-#         call    emit
-#         call    space
-# dot_s_body:
-#         call    depth
-#         cmp     $r0,0
-#         jmpc    z,drop
-# 
-#         call    drop
-#         push    $r0
-#         call    drop
-# 
-#         call    dot_s_body
-# 
-#         call    dupe
-#         pop     $r0
-# 
-#         call    dupe
-#         jmp     dot
 
 #######   FT900   ####################################################
 
@@ -2419,28 +2339,28 @@ header  "f>d",f_to_d
         .set    ramhere,ramhere+\size
         .endm
 
-        allot   guardian,4     /*  */
+        allot   guardian,4      /*  */
         allot   context_0,0
-        allot   dp,4           /* RAM data pointer */
-        allot   cp,4         /* PM data pointer */
-        allot   cwl,4          /* Compilation word list */
-        allot   wordlists,4    /* All word lists */
-        allot   nsearch,4      /* Number of word lists in searchlist */
-        allot   searchlist,4*16/* search list */
+        allot   dp,4            /* RAM data pointer */
+        allot   cp,4            /* Code pointer */
+        allot   cwl,4           /* Compilation word list */
+        allot   wordlists,4     /* All word lists */
+        allot   nsearch,4       /* Number of word lists in searchlist */
+        allot   searchlist,4*16 /* search list */
         allot   context_1,0
-        allot   forth,8        /* Forth word list */
-        allot   internal,8     /* Internal word list */
-        allot   handler,4      /* exception handler */
-        allot   aname,32       /* name buffer, used during dictionary search */
-        allot   tib,256        /* terminal input buffer */
-        allot   sourceA,4      /* tib+1 */
-        allot   sourceC,4       #
-        allot   _in,4          /* >IN */
-        allot   _inwas,4       /* >IN at start of previous word */
-        allot   recent,4       /* most recent CREATE */
-        allot   thisxt,4       /* most recent xt */
-        allot   tosmudge,4     /* smudge point, usually xt-4 */
-        allot   leaves,4       /* chain of LEAVE pointers */
+        allot   forth,8         /* Forth word list */
+        allot   internal,8      /* Internal word list */
+        allot   handler,4       /* exception handler */
+        allot   aname,32        /* name buffer, used during dictionary search */
+        allot   tib,256         /* terminal input buffer */
+        allot   sourceA,4       /* tib+1 */
+        allot   sourceC,4        #
+        allot   _in,4           /* >IN */
+        allot   _inwas,4        /* >IN at start of previous word */
+        allot   recent,4        /* most recent CREATE */
+        allot   thisxt,4        /* most recent xt */
+        allot   tosmudge,4      /* smudge point, usually xt-4 */
+        allot   leaves,4        /* chain of LEAVE pointers */
         allot   _source_id,4
         allot   _state,4
         allot   _base,4

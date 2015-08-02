@@ -120,16 +120,6 @@ include double.fs
 
 include string.fs
 
-\ #######   SEARCH   ##########################################
-
-: wordlist
-    align
-    here dup
-    _wl @ ,
-    0 ,
-    _wl !
-;
-
 \ #######   EXCEPTION   #######################################
 
 internal-wordlist set-current
@@ -148,6 +138,16 @@ forth-wordlist set-current
 ; immediate
 
 include tools-ext.fs
+
+\ #######   SEARCH   ##########################################
+
+: wordlist
+    align
+    here dup
+    _wl @ ,
+    0 ,
+    _wl !
+;
 
 \ #######   SEARCH EXT   ######################################
 

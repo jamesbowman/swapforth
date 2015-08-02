@@ -38,6 +38,12 @@
     2drop
 ;
 
+\ stage1.fs contains everything up to the optimizer
+\ compile it once, so we have a first-stage optimizer
+\ then recompile 'for real'.
+\ This means that everything in stage1.fs is built
+\ optimized.
+
 marker --base--
 
 $8000 dp !
@@ -47,53 +53,12 @@ include stage1.fs
 --base--
 include stage1.fs
 
-\ Start a local word definition region
-\ These words will not be globally visible.
-\ Usage:
-\
-\       localwords  \ {
-\           ... define local words ...
-\       publicwords \ }{
-\           ... define public words ...
-\       donewords   \ }
-\
-
-: LOCALWORDS
-    get-current
-    get-order wordlist swap 1+ set-order definitions
-;
-
-: PUBLICWORDS
-    set-current
-;
-
-: DONEWORDS
-    previous
-;
-
-marker testing-localwords
-    : k0 100 ;
-    t{ k0 -> 100 }t
-    localwords
-        : k0 200 ;
-        : k1 300 ;
-    publicwords
-        t{ k0 k1 -> 200 300 }t
-        : k01 k0 k1 ;
-    donewords
-    t{ k0 -> 100 }t
-    t{ k01 -> 200 300 }t
-    t{ bl word k1 find nip -> 0 }t
-testing-localwords
-
+include localwords.fs
 include float1.fs
 include float2.fs
 
 include facilityext.fs
-
-: key?  ( -- f )
-    $10325 c@ 1 and 0<>
-;
+defer key?
 
 include ft900/dis.fs
 
@@ -101,20 +66,6 @@ include ft900/dis.fs
 depth throw
 
 only forth definitions
-
-\  from Wil Baden:
-\  ANEW                            ( "name" -- )( Run: -- )
-\     Compiler directive used in the form: `ANEW _name_`. If the word
-\     _name_ already exists, it and all subsequent words are
-\     forgotten from the current dictionary, then a `MARKER` word
-\     _name_ is created. This is usually placed at the start of a
-\     file. When the code is reloaded, any prior version is
-\     automatically pruned from the dictionary.
-\     Executing _name_ will also cause it to be forgotten, since
-\     it is a `MARKER` word.
-
-: POSSIBLY  ( "name" -- )  BL WORD FIND  ?dup AND IF  EXECUTE  THEN ;
-: ANEW  ( "name" -- )( Run: -- )  >IN @ POSSIBLY  >IN ! MARKER ;
 
 : bit
     1 swap lshift
@@ -225,15 +176,15 @@ depth 0<> throw
 include escaped.fs
 include forth2012.fs
 include structures.fs
-
 include memory.fs
-
 include comus.fs
 include mini-oof.fs
+
+include ft900/uart.fs
 
 : new
     s" | marker |" evaluate
 ;
 marker |
 
-include runtests.fs
+\ include runtests.fs
