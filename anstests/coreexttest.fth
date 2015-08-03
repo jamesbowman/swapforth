@@ -749,7 +749,6 @@ T{ 123. <# #S BL HOLD HTEST2 HOLDS BL HOLD htest HOLDS #>  HTEST3 COMPARE -> 0 }
 T{ : HLD HOLDS ; -> }T
 T{ 0. <#  HTEST HLD #> HTEST COMPARE -> 0 }T
 
-0 [IF]  \ {
 \ -----------------------------------------------------------------------------
 TESTING REFILL SOURCE-ID
 \ REFILL and SOURCE-ID from the user input device can't be tested from a file,
@@ -757,8 +756,6 @@ TESTING REFILL SOURCE-ID
 
 T{ : RF1  S" REFILL" EVALUATE ; RF1 -> FALSE }T
 T{ : SID1  S" SOURCE-ID" EVALUATE ; SID1 -> -1 }T
-
-[THEN]  \ }
 
 \ ------------------------------------------------------------------------------
 TESTING S\"  (Forth 2012 compilation mode)

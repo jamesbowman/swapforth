@@ -53,6 +53,7 @@ class SwapForth:
         self.tib = allot(256, "TIB")
         self.sourcea = allot(self.CELL, "SOURCEA")
         self.sourcec = allot(self.CELL, "SOURCEC")
+        self.sourceid = allot(self.CELL, "SOURCEID")
         self.to_in = allot(self.CELL, ">IN")
         self.base = allot(self.CELL, "BASE")
         self.state = allot(self.CELL, "STATE")
@@ -128,6 +129,7 @@ class SwapForth:
 
     def CATCH(self):
         self.q('SOURCEA @ SOURCEC @ >IN @')
+        self.q('SOURCEID @ >R')
         source_spec = self.popn(3)
         (ds,rs,ip) = (len(self.d) - 1, len(self.r), self.ip)
         try:
@@ -142,6 +144,7 @@ class SwapForth:
             self.lit(source_spec[0])
             self.lit(source_spec[1])
             self.lit(source_spec[2])
+            self.q('R> SOURCEID !')
             self.q('>IN ! SOURCEC ! SOURCEA !')
             self.lit(e.value)
         else:
@@ -674,9 +677,15 @@ class SwapForth:
 
     def EVALUATE(self):
         self.q('SOURCE >R >R >IN @ >R')
+        self.q('SOURCEID @ >R -1 SOURCEID !')
         self.q('SOURCEC ! SOURCEA ! 0 >IN !')
         self.interpret()
+        self.q('R> SOURCEID !')
         self.q('R> >IN ! R> SOURCEA ! R> SOURCEC !')
+
+    def source_id(self):
+        """ SOURCE-ID """
+        self.q('SOURCEID @')
 
     def interpret(self):
 
@@ -754,13 +763,17 @@ class SwapForth:
         self.two_drop()
 
     def REFILL(self):
-        self.tib()
-        self.lit(256)
-        self.ACCEPT()
-        self.q('SOURCEC !')
-        self.q('TIB SOURCEA !')
-        self.q('0 >IN !')
-        self.lit(-1)
+        self.q('SOURCEID @')
+        if self.d.pop() == 0:
+            self.tib()
+            self.lit(256)
+            self.ACCEPT()
+            self.q('SOURCEC !')
+            self.q('TIB SOURCEA !')
+            self.q('0 >IN !')
+            self.lit(-1)
+        else:
+            self.lit(0)
 
     def putcmd(self, cmd):
         if cmd.endswith('\r'):
@@ -815,7 +828,7 @@ class Tethered(swapforth.TetheredTarget):
         self.searchpath = ['.']
         self.log = open("log", "w")
         self.ser = None
-        self.verbose = False
+        self.verbose = True
         self.interpreting = False
 
         self.ready = threading.Event()
