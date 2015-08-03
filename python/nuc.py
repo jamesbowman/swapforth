@@ -828,7 +828,7 @@ class Tethered(swapforth.TetheredTarget):
         self.searchpath = ['.']
         self.log = open("log", "w")
         self.ser = None
-        self.verbose = True
+        self.verbose = False
         self.interpreting = False
 
         self.ready = threading.Event()
