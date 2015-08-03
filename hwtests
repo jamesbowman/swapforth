@@ -1,0 +1,5 @@
+set -e -x
+cd ft900
+./localtest
+cd ../j1a
+./localtest

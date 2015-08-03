@@ -1,0 +1,5 @@
+iceprog icestorm/j1a.bin
+PORT=`icestorm/findserial`
+echo |
+python shell.py -h $PORT ../demos/factorials.fs -e '42 FAC .FAC' |
+grep 1,405,006,117,752,879,898,543,142,606,244,511,569,936,384,000,000,000

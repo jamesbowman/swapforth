@@ -1,0 +1,5 @@
+#!/bin/sh
+for D in /dev/ttyUSB?
+do
+  udevadm info -a -n $D|grep 'ATTRS{idProduct}=="6010"'>/dev/null && echo $D
+done

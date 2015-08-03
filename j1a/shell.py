@@ -71,7 +71,7 @@ if __name__ == '__main__':
             else:
                 try:
                     r.include(a)
-                except sf.Bye:
+                except swapforth.Bye:
                     pass
                 args = args[1:]
     if not r:
