@@ -59,7 +59,8 @@
 \ bits in a cell."
 
 create BUF0
-16 cells 2 + allot here constant BUF
+16 cells 2 + 128 max
+allot here constant BUF
 
 variable hld
 
