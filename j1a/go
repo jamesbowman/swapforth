@@ -1,6 +1,6 @@
-set -e
-PORT=/dev/ttyUSB3
+set -e -x
 
 make -C icestorm
 iceprog icestorm/j1a.bin
-python shell.py -h $PORT -p ../common -p ../demos swapforth.fs
+PORT=`icestorm/findserial`
+python shell.py -h $PORT -p ../common -p ../demos # swapforth.fs

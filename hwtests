@@ -3,3 +3,6 @@ cd ft900
 ./localtest
 cd ../j1a
 ./localtest
+cd ../j1b
+./localtest
+echo ALL PASSED
