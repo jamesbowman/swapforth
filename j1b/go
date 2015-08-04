@@ -2,7 +2,8 @@ set -e
 
 # ( cd ../python ; echo | sh go )
 
-gforth cross.fs basewords.fs nuc.fs
+# gforth cross.fs basewords.fs nuc.fs
 
-$HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -f xilinx/j1-papilioduo.bit
-PYTHONPATH=../shell/:$PYTHONPATH python shell.py -h /dev/papilio -i build/nuc.hex -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ swapforth.fs
+# $HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -d 'Papilio DUO' -f xilinx/j1-papilioduo.bit
+# python shell.py -h /dev/papilio -i build/nuc.hex -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ swapforth.fs
+./localtest

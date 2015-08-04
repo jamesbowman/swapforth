@@ -42,6 +42,7 @@ include double0.fs
 include double.fs
 include core.fs
 
+: /mod      >r s>d r> sm/rem ;
 : /         /mod nip ;
 : mod       /mod drop ;
 
@@ -154,43 +155,7 @@ include forth2012.fs
 include structures.fs
 \ include memory.fs
 
-marker |ans cr .( ANS complete) cr
-
-marker YY
-include runtests.fs
-YY
-
-include fph.fs
-include comus.fs
-include mini-oof.fs
-
-include drivers/gpio.fs
-include drivers/spi.fs
-include drivers/serialize.fs
-include drivers/time.fs
-
-8 constant GPUSEL
-
-: gd2-sel
-    GPUSEL lo
+: new
+    s" | marker |" evaluate
 ;
-
-: gd2-unsel
-    GPUSEL hi
-;
-
-: gd2-spi-init
-    spi-init
-    OUTPUT GPUSEL pinMode
-    gd2-unsel
-;
-
-include gd2.fs
-
-include demos/helloworld.fs
-\ include demos/counting.fs
-\ include demos/fizz.fs
-\ include demos/metaball.fs
-\ include demos/blobs.fs
-\ include demos/widgets.fs
-\ include demos/snow.fs
+marker |

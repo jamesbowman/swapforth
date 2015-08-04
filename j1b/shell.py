@@ -13,14 +13,17 @@ except:
     print "This tool needs PySerial, but it was not found"
     sys.exit(1)
 
-import swapforth as sf
+sys.path.append("../shell")
+import swapforth
 
-class TetheredJ1b(sf.TetheredFT900):
+class TetheredJ1b(swapforth.TetheredTarget):
     def __init__(self, port):
         ser = serial.Serial(port, 921600, timeout=None, rtscts=0)
         self.ser = ser
         self.searchpath = ['.']
         self.log = open("log", "w")
+        self.interpreting = True
+        self.verbose = False
 
     def boot(self, bootfile = None):
         ser = self.ser
@@ -55,46 +58,20 @@ class TetheredJ1b(sf.TetheredFT900):
             print  repr(c)
             if c == chr(30):
                 break
+        if 0:
+            ser.write('115200 $1008 io!\r')
+            self.ser.flush()
+            time.sleep(.010)
+            # self.ser.setBaudrate(921600)
+            # self.ser.flushInput()
+            # self.ser.flushOutput()
+            print 'all set'
+            print repr(self.ser.read(1))
+            while 1:
+                c = ser.read(1)
+                print  repr(c)
+                if c == chr(30):
+                    break
 
 if __name__ == '__main__':
-    port = '/dev/ttyUSB0'
-    image = None
-
-    r = None
-    searchpath = []
-
-    args = sys.argv[1:]
-    while args:
-        a = args[0]
-        if a.startswith('-i'):
-            image = args[1]
-            args = args[2:]
-        elif a.startswith('-h'):
-            port = args[1]
-            args = args[2:]
-        elif a.startswith('-p'):
-            searchpath.append(args[1])
-            args = args[2:]
-        else:
-            if not r:
-                r = TetheredJ1b(port)
-                r.boot(image)
-                r.searchpath += searchpath
-            if a.startswith('-e'):
-                print r.shellcmd(args[1])
-                args = args[2:]
-            else:
-                try:
-                    r.include(a)
-                except sf.Bye:
-                    pass
-                args = args[1:]
-    if not r:
-        r = TetheredJ1b(port)
-        r.boot(image)
-        r.searchpath += searchpath
-
-    # print repr(r.ser.read(1))
-    # r.interactive_command(None)
-    # r.listen()
-    r.shell()
+    swapforth.main(TetheredJ1b)

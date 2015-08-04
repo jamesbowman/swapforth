@@ -21,6 +21,7 @@
 : T->R      h# 0020 or ;
 : N->[T]    h# 0030 or ;
 : N->io[T]  h# 0040 or ;
+: _IORD_    h# 0050 or ;
 : RET       h# 0080 or ;
 
 : d-1       h# 0003 or ;
@@ -53,9 +54,9 @@
 :: >r        N     T->R      r+1 d-1 alu ;
 :: r>        rT    T->N      r-1 d+1 alu ;
 :: r@        rT    T->N          d+1 alu ;
-:: @         T alu
+:: @         T                       alu
              [T]                     alu ;
-:: io@       T alu
+:: io@       T     _IORD_            alu
              io[T]                   alu ;
 :: !         
              T     N->[T]        d-1 alu

@@ -1,6 +1,5 @@
 `default_nettype none
 
-
 module bram_tdp #(
     parameter DATA = 72,
     parameter ADDR = 10
@@ -84,6 +83,86 @@ module ram16k(
 
 endmodule
 
+module textmode(
+  input wire clk,               // main clock
+  input wire pix,               // pixel clock
+  output reg [2:0] vga_red,     // VGA output signals
+  output reg [2:0] vga_green,
+  output reg [2:0] vga_blue,
+  output reg vga_hsync_n,
+  output reg vga_vsync_n);
+
+  // These timing values come from
+  // http://tinyvga.com/vga-timing/1024x768@60Hz
+
+  // hcounter:
+  //    0- 799   visible area
+  //  800- 839   front porch
+  //  840- 967   sync pulse
+  //  968-1055   back porch
+
+  reg [10:0] hcounter;
+  wire [10:0] hcounterN = (hcounter == 11'd1055) ? 11'd0 : (hcounter + 11'd1);
+
+  // vcounter:
+  //  0  -599     visible area
+  //  600-600     front porch
+  //  601-604     sync pulse
+  //  605-627     back porch
+
+  reg [9:0] vcounter;
+  reg [9:0] vcounterN;
+  always @*
+    if (hcounterN != 11'd0)
+      vcounterN = vcounter;
+    else if (vcounter != 10'd627)
+      vcounterN = vcounter + 10'd1;
+    else
+      vcounterN = 10'd0;
+
+  wire visible = (hcounter < 800) & (vcounter < 600);
+
+  reg [1:0] visible_;
+  reg [1:0] hsync_;
+  always @(posedge clk)
+    if (pix) begin
+      visible_ <= {visible_[0], visible};
+      hsync_ <= {hsync_[0], !((840 <= hcounter) & (hcounter < 968))};
+    end
+  reg [2:0] r, g, b;
+  always @*
+    case (hcounter[3:0] ^ vcounter[3:0])
+    0:    {r, g, b} = { 3'b000, 3'b000, 3'b000 };
+    1:    {r, g, b} = { 3'b000, 3'b000, 3'b100 };
+    2:    {r, g, b} = { 3'b000, 3'b100, 3'b000 };
+    3:    {r, g, b} = { 3'b000, 3'b100, 3'b100 };
+    4:    {r, g, b} = { 3'b100, 3'b000, 3'b000 };
+    5:    {r, g, b} = { 3'b100, 3'b000, 3'b100 };
+    6:    {r, g, b} = { 3'b100, 3'b001, 3'b000 };
+    7:    {r, g, b} = { 3'b100, 3'b100, 3'b100 };
+    8:    {r, g, b} = { 3'b011, 3'b011, 3'b011 };
+    9:    {r, g, b} = { 3'b010, 3'b010, 3'b111 };
+    10:   {r, g, b} = { 3'b010, 3'b111, 3'b010 };
+    11:   {r, g, b} = { 3'b010, 3'b111, 3'b111 };
+    12:   {r, g, b} = { 3'b111, 3'b010, 3'b010 };
+    13:   {r, g, b} = { 3'b111, 3'b010, 3'b111 };
+    14:   {r, g, b} = { 3'b111, 3'b111, 3'b010 };
+    15:   {r, g, b} = { 3'b111, 3'b111, 3'b111 };
+    endcase
+
+  always @(posedge clk)
+    if (pix) begin
+      hcounter <= hcounterN;
+      vcounter <= vcounterN;
+      vga_hsync_n <= hsync_[1];
+      vga_vsync_n <= !((601 <= vcounter) & (vcounter < 605));
+      vga_red   <= visible_[1] ? r : 3'b000;
+      vga_green <= visible_[1] ? g : 3'b000;
+      vga_blue  <= visible_[1] ? b : 3'b000;
+    end
+
+endmodule
+
 module top(
   input wire CLK,
   input  wire DUO_SW1,
@@ -147,7 +226,7 @@ module top(
   inout wire Arduino_53
 
   );
-  localparam MHZ = 150;
+  localparam MHZ = 80;
 
   reg  DUO_LED;
   wire fclk;
@@ -178,12 +257,12 @@ module top(
   wire uart0_valid, uart0_busy;
   wire [7:0] uart0_data;
   wire uart0_rd, uart0_wr;
-  reg [31:0] baud = 32'd921600;
+  reg [31:0] uart_baud = 32'd921600;
   wire UART0_RX;
   buart #(.CLKFREQ(MHZ * 1000000)) _uart0 (
      .clk(fclk),
      .resetq(resetq),
-     .baud(baud),
+     .baud(uart_baud),
      .rx(RXD),
      .tx(TXD),
      .rd(uart0_rd),
@@ -202,7 +281,7 @@ module top(
   wire [12:0] code_addr;
   wire [15:0] insn;
 
-  wire io_wr;
+  wire io_rd, io_wr;
 
   wire resetq = DTR;
 
@@ -210,6 +289,7 @@ module top(
      .clk(fclk),
      .resetq(resetq),
 
+     .io_rd(io_rd),
      .io_wr(io_wr),
      .mem_addr(mem_addr),
      .mem_wr(mem_wr),
@@ -229,18 +309,20 @@ module top(
              .b_addr(code_addr),
              .b_q(insn));
 
-  reg io_wr_;
+  reg io_wr_, io_rd_;
   reg [15:0] mem_addr_;
   reg [31:0] dout_;
   always @(posedge fclk)
-    {io_wr_, mem_addr_, dout_} <= {io_wr, mem_addr, dout};
+    {io_wr_, io_rd_, mem_addr_, dout_} <= {io_wr, io_rd, mem_addr, dout};
 
   /*      READ            WRITE
-    00xx  GPIO in         GPIO wr
+    00xx  GPIO rd         GPIO wr
     01xx                  GPIO direction
-    1000  (r) UART status (w) UART xmit
-    1004                  UART ack
-    ..
+
+    1000  UART RX         UART TX
+    1004  UART status 
+    1008  baudrate        baudrate
+
     1010  master freq     snapshot clock
     1014  clock[31:0]
     1018  clock[63:32]
@@ -256,7 +338,9 @@ module top(
     16'h00??: din <= gpi[mem_addr[6:0]];
     16'h01??: din <= gpio_dir[mem_addr[6:0]];
 
-    16'h1000: din <= {16'd0, uart0_data, 4'd0, DTR, uart0_valid, uart0_busy, DUO_SW1};
+    16'h1000: din <= {24'd0, uart0_data};
+    16'h1004: din <= {24'd0, 4'd0, DTR, uart0_valid, uart0_busy, DUO_SW1};
+    16'h1008: din <= uart_baud;
 
     16'h1010: din <= MHZ * 1000000;
     16'h1014: din <= counter_[31:0];
@@ -266,17 +350,19 @@ module top(
     endcase
 
     if (io_wr_) begin
-      if (mem_addr_[15:8] == 8'h00)
-        gpo[mem_addr_[6:0]] <= dout_[0];
-      if (mem_addr_[15:8] == 8'h01)
-        gpio_dir[mem_addr_[6:0]] <= dout_[0];
-      if (mem_addr_ == 16'h1010)
-        counter_ <= counter;
+      casez (mem_addr_)
+        16'h00??: gpo[mem_addr_[6:0]] <= dout_[0];
+        16'h01??: gpio_dir[mem_addr_[6:0]] <= dout_[0];
+
+        16'h1008: uart_baud <= dout;
+
+        16'h1010: counter_ <= counter;
+      endcase
     end
   end
 
   assign uart0_wr = io_wr_ & (mem_addr_ == 16'h1000);
-  assign uart0_rd = io_wr_ & (mem_addr_ == 16'h1004);
+  assign uart0_rd = io_rd_ & (mem_addr_ == 16'h1000);
 
   assign Arduino_0 = gpio_dir[0] ? gpo[0] : 1'bz;
   assign Arduino_1 = gpio_dir[1] ? gpo[1] : 1'bz;
@@ -300,37 +386,37 @@ module top(
   assign Arduino_19 = gpio_dir[19] ? gpo[19] : 1'bz;
   assign Arduino_20 = gpio_dir[20] ? gpo[20] : 1'bz;
   assign Arduino_21 = gpio_dir[21] ? gpo[21] : 1'bz;
-  assign Arduino_22 = gpio_dir[22] ? gpo[22] : 1'bz;
+  // assign Arduino_22 = gpio_dir[22] ? gpo[22] : 1'bz;
   assign Arduino_23 = gpio_dir[23] ? gpo[23] : 1'bz;
-  assign Arduino_24 = gpio_dir[24] ? gpo[24] : 1'bz;
+  // assign Arduino_24 = gpio_dir[24] ? gpo[24] : 1'bz;
   assign Arduino_25 = gpio_dir[25] ? gpo[25] : 1'bz;
-  assign Arduino_26 = gpio_dir[26] ? gpo[26] : 1'bz;
+  // assign Arduino_26 = gpio_dir[26] ? gpo[26] : 1'bz;
   assign Arduino_27 = gpio_dir[27] ? gpo[27] : 1'bz;
   assign Arduino_28 = gpio_dir[28] ? gpo[28] : 1'bz;
   assign Arduino_29 = gpio_dir[29] ? gpo[29] : 1'bz;
   assign Arduino_30 = gpio_dir[30] ? gpo[30] : 1'bz;
   assign Arduino_31 = gpio_dir[31] ? gpo[31] : 1'bz;
-  assign Arduino_32 = gpio_dir[32] ? gpo[32] : 1'bz;
+  // assign Arduino_32 = gpio_dir[32] ? gpo[32] : 1'bz;
   assign Arduino_33 = gpio_dir[33] ? gpo[33] : 1'bz;
-  assign Arduino_34 = gpio_dir[34] ? gpo[34] : 1'bz;
+  // assign Arduino_34 = gpio_dir[34] ? gpo[34] : 1'bz;
   assign Arduino_35 = gpio_dir[35] ? gpo[35] : 1'bz;
-  assign Arduino_36 = gpio_dir[36] ? gpo[36] : 1'bz;
+  // assign Arduino_36 = gpio_dir[36] ? gpo[36] : 1'bz;
   assign Arduino_37 = gpio_dir[37] ? gpo[37] : 1'bz;
-  assign Arduino_38 = gpio_dir[38] ? gpo[38] : 1'bz;
+  // assign Arduino_38 = gpio_dir[38] ? gpo[38] : 1'bz;
   assign Arduino_39 = gpio_dir[39] ? gpo[39] : 1'bz;
-  assign Arduino_40 = gpio_dir[40] ? gpo[40] : 1'bz;
+  // assign Arduino_40 = gpio_dir[40] ? gpo[40] : 1'bz;
   assign Arduino_41 = gpio_dir[41] ? gpo[41] : 1'bz;
-  assign Arduino_42 = gpio_dir[42] ? gpo[42] : 1'bz;
+  // assign Arduino_42 = gpio_dir[42] ? gpo[42] : 1'bz;
   assign Arduino_43 = gpio_dir[43] ? gpo[43] : 1'bz;
-  assign Arduino_44 = gpio_dir[44] ? gpo[44] : 1'bz;
+  // assign Arduino_44 = gpio_dir[44] ? gpo[44] : 1'bz;
   assign Arduino_45 = gpio_dir[45] ? gpo[45] : 1'bz;
-  assign Arduino_46 = gpio_dir[46] ? gpo[46] : 1'bz;
+  // assign Arduino_46 = gpio_dir[46] ? gpo[46] : 1'bz;
   assign Arduino_47 = gpio_dir[47] ? gpo[47] : 1'bz;
-  assign Arduino_48 = gpio_dir[48] ? gpo[48] : 1'bz;
+  // assign Arduino_48 = gpio_dir[48] ? gpo[48] : 1'bz;
   assign Arduino_49 = gpio_dir[49] ? gpo[49] : 1'bz;
-  assign Arduino_50 = gpio_dir[50] ? gpo[50] : 1'bz;
+  // assign Arduino_50 = gpio_dir[50] ? gpo[50] : 1'bz;
   assign Arduino_51 = gpio_dir[51] ? gpo[51] : 1'bz;
-  assign Arduino_52 = gpio_dir[52] ? gpo[52] : 1'bz;
+  // assign Arduino_52 = gpio_dir[52] ? gpo[52] : 1'bz;
   assign Arduino_53 = gpio_dir[53] ? gpo[53] : 1'bz;
 
   assign gpi[0] = Arduino_0;
@@ -355,37 +441,83 @@ module top(
   assign gpi[19] = Arduino_19;
   assign gpi[20] = Arduino_20;
   assign gpi[21] = Arduino_21;
-  assign gpi[22] = Arduino_22;
+  // assign gpi[22] = Arduino_22;
   assign gpi[23] = Arduino_23;
-  assign gpi[24] = Arduino_24;
+  // assign gpi[24] = Arduino_24;
   assign gpi[25] = Arduino_25;
-  assign gpi[26] = Arduino_26;
+  // assign gpi[26] = Arduino_26;
   assign gpi[27] = Arduino_27;
   assign gpi[28] = Arduino_28;
   assign gpi[29] = Arduino_29;
   assign gpi[30] = Arduino_30;
   assign gpi[31] = Arduino_31;
-  assign gpi[32] = Arduino_32;
+  // assign gpi[32] = Arduino_32;
   assign gpi[33] = Arduino_33;
-  assign gpi[34] = Arduino_34;
+  // assign gpi[34] = Arduino_34;
   assign gpi[35] = Arduino_35;
-  assign gpi[36] = Arduino_36;
+  // assign gpi[36] = Arduino_36;
   assign gpi[37] = Arduino_37;
-  assign gpi[38] = Arduino_38;
+  // assign gpi[38] = Arduino_38;
   assign gpi[39] = Arduino_39;
-  assign gpi[40] = Arduino_40;
+  // assign gpi[40] = Arduino_40;
   assign gpi[41] = Arduino_41;
-  assign gpi[42] = Arduino_42;
+  // assign gpi[42] = Arduino_42;
   assign gpi[43] = Arduino_43;
-  assign gpi[44] = Arduino_44;
+  // assign gpi[44] = Arduino_44;
   assign gpi[45] = Arduino_45;
-  assign gpi[46] = Arduino_46;
+  // assign gpi[46] = Arduino_46;
   assign gpi[47] = Arduino_47;
-  assign gpi[48] = Arduino_48;
+  // assign gpi[48] = Arduino_48;
   assign gpi[49] = Arduino_49;
-  assign gpi[50] = Arduino_50;
+  // assign gpi[50] = Arduino_50;
   assign gpi[51] = Arduino_51;
-  assign gpi[52] = Arduino_52;
+  // assign gpi[52] = Arduino_52;
   assign gpi[53] = Arduino_53;
+
+
+
+  wire [2:0] vga_red;
+  wire [2:0] vga_green;
+  wire [2:0] vga_blue;
+  wire vga_hsync;
+  wire vga_vsync;
+
+  reg [1:0] clkd3;
+  reg [1:0] clkd3N;
+
+  always @*
+    case (clkd3)
+    2'd0:       clkd3N = 2'd1;
+    2'd1:       clkd3N = 2'd2;
+    2'd2:       clkd3N = 2'd0;
+    default:    clkd3N = 2'd0;
+    endcase
+
+  always @(posedge fclk)
+    clkd3 <= clkd3N;
+
+  textmode tm (
+    .clk(fclk),
+    .pix(clkd3 == 2'd0),
+    .vga_red(vga_red),
+    .vga_green(vga_green),
+    .vga_blue(vga_blue),
+    .vga_hsync_n(vga_hsync),
+    .vga_vsync_n(vga_vsync));
+
+  assign Arduino_52 = 1'b0;         // Red1
+  assign Arduino_50 = vga_red[0];   // Red2
+  assign Arduino_48 = vga_red[1];   // Red3
+  assign Arduino_46 = vga_red[2];   // Red4
+  assign Arduino_38 = 1'b0;         // Green1
+  assign Arduino_40 = vga_green[0]; // Green2
+  assign Arduino_42 = vga_green[1]; // Green3
+  assign Arduino_44 = vga_green[2]; // Green4
+  assign Arduino_26 = 1'b0;         // Blue1
+  assign Arduino_32 = vga_blue[0];  // Blue2
+  assign Arduino_34 = vga_blue[1];  // Blue3
+  assign Arduino_36 = vga_blue[2];  // Blue4
+  assign Arduino_24 = vga_vsync;    // VSync
+  assign Arduino_22 = vga_hsync;    // HSync
 
 endmodule

@@ -2,17 +2,16 @@ meta
     $3f80 org 
 target
 
-$1000 constant UART-R-STATUS
-$1000 constant UART-W-XMIT
-$1004 constant UART-W-ACK
+$1000 constant UART-D
+$1004 constant UART-STATUS
+
 
 : b.key
     begin
-        UART-R-STATUS io@
+        UART-STATUS io@
         d# 4 and
     until
-    UART-R-STATUS io@ d# 8 rshift
-    d# 0 UART-W-ACK io!
+    UART-D io@
 ;
 
 : b.32
@@ -60,7 +59,7 @@ header u>       : u>        swap u< ;
 
 header key?
 : key?
-    UART-R-STATUS io@
+    UART-STATUS io@
     d# 4 and
     0<>
 ;
@@ -70,12 +69,11 @@ header key
     begin
         key?
     until
-    UART-R-STATUS io@ d# 8 rshift
-    d# 0 UART-W-ACK io!
+    UART-D io@
 ;
 
 : ready
-    UART-R-STATUS io@
+    UART-STATUS io@
     d# 2 and
     0=
 ;
@@ -83,7 +81,7 @@ header key
 header emit
 : emit
     begin ready until
-    UART-W-XMIT io!
+    UART-D io!
 ;
 
 header cr
@@ -226,12 +224,13 @@ create thisxt   0 ,
 create syncpt   0 ,
 create sourceA  0 ,
 create sourceC  0 ,
+create sourceid 0 ,
 create >in      0 ,
 create state    0 ,
 create delim    0 ,
 create rO       0 ,
 create leaves   0 ,
-create tib 128 allot
+create tib $80 allot
 
 header dp    :noname dp ;
 header cp    :noname cp ;
@@ -556,6 +555,11 @@ header execute
 header source
 : source
     sourceA @ sourceC @
+;
+
+header source-id
+: source-id
+    sourceid @
 ;
 
 \ From Forth200x - public domain
@@ -1108,18 +1112,22 @@ header-imm postpone
 
 header refill
 : refill
-    tib d# 128 accept
-    sourceC !
-    tib sourceA !
-    d# 0 >in !
-    true
+    source-id 0= dup
+    if
+        tib d# 128 accept
+        sourceC !
+        tib sourceA !
+        d# 0 >in !
+    then
 ;
 
 header evaluate
 :noname
     source >r >r >in @ >r
+    source-id >r d# -1 sourceid !
     sourceC ! sourceA ! d# 0 >in !
     interpret
+    r> sourceid !
     r> >in ! r> sourceA ! r> sourceC !
 ;
 

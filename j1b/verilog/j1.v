@@ -4,6 +4,7 @@ module j1(
   input wire clk,
   input wire resetq,
 
+  output wire io_rd,
   output wire io_wr,
   output wire [15:0] mem_addr,
   output wire mem_wr,
@@ -67,11 +68,13 @@ module j1(
   wire func_T_R =   (insn[6:4] == 2);
   wire func_write = (insn[6:4] == 3);
   wire func_iow =   (insn[6:4] == 4);
+  wire func_ior =   (insn[6:4] == 5);
 
   wire is_alu = (insn[15:13] == 3'b011);
   assign mem_wr = !reboot & is_alu & func_write;
   assign dout = st1;
   assign io_wr = !reboot & is_alu & func_iow;
+  assign io_rd = !reboot & is_alu & func_ior;
 
   assign rstkD = (insn[13] == 1'b0) ? {{(`WIDTH - 14){1'b0}}, pc_plus_1, 1'b0} : st0;
 
