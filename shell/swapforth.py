@@ -226,7 +226,7 @@ class TetheredTarget:
                     print '\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower())
         elif cmd.startswith('#time '):
             t0 = time.time()
-            r = self.command_response(cmd[6:])
+            r = self.shellcmd(cmd[6:])
             t1 = time.time()
             print r
             print 'Took %.6f seconds' % (t1 - t0)
