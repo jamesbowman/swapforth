@@ -28,8 +28,8 @@ class TetheredJ1a(swapforth.TetheredTarget):
         for c in ' 1 tth !\r':
             ser.write(c)
             ser.flush()
-            ser.flushInput()
             time.sleep(0.001)
+            ser.flushInput()
             # print repr(ser.read(ser.inWaiting()))
 
         sys.stdout.flush()
