@@ -79,6 +79,7 @@
 \newcommand{\gdtwo}{Gameduino 2 }
 \newcommand{\gdtwos}{Gameduino 2's }
 \newcommand{\itwoc}{I$^{\textrm{2}}$C }
+\newcommand{\digilentpmod}{Digilent Pmod\texttrademark{}}
 
 \newcommand{\png}[1]{
 \begin{center}
@@ -497,8 +498,8 @@ Implemented words are:
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0880}{\word{cell+}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0890}{\word{cells}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0895}{\word{char}}
-% \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0897}{\word{char+}}
-% \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0898}{\word{chars}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0897}{\word{char+}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0898}{\word{chars}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0950}{\word{constant}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0980}{\word{count}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0990}{\word{cr}}
@@ -577,8 +578,6 @@ These core words are not implemented:
 
 \word{>body}
 \word{abort"}
-\word{char+}
-\word{chars}
 \word{environment?}
 \word{leave}
 
@@ -744,15 +743,14 @@ The J1a for iCEstick includes connections to the iCEstick peripherals:
 \item SPI flash \index{SPI flash}
 \item LEDs \index{LEDs}
 \item IrDA tranceiver \index{IrDA}
-\item Pmod connector \index{Pmod}
-\item prototyping connectors
+\item \digilentpmod{} connector \index{Pmod}
+% \item prototyping connectors
 \item UART \index{UART}
 \end{itemize}
 
 Access to peripherals is via the
 \mach{io@} and \mach{io!} words.
 Peripherals are port-mapped into a 16-bit IO address space.
-
 Most ports are either read-only or write-only.
 For read-only ports, writing to the port has no effect.
 For write-only ports, reading from the port gives zero.
@@ -774,9 +772,9 @@ blinks the on-board LEDs when a signal on IrDA is detected. \index{blink}
 
 \newpage
 \section{Port Map}
-\subsection{\$0001: Pmod data}
+\subsection{\$0001: \digilentpmod{} data}
 
-The read-write port at address \$0001 is for direct access to the Digilent Pmod
+The read-write port at address \$0001 is for direct access to the \digilentpmod{}
 connector. The port pins are assigned:
 
 \vspace{10pt}
@@ -812,11 +810,10 @@ Correspondingly the port bits are assigned to pins as follows:
 
 Note that pin direction is controlled by the corresponding bit the port at address \$0002.
 
-\subsection{\$0002: Pmod direction}
+\subsection{\$0002: \digilentpmod{} direction}
 
-Each of the 8 bits controls the direction of the corresponding pin of the Pmod connector.
+Each of the 8 bits controls the direction of the corresponding pin of the \digilentpmod{} connector.
 0 sets the pin to input (with pull-up), 1 means sets the pin to output.
-
 The bit-to-pin mapping is the same as for port \$0001.
 
 \subsection{\$0004: LEDs}
