@@ -36,20 +36,19 @@ endmodule
 */
 
 module uart(
-   input wire clk,         // System clock
+   input wire clk,
    input wire resetq,
 
-   // Outputs
-   output wire uart_busy,   // High means UART is transmitting
-   output reg uart_tx,     // UART transmit wire
-   // Inputs
+   output wire uart_busy,       // High means UART is transmitting
+   output reg uart_tx,          // UART transmit wire
+
    input wire [31:0] baud,
-   input wire uart_wr_i,   // Raise to transmit byte
-   input wire [7:0] uart_dat_i  // 8-bit data
+   input wire uart_wr_i,        // Raise to transmit byte
+   input wire [7:0] uart_dat_i
 );
   parameter CLKFREQ = 1000000;
 
-  reg [3:0] bitcount;
+  reg [3:0] bitcount;           // 0 means idle, so this is a 1-based counter
   reg [8:0] shifter;
 
   assign uart_busy = |bitcount;
@@ -74,7 +73,7 @@ module uart(
     end else begin
       if (starting) begin
         shifter <= { uart_dat_i[7:0], 1'b0 };
-        bitcount <= 1 + 8 + 1 + 4;
+        bitcount <= 1 + 8 + 1;    // 1 start, 8 data, 1 stop
       end
 
       if (sending & ser_clk) begin
