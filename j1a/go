@@ -3,4 +3,4 @@ set -e -x
 make -C icestorm
 iceprog icestorm/j1a.bin
 PORT=`icestorm/findserial`
-python shell.py -h $PORT -p ../common -p ../demos # swapforth.fs
+python shell.py -h $PORT -p ../common -p ../demos swapforth.fs spi2.fs

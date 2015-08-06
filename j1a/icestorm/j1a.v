@@ -72,14 +72,14 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
            output PIOS_02,    // flash MOSI
            output PIOS_03,    // flash CS
 
-           output PIO1_02,    // PMOD 1
-           output PIO1_03,    // PMOD 1
-           output PIO1_04,    // PMOD 1
-           output PIO1_05,    // PMOD 1
-           output PIO1_06,    // PMOD 1
-           output PIO1_07,    // PMOD 1
-           output PIO1_08,    // PMOD 1
-           output PIO1_09,    // PMOD 1
+           inout PIO1_02,    // PMOD 1
+           inout PIO1_03,    // PMOD 2
+           inout PIO1_04,    // PMOD 3
+           inout PIO1_05,    // PMOD 4
+           inout PIO1_06,    // PMOD 5
+           inout PIO1_07,    // PMOD 6
+           inout PIO1_08,    // PMOD 7
+           inout PIO1_09,    // PMOD 8
 
            output PIO1_18,    // IR TXD
            input  PIO1_19,    // IR RXD
@@ -137,7 +137,17 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   // ######   PMOD   ##########################################
 
   reg [7:0] pmod_dir;   // 1:output, 0:input
-  assign {PIO1_09, PIO1_08, PIO1_07, PIO1_06, PIO1_05, PIO1_04, PIO1_03, PIO1_02} = pmod_dir;
+  reg [7:0] pmod_out;
+  wire [7:0] pmod_in;
+
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io0 (.PACKAGE_PIN(PIO1_02), .D_OUT_0(pmod_out[0]), .D_IN_0(pmod_in[0]), .OUTPUT_ENABLE(pmod_dir[0]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io1 (.PACKAGE_PIN(PIO1_03), .D_OUT_0(pmod_out[1]), .D_IN_0(pmod_in[1]), .OUTPUT_ENABLE(pmod_dir[1]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io2 (.PACKAGE_PIN(PIO1_04), .D_OUT_0(pmod_out[2]), .D_IN_0(pmod_in[2]), .OUTPUT_ENABLE(pmod_dir[2]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io3 (.PACKAGE_PIN(PIO1_05), .D_OUT_0(pmod_out[3]), .D_IN_0(pmod_in[3]), .OUTPUT_ENABLE(pmod_dir[3]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io4 (.PACKAGE_PIN(PIO1_06), .D_OUT_0(pmod_out[4]), .D_IN_0(pmod_in[4]), .OUTPUT_ENABLE(pmod_dir[4]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io5 (.PACKAGE_PIN(PIO1_07), .D_OUT_0(pmod_out[5]), .D_IN_0(pmod_in[5]), .OUTPUT_ENABLE(pmod_dir[5]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io6 (.PACKAGE_PIN(PIO1_08), .D_OUT_0(pmod_out[6]), .D_IN_0(pmod_in[6]), .OUTPUT_ENABLE(pmod_dir[6]));
+  SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1)) io7 (.PACKAGE_PIN(PIO1_09), .D_OUT_0(pmod_out[7]), .D_IN_0(pmod_in[7]), .OUTPUT_ENABLE(pmod_dir[7]));
 
   // ######   UART   ##########################################
 
@@ -177,11 +187,14 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   */
 
   assign io_din =
+    (io_addr_[ 0] ? {8'd0, pmod_in}                                    : 16'd0) |
     (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0) |
     (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
     (io_addr_[13] ? {12'd0, PIO1_19, PIOS_01, uart0_valid, !uart0_busy} : 16'd0);
 
   always @(posedge clk) begin
+    if (io_wr_ & io_addr_[0])
+      pmod_out <= dout_[7:0];
     if (io_wr_ & io_addr_[1])
       pmod_dir <= dout_[7:0];
     if (io_wr_ & io_addr_[2])
