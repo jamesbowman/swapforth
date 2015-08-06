@@ -73,7 +73,7 @@ class TetheredTarget:
         except:
             print "This tool needs PySerial, but it was not found"
             sys.exit(1)
-        self.ser = serial.Serial(port, 115200, timeout=None, rtscts=0)
+        self.ser = serial.Serial(port, speed, timeout=None, rtscts=0)
 
     def custom(self):
         self.tex = open("log.tex", "wt")
