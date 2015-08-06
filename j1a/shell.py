@@ -23,11 +23,13 @@ class TetheredJ1a(swapforth.TetheredTarget):
         ser = self.ser
         ser.setDTR(1)
         ser.setDTR(0)
+        time.sleep(0.01)
 
         for c in ' 1 tth !\r':
             ser.write(c)
             ser.flush()
             ser.flushInput()
+            time.sleep(0.001)
             # print repr(ser.read(ser.inWaiting()))
 
         sys.stdout.flush()
@@ -46,37 +48,4 @@ class TetheredJ1a(swapforth.TetheredTarget):
         self.reset()
         
 if __name__ == '__main__':
-    port = '/dev/ttyUSB0'
-
-    r = None
-    searchpath = []
-
-    args = sys.argv[1:]
-    while args:
-        a = args[0]
-        if a.startswith('-h'):
-            port = args[1]
-            args = args[2:]
-        elif a.startswith('-p'):
-            searchpath.append(args[1])
-            args = args[2:]
-        else:
-            if not r:
-                r = TetheredJ1a(port)
-                r.boot()
-                r.searchpath += searchpath
-            if a.startswith('-e'):
-                print r.shellcmd(args[1])
-                args = args[2:]
-            else:
-                try:
-                    r.include(a)
-                except swapforth.Bye:
-                    pass
-                args = args[1:]
-    if not r:
-        r = TetheredJ1a(port)
-        r.boot()
-        r.searchpath += searchpath
-
-    r.shell()
+    swapforth.main(TetheredJ1a)
