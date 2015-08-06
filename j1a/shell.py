@@ -23,16 +23,17 @@ class TetheredJ1a(swapforth.TetheredTarget):
         ser = self.ser
         ser.setDTR(1)
         ser.setDTR(0)
+        print ser.baudrate
         time.sleep(0.01)
 
-        for c in ' 1 tth !\r':
+        for c in ' 1 tth !':
             ser.write(c)
             ser.flush()
             time.sleep(0.001)
             ser.flushInput()
             # print repr(ser.read(ser.inWaiting()))
+        ser.write('\r')
 
-        sys.stdout.flush()
         while 1:
             c = ser.read(1)
             # print repr(c)
