@@ -7,11 +7,6 @@ int main(int argc, char **argv)
     Verilated::commandArgs(argc, argv);
     Vj1a* top = new Vj1a;
 
-    // Verilated::traceEverOn(true);
-    // VerilatedVcdC* tfp = new VerilatedVcdC;
-    // top->trace (tfp, 99);
-    // tfp->open ("simx.vcd");
-
     if (argc != 2) {
       fprintf(stderr, "usage: sim <hex-file>\n");
       exit(1);
@@ -36,34 +31,19 @@ int main(int argc, char **argv)
       top->v__DOT__ram_data[i] = v;
     }
 
-    // FILE *input = fopen(argv[1], "r");
-    // if (!input) {
-    //   perror(argv[1]);
-    //   exit(1);
-    // }
-    // top->io_din = getc(input);
-
     top->resetq = 0;
     top->eval();
     top->resetq = 1;
+    top->uart0_valid = 1;   // pretend to always have a character waiting
 
-    FILE *log = fopen("log", "w");
-    int t = 0;
-    // for (i = 0; /*i < 534563551 */; i++) {
     for (i = 0; ; i++) {
       top->clk = 1;
       top->eval();
-      // tfp->dump(t);
-      t += 20;
 
       top->clk = 0;
       top->eval();
-      // tfp->dump(t);
-      t += 20;
       if (top->uart0_wr) {
-        // printf("out %d\n", top->uart_w);
         putchar(top->uart_w);
-        putc(top->uart_w, log);
       }
       if (top->uart0_rd) {
         int c = getchar();
@@ -74,8 +54,6 @@ int main(int argc, char **argv)
     }
     printf("Simulation ended after %d cycles\n", i);
     delete top;
-    // tfp->close();
-    fclose(log);
 
     exit(0);
 }
