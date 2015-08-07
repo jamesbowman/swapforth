@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+make
+( echo
+  python expand.py ../swapforth.fs
+  echo "\\ ------------"
+  echo serialize
+  echo "\\ ------------"
+) |
+obj_dir/Vj1a ../build/nuc.hex | awk '
+  {
+   if (ok>0) {
+       print; 
+   }
+  }
+  /-------/ { ok = 1-ok }
+'|head -1 |sed -s "s/serialize//g" | sed -s "s/  ok//g" > newmem.dat
+
+python ./flash.py
+
+
+
