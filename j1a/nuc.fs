@@ -364,9 +364,9 @@ header accept
     drop dup
     begin
         key
-        dup h# 0d xor
+        h# 0d overxor
     while
-        dup h# 0a = if
+        h# 0a over= if
             drop
         else
             tethered @ 0= if

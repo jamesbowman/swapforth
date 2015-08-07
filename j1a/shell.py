@@ -23,7 +23,6 @@ class TetheredJ1a(swapforth.TetheredTarget):
         ser = self.ser
         ser.setDTR(1)
         ser.setDTR(0)
-        print ser.baudrate
         time.sleep(0.01)
 
         for c in ' 1 tth !':
