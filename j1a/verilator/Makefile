@@ -1,6 +1,6 @@
 SUBDIRS=..
 
-all: obj_dir/Vj1a ../build/nuc.hex
+all: obj_dir/Vj1a ../build/nuc.hex build/lib/python/vsimj1a.so
 
 VERILOGS=j1a.v ../verilog/*.v
 
@@ -10,5 +10,8 @@ obj_dir/Vj1a: $(VERILOGS) sim_main.cpp Makefile
 
 ../build/nuc.hex:
 	$(MAKE) -C ..
+
+build/lib/python/vsimj1a.so: setup.py obj_dir/Vj1a__ALL.a vsim.cpp
+	python setup.py install --home build
 
 .PHONY: all

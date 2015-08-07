@@ -1,1 +1,2 @@
-./localtest
+make &&
+python shell.py -p ../ -p ../../common swapforth.fs ../../demos/factorials.fs
