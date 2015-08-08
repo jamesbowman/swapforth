@@ -177,7 +177,6 @@ header type
 
 create base     $a ,
 create forth    0 ,
-create cp       0 ,         \ Code pointer, grows up
 create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
@@ -192,7 +191,6 @@ create tethered 0 ,
 create tib #128 allot
 
 header dp    :noname dp ;
-header cp    :noname cp ;
 header state :noname state ;
 header base  :noname base ;
 header >in   :noname >in  ;
@@ -312,7 +310,7 @@ header d2*
 ;
 
 : mulstep ( ud u1 -- ud u1 )
-    DOUBLE DOUBLE DOUBLE DOUBLE
+    DOUBLE DOUBLE
     >r
     d2*
     r@ d# 0 < if 
@@ -325,16 +323,16 @@ header um*
 : um*  ( u1 u2 -- ud ) 
     scratch ! 
     d# 0. rot
-    mulstep
+    mulstep mulstep mulstep mulstep
     drop 
 ; 
 
 : mul32step ( u2 u1 -- u2 u1 )
-    DOUBLE DOUBLE DOUBLE DOUBLE
+    DOUBLE DOUBLE
     >r
     2*
     r@ d# 0 < if 
-        scratch @ +
+        scratch @i +
     then 
     r> 2*
 ;
@@ -343,7 +341,7 @@ header *
 : *
     scratch !
     d# 0 swap
-    mul32step
+    mul32step mul32step mul32step mul32step
     drop
 ;
 
@@ -899,7 +897,7 @@ header-imm leave
 \     leaves @ d# 0 leaves !
 \     ['] (?do) compile,
 \     tif
-\         cp @
+\         dp @
 \         leaves @ code,
 \         leaves !
 \     tthen
@@ -1138,5 +1136,4 @@ header quit
 meta
     link @ t' forth tw!
     there  t' dp tw!
-    tcp @  t' cp tw!
 target

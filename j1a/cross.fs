@@ -198,6 +198,14 @@ variable wordstart
     s" code," evaluate
 ;
 
+\ usage "<variable> @i"
+\ replaces the variable with an inline fetch using a high-call
+\
+:: @i
+    tdp @ 2 - >r
+    r@ tw@ $2000 + 2/ $4000 or r> tw!
+;
+
 ( Switching between target and meta          JCB 19:08 05/02/12)
 
 : target    only target-wordlist add-order definitions ;

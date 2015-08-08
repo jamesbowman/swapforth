@@ -113,12 +113,10 @@ include core-ext.fs
 : marker
     forth @
     dp @
-    cp @
     create
-        , , ,
+        , ,
     does>
-        dup @ cp !
-        cell+ dup @ dp !
+        dup @ dp !
         cell+ @ forth !
 ;
 
