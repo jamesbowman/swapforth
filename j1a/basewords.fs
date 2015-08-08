@@ -54,8 +54,6 @@
 :: >r        N     T->R      r+1 d-1 alu ;
 :: r>        rT    T->N      r-1 d+1 alu ;
 :: r@        rT    T->N          d+1 alu ;
-:: @         T                       alu
-             [T]                     alu ;
 :: io@       T     _IORD_            alu
              io[T]                   alu ;
 :: !         
@@ -85,7 +83,6 @@
 :: 2dupu<    Nu<T  T->N          d+1 alu ;
 :: 2dupxor   T^N   T->N          d+1 alu ;
 :: dup>r     T     T->R      r+1     alu ;
-:: dup@      [T]   T->N          d+1 alu ;
 :: overand   T&N                     alu ;
 :: over>     N<T                     alu ;
 :: over=     N==T                    alu ;

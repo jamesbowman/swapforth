@@ -10,7 +10,6 @@ module j1(
   output wire [15:0] mem_addr,
   output wire mem_wr,
   output wire [`WIDTH-1:0] dout,
-  input  wire [`WIDTH-1:0] mem_din,
 
   input  wire [`WIDTH-1:0] io_din,
 
@@ -35,6 +34,8 @@ module j1(
   reg [1:0] dspI, rspI;
   stack2 #(.DEPTH(16)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
   stack2 #(.DEPTH(19)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
+  // stack2 #(.DEPTH(24)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
+  // stack2 #(.DEPTH(24)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
 
   always @*
   begin
@@ -57,7 +58,7 @@ module j1(
       9'b0_011_?1001: st0N = {st0[`WIDTH - 1], st0[`WIDTH - 1:1]};
       9'b0_011_?1010: st0N = {st0[`WIDTH - 2:0], 1'b0};
       9'b0_011_?1011: st0N = rst0;
-      9'b0_011_?1100: st0N = mem_din;
+      9'b0_011_?1100: st0N = io_din;
       9'b0_011_?1101: st0N = io_din;
       9'b0_011_?1110: st0N = {{(`WIDTH - 5){1'b0}}, dsp};
       9'b0_011_?1111: st0N = {`WIDTH{(st1 < st0)}};

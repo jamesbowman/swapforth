@@ -14,21 +14,13 @@ int main(int argc, char **argv)
 
     FILE *hex = fopen(argv[1], "r");
     int i;
-    for (i = 0; i < 2048; i++) {
+    for (i = 0; i < 4096; i++) {
       unsigned int v;
       if (fscanf(hex, "%x\n", &v) != 1) {
         fprintf(stderr, "invalid hex value at line %d\n", i + 1);
         exit(1);
       }
       top->v__DOT__ram_prog[i] = v;
-    }
-    for (i = 0; i < 2048; i++) {
-      unsigned int v;
-      if (fscanf(hex, "%x\n", &v) != 1) {
-        fprintf(stderr, "invalid hex value at line %d\n", i + 1);
-        exit(1);
-      }
-      top->v__DOT__ram_data[i] = v;
     }
 
     top->resetq = 0;
@@ -39,17 +31,17 @@ int main(int argc, char **argv)
     for (i = 0; ; i++) {
       top->clk = 1;
       top->eval();
-
       top->clk = 0;
       top->eval();
+
       if (top->uart0_wr) {
         putchar(top->uart_w);
       }
       if (top->uart0_rd) {
         int c = getchar();
-        top->uart0_data = (c == '\n') ? '\r' : c;
         if (c == EOF)
           break;
+        top->uart0_data = (c == '\n') ? '\r' : c;
       }
     }
     printf("Simulation ended after %d cycles\n", i);

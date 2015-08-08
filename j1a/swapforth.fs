@@ -62,13 +62,13 @@
 
 : create
     :
-    here postpone literal
+    here 4 + postpone literal
     postpone ;
 ;
 
-\ : >body
-\     uw@ 32767 and
-\ ;
+: >body
+    @ 32767 and
+;
 
 : ?do postpone do ; immediate
 \ include double.fs
@@ -87,12 +87,6 @@ include core.fs
 
 \ #######   CORE EXT   ########################################
 
-: sliteral
-    here postpone literal
-    postpone count
-    s,
-; immediate
-
 : ."
     [char] " parse
     state @ if
@@ -104,7 +98,7 @@ include core.fs
 ; immediate
 
 : unused
-    $3000 cp @ - here -
+    $2000 here -
 ;
 
 : pad
@@ -130,13 +124,10 @@ include core-ext.fs
 
 ( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
 
-: serialize \ print out all of program memory as base-36 cells
+: serialize \ print out all of memory as base-36 cells
     base @
     #36 base !
-    $1000 $0000 do
-        i code@ .
-    2 +loop
-    $2000 $1000 do
+    $2000 $0000 do
         i @ .
     2 +loop
     base !

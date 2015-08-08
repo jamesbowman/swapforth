@@ -12,7 +12,6 @@ module j1a(input wire clk,
            input wire [7:0] uart0_data
 );
   wire io_rd, io_wr;
-  wire [15:0] mem_din;
   wire [15:0] mem_addr;
   wire mem_wr;
   wire [15:0] dout;
@@ -22,19 +21,12 @@ module j1a(input wire clk,
   /* verilator lint_on UNUSED */
   wire [15:0] insn;
 
-  reg [15:0] ram_prog[0:2047] /* verilator public_flat */;
+  reg [15:0] ram_prog[0:4095] /* verilator public_flat */;
   always @(posedge clk) begin
-    // $display("pc=%x", code_addr);
-    insn <= ram_prog[code_addr[10:0]];
-    if (mem_wr & !mem_addr[12])
-      ram_prog[mem_addr[11:1]] <= dout;
-  end
-
-  reg [15:0] ram_data[0:2047] /* verilator public_flat */;
-  always @(posedge clk) begin
-    mem_din <= ram_data[mem_addr[11:1]];
-    if (mem_wr & mem_addr[12])
-      ram_data[mem_addr[11:1]] <= dout;
+    // $display("pc=%x", code_addr * 2);
+    insn <= ram_prog[code_addr[11:0]];
+    if (mem_wr)
+      ram_prog[mem_addr[12:1]] <= dout;
   end
 
   j1 _j1(
@@ -45,7 +37,6 @@ module j1a(input wire clk,
     .mem_wr(mem_wr),
     .dout(dout),
     .io_din(io_din),
-    .mem_din(mem_din),
     .mem_addr(mem_addr),
     .code_addr(code_addr),
     .insn(insn));

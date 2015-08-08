@@ -44,23 +44,34 @@ def genram(hh, d, **args):
         hh.write(template.format(i = i, lo = 2*i, hi = 2*i + 1, init = init,
                                  **args))
 code = [int(v,16) for v in code]
-rom = code[:2048]
-ram = code[2048:]
+bn0 = code[:2048]
+bn1 = code[2048:]
 hh = open("build/ram.v", "w")
-genram(hh, rom,
-       kind = "rom",
+hh.write("""
+    wire [15:0] insn0, insn1;
+    wire [15:0] insn;
+""")
+genram(hh, bn0,
+       kind = "bn0",
        raddr = "code_addr[10:0]",
        waddr = "mem_addr[11:1]",
        we = "mem_wr & !mem_addr[12]",
-       din = "insn",
+       din = "insn0",
        dout = "dout"
        )
-genram(hh, ram,
-       kind = "ram",
-       raddr = "mem_addr[11:1]",
+genram(hh, bn1,
+       kind = "bn1",
+       raddr = "code_addr[10:0]",
        waddr = "mem_addr[11:1]",
        we = "mem_wr & mem_addr[12]",
-       din = "mem_din",
+       din = "insn1",
        dout = "dout"
        )
+hh.write("""
+    reg c11;
+    always @(posedge clk) c11 <= code_addr[11];
+    wire [15:0] cm = {16{c11}};
+    assign insn = (cm & insn1) | (~cm & insn0);
+    // assign insn = c11 ? insn1 : insn0;
+""")
 hh.close()

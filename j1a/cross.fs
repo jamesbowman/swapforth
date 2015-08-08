@@ -22,7 +22,7 @@ tflash      31072 erase
 _tbranches  131072 erase
 : tbranches cells _tbranches + ;
 
-variable tdp    $1000 tdp !     \ Data pointer
+variable tdp    0 tdp !         \ Data pointer
 variable tcp    0 tcp !         \ Code pointer
 : there     tdp @ ;
 : islegal   ;
@@ -34,8 +34,8 @@ variable tcp    0 tcp !         \ Code pointer
 : twalign   tdp @ 1+ -2 and tdp ! ;
 : tc,       there tc! 1 tdp +! ;
 : tw,       there tw! tcell tdp +! ;
-: tcode,    tcp @ tw! tcell tcp +! ;
-: org       tcp ! ;
+: tcode,    tdp @ tw! tcell tdp +! ;
+: org       tdp ! ;
 
 wordlist constant target-wordlist
 : add-order ( wid -- ) >r get-order r> swap 1+ set-order ;
@@ -78,7 +78,7 @@ warnings off
 
 ( Defining words for target                  JCB 19:04 05/02/12)
 
-: codeptr   tcp @ 2/ ;  \ target data pointer as a jump address
+: codeptr   tdp @ 2/ ;  \ target data pointer as a jump address
 
 : wordstr ( "name" -- c-addr u )
     >in @ >r bl word count r> >in !
@@ -98,7 +98,6 @@ variable link 0 link !
         i c@ tc,
     loop
     twalign
-    tcp @ tw,
 ;
 
 :: header-imm
@@ -111,7 +110,6 @@ variable link 0 link !
         i c@ tc,
     loop
     twalign
-    tcp @ tw,
 ;
 
 variable wordstart
@@ -160,12 +158,12 @@ variable wordstart
 ;
 
 :: ;
-    tcp @ wordstart @ = if
+    tdp @ wordstart @ = if
         s" exit" evaluate
     else
-        tcp @ 2 - shortcut \ true if shortcut applied
-        tcp @ 0 do
-            i tbranches @ tcp @ = if
+        tdp @ 2 - shortcut \ true if shortcut applied
+        tdp @ 0 do
+            i tbranches @ tdp @ = if
                 i tbranches @ shortcut and
             then
         loop
@@ -195,7 +193,7 @@ variable wordstart
 :: inline:
     parse-name evaluate
     \ tcp @ tw! tcell tcp +! ;
-    tcp @ 2 - >r
+    tdp @ 2 - >r
     r@ tw@ $8000 or r> tw!
     s" code," evaluate
 ;
@@ -250,17 +248,17 @@ warnings on
 ( Conditionals                               JCB 13:12 09/03/10)
 
 : resolve ( orig -- )
-    tcp @ over tbranches ! \ forward reference from orig to this loc
-    dup t@ tcp @ 2/ or swap tw!
+    tdp @ over tbranches ! \ forward reference from orig to this loc
+    dup t@ tdp @ 2/ or swap tw!
 ;
 
 :: if
-    tcp @
+    tdp @
     0 0branch
 ;
 
 :: DOUBLE
-    tcp @ 2/ 1+ scall
+    tdp @ 2/ 1+ scall
 ;
 
 :: then
@@ -268,12 +266,12 @@ warnings on
 ;
 
 :: else
-    tcp @
+    tdp @
     0 ubranch 
     swap resolve
 ;
 
-:: begin tcp @ ;
+:: begin tdp @ ;
 
 :: again ( dest -- )
     2/ ubranch
@@ -282,7 +280,7 @@ warnings on
     2/ 0branch
 ;
 :: while
-    tcp @
+    tdp @
     0 0branch
 ;
 :: repeat
@@ -343,7 +341,7 @@ next-arg 2dup .trim >str constant prefix.
 
 target included                         \ include the program.fs
 
-[ tcp @ 0 org ] main [ org ]
+[ tdp @ 0 org ] main [ org ]
 meta
 
 decimal

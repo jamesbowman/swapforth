@@ -32,21 +32,13 @@ Vj1a_init(v3 *self, PyObject *args, PyObject *kwds)
   self->dut = new Vj1a;
   FILE *hex = fopen("../build/nuc.hex", "r");
   int i;
-  for (i = 0; i < 2048; i++) {
+  for (i = 0; i < 4096; i++) {
     unsigned int v;
     if (fscanf(hex, "%x\n", &v) != 1) {
       fprintf(stderr, "invalid hex value at line %d\n", i + 1);
       exit(1);
     }
     self->dut->v__DOT__ram_prog[i] = v;
-  }
-  for (i = 0; i < 2048; i++) {
-    unsigned int v;
-    if (fscanf(hex, "%x\n", &v) != 1) {
-      fprintf(stderr, "invalid hex value at line %d\n", i + 1);
-      exit(1);
-    }
-    self->dut->v__DOT__ram_data[i] = v;
   }
 
   return 0;

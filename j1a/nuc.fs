@@ -103,9 +103,14 @@ header bl
 header .x
 : . hex4 space ;
 
-header code@
-: code@
-    h# 2000 or >r
+header execute
+: execute
+    >r
+;
+
+header @
+: @
+    h# 2000 or execute
 ;
 
 header false    : false d# 0 ; 
@@ -126,7 +131,7 @@ header max      : max   2dup< if nip else drop then ;
 
 header c@
 : c@
-    dup@ swap
+    dup @ swap
     d# 1 and if
         2/ 2/ 2/ 2/
         2/ 2/ 2/ 2/
@@ -236,12 +241,15 @@ header -        : -         negate + ;
 header abs      : abs       dup 0< if negate then ; 
 header here     : here      dp @ ;
 
-: 1/string
-    d# 1
 header /string
 : /string
     dup >r - swap r> + swap
 ; 
+
+: 1/string
+    d# 1
+    /string
+;
 
 header aligned
 : aligned
@@ -423,7 +431,6 @@ header accept
     d# 2 +
     count +
     aligned
-    @
 ;
 
 header align
@@ -463,10 +470,10 @@ header sfind
    dup base @ u<
 ;
 
-: ud* ( ud1 u -- ud2 ) \ ud2 is the product of ud1 and u
-    tuck * >r
-    um* r> +
-;
+\ : ud* ( ud1 u -- ud2 ) \ ud2 is the product of ud1 and u
+\     tuck * >r
+\     um* r> +
+\ ;
 
 header >number
 : >number ( ud1 c-addr1 u1 -- ud2 c-addr2 u2 )
@@ -520,11 +527,6 @@ header cmove>
     drop 2drop
 ;
 
-header execute
-: execute
-    >r
-;
-
 header 2@
 : 2@ \ ( a -- lo hi )
     dup cell+ @ swap @
@@ -573,7 +575,8 @@ header parse-name
 : _parse
     xt-skip ( end-word restlen r: start-word )
     2dup d# 1 min + source drop - >in !
-    drop r> tuck -
+    drop r>
+    tuck -
 ;
 
 : isnotdelim
@@ -590,25 +593,30 @@ header parse
 ;
 
 header allot
-: allot
+: tallot
     dp +!
 ;
 
 header ,
 : w,
     here !
-    d# 2 allot
+    d# 2 tallot
 ;
 
 header c,
 : c,
     here c!
-    d# 1 allot
+    d# 1 tallot
 ;
 
 : code,
-    cp @ !
-    d# 2 cp +!
+    dp @ !
+    d# 2 dp +!
+;
+
+header compile,
+: compile,
+    2/ h# 4000 or code,
 ;
 
 : attach
@@ -618,7 +626,7 @@ header c,
 ;
 
 : sync
-    cp @ syncpt !
+    dp @ syncpt !
 ;
 
 header s,
@@ -634,6 +642,20 @@ header s,
     2drop
 ;
 
+: (sliteral)
+    r>
+    count
+    2dup + aligned
+    >r
+;
+
+header-imm sliteral
+:noname
+    ['] (sliteral) compile,
+    s,
+    align
+;
+
 : mkheader
     align
     here lastword !
@@ -641,8 +663,7 @@ header s,
     parse-name
     s,
     align
-    cp @ dup w,
-    thisxt !
+    dp @ thisxt !
     sync
 ;
 
@@ -671,7 +692,7 @@ header :
 
 header :noname
 :noname
-    align cp @
+    align dp @
     dup thisxt !
     d# 0 lastword !
     sync
@@ -702,7 +723,7 @@ header-imm ;
 
 header-imm ahead
 : tahead
-    cp @ h# 0000 or
+    dp @ h# 0000 or
     d# 0 code,
 ;
 
@@ -714,14 +735,14 @@ header-imm if
 header-imm then
 : tthen
     dup h# e000 and
-    cp @ 2/ or
+    dp @ 2/ or
     swap h# 1fff and !
     sync
 ;
 
 header-imm begin
 : tbegin
-    cp @ 2/
+    dp @ 2/
 ;
 
 header-imm again
@@ -758,10 +779,6 @@ header-imm until
 \         then
 \     then
 \ ;
-header compile,
-: compile,
-    2/ h# 4000 or code,
-;
 
 header does>
 :noname
@@ -827,14 +844,14 @@ header-imm do
 \ compile a call to (loopdone)
 
 : resolveleaves
-\     leaves @
-\     begin
-\         dup
-\     while
-\         dup @ swap        ( next leafptr )
-\         cp @ 2/ swap !
-\     repeat
-\     drop
+    leaves @
+    begin
+        dup
+    while
+        dup @ swap        ( next leafptr )
+        dp @ 2/ swap !
+    repeat
+    drop
     leaves !
     ['] (loopdone) compile,
 ;
@@ -869,13 +886,13 @@ header-imm +loop
     resolveleaves
 ;
 
-\ header-imm leave
-\ : leave
-\     inline: r>
-\     cp @
-\     leaves @ code,
-\     leaves !
-\ ;
+header-imm leave
+: leave
+    inline: r>
+    dp @
+    leaves @ code,
+    leaves !
+;
 
 \ header-imm ?do
 \ :noname
@@ -917,7 +934,7 @@ header decimal
     d# 10 base !
 ;
 
-header cells
+header cells    :noname     2*       ;
 header 2*       :noname     2*       ;
 header 2/       :noname     2/       ;
 header !        :noname     !        ;
@@ -934,7 +951,6 @@ header dup      :noname     dup      ;
 header drop     :noname     drop     ;
 header over     :noname     over     ;
 header nip      :noname     nip      ;
-header @        :noname     @        ;
 header io!      :noname     io!      ;
 header io@      :noname     io@      ;
 header depth    :noname     depth    ;
@@ -1071,7 +1087,8 @@ header-imm postpone
 
 : interpret
     begin
-        parse-name dup
+        parse-name
+        dup
     while
         sfind
         state @ +
@@ -1096,13 +1113,8 @@ header evaluate
     r> >in ! r> r> source!
 ;
 
-: main
-    cr
-    decimal
-    d# 0 tethered !
-    key> drop
-
 header quit
+: quit
     begin
         refill drop
         interpret
@@ -1113,6 +1125,14 @@ header quit
             cr
         then
     again
+;
+
+: main
+    cr
+    decimal
+    d# 0 tethered !
+    key> drop
+    quit
 ;
 
 meta
