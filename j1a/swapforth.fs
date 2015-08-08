@@ -112,12 +112,11 @@ include core-ext.fs
 
 : marker
     forth @
-    dp @
+    here
     create
         , ,
     does>
-        dup @ dp !
-        cell+ @ forth !
+        2@ dp ! forth !
 ;
 
 ( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
@@ -166,6 +165,48 @@ marker |
     then
     drop
 ;
+
+: .xt  \ print xt's name
+    begin
+        2 -
+        dup c@ 20 <
+    until
+    count type
+;
+
+: see
+    base @ hex
+    '
+    32 bounds
+    begin
+        cr dup .
+        dup @ >r
+        r@ 4 .r
+        6 spaces
+        r@ 15 rshift if
+            [char] L emit space
+            r@ 32767 and .
+        else
+            r@ 13 rshift 0 = if
+                [char] J emit space
+                r@ 8191 and 2* .
+            then
+            r@ 13 rshift 1 = if
+                [char] Z emit space
+                r@ 8191 and 2* .
+            then
+            r@ 13 rshift 2 = if
+                r@ 8191 and 2* .xt
+            then
+        then
+        r> drop
+        2 +
+        2dup =
+    until
+    2drop
+    base !
+;
+
 
 : (.s)
     depth if

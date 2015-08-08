@@ -76,6 +76,7 @@ CREATE ACTUAL-RESULTS 20 CELLS ALLOT
    THEN ;
 
 include core.fr
+here .x
 new unused decimal .
 #bye
 marker XX

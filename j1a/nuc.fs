@@ -184,7 +184,6 @@ create syncpt   0 ,
 create sourceC  0 , 0 ,
 create >in      0 ,
 create state    0 ,
-create delim    0 ,
 create rO       0 ,
 create leaves   0 ,
 create tethered 0 ,
@@ -578,12 +577,12 @@ header parse-name
 ;
 
 : isnotdelim
-    delim @i <>
+    scratch @i <>
 ;
 
 header parse
 : parse ( "ccc<char" -- c-addr u )
-    delim !
+    scratch !
     source >in @i /string
     over >r
     ['] isnotdelim
@@ -607,14 +606,34 @@ header c,
     d# 1 tallot
 ;
 
-: code,
-    dp @i !
-    d# 2 dp +!
-;
+\ : isreturn ( opcode -- f )
+\     h# e080 and
+\     h# 6080 =
+\ ;
+\ 
+\ : isliteral ( ptr -- f)
+\     dup @ h# 8000 and 0<>
+\     swap d# 2 + @ h# 608c = and
+\ ;
+\ 
+\ header compile,
+\ : compile,
+\     dup @ isreturn if
+\         @ h# ff73 and
+\         w,
+\     else
+\         dup isliteral if
+\             @ w,
+\         else
+\             2/ h# 4000 or
+\             w,
+\         then
+\     then
+\ ;
 
 header compile,
 : compile,
-    2/ h# 4000 or code,
+    2/ h# 4000 or w,
 ;
 
 : attach
@@ -638,6 +657,7 @@ header s,
         1+
     repeat
     2drop
+    align
 ;
 
 : (sliteral)
@@ -651,7 +671,6 @@ header-imm sliteral
 :noname
     ['] (sliteral) compile,
     s,
-    align
 ;
 
 : mkheader
@@ -660,7 +679,6 @@ header-imm sliteral
     forth @i w,
     parse-name
     s,
-    align
     dp @i thisxt !
     sync
 ;
@@ -702,10 +720,37 @@ header :noname
     r> r> rO ! >r
 ;
 
+\ : prev
+\     dp @ d# -2 +
+\ ;
+\ 
+\ : jumpable ( op -- f )
+\     dup h# e000 and h# 4000 =       \ is a call
+\     swap h# 1fff and 2* ['] (loopdone) <> and
+\ ;
+\ 
+\ header-imm exit
+\ : texit
+\     dp @ thisxt @ <> if
+\         prev @ jumpable if
+\             prev
+\             @
+\             h# 4000 xor
+\             prev !
+\             dp @ syncpt @ <> if
+\                 inline: exit
+\             then
+\             exit
+\         then
+\     then
+\     inline: exit
+\ ;
+
 header-imm exit
 : texit
     inline: exit
 ;
+
 
 header-imm ;
 :noname
@@ -722,7 +767,7 @@ header-imm ;
 header-imm ahead
 : tahead
     dp @i h# 0000 or
-    d# 0 code,
+    d# 0 w,
 ;
 
 header-imm if
@@ -745,38 +790,13 @@ header-imm begin
 
 header-imm again
 : tagain
-    code,
+    w,
 ;
 
 header-imm until
 : tuntil
-    h# 2000 or code,
+    h# 2000 or w,
 ;
-
-\ : isreturn ( opcode -- f )
-\     h# e080 and
-\     h# 6080 =
-\ ;
-\ 
-\ : isliteral ( ptr -- f)
-\     dup @i h# 8000 and 0<>
-\     swap d# 2 + @i h# 608c = and
-\ ;
-\ 
-\ header compile,
-\ : compile,
-\     dup @i isreturn if
-\         @i h# ff73 and
-\         code,
-\     else
-\         dup isliteral if
-\             @i code,
-\         else
-\             2/ h# 4000 or
-\             code,
-\         then
-\     then
-\ ;
 
 header does>
 :noname
@@ -888,7 +908,7 @@ header-imm leave
 : leave
     inline: r>
     dp @i
-    leaves @i code,
+    leaves @i w,
     leaves !
 ;
 
@@ -898,7 +918,7 @@ header-imm leave
 \     ['] (?do) compile,
 \     tif
 \         dp @
-\         leaves @ code,
+\         leaves @ w,
 \         leaves !
 \     tthen
 \     tbegin
@@ -974,6 +994,10 @@ header throw
     then
 ;
 
+
+: isvoid ( caddr u -- ) \ any char remains, throw -13
+    nip 0<> d# 13
+;fallthru
 : -throw ( a b -- ) \ if a is nonzero, throw -b
     negate and throw
 ;
@@ -981,10 +1005,6 @@ header throw
 header abort
 : abort
     d# -1 throw
-;
-
-: isvoid ( caddr u -- ) \ any char remains, throw -13
-    nip 0<> d# 13 -throw
 ;
 
 : consume1 ( caddr u ch -- caddr' u' f )
@@ -1050,7 +1070,7 @@ header-imm literal
         invert tliteral
         inline: invert
     else
-        h# 8000 or code,
+        h# 8000 or w,
     then
 ;
 

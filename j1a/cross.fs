@@ -195,7 +195,7 @@ variable wordstart
     \ tcp @ tw! tcell tcp +! ;
     tdp @ 2 - >r
     r@ tw@ $8000 or r> tw!
-    s" code," evaluate
+    s" w," evaluate
 ;
 
 \ usage "<variable> @i"
