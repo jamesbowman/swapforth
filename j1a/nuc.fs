@@ -2,14 +2,14 @@
 \   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
 \               If the string is legal, give a single or double cell number
 \               and size of the number.
-header negate   : negate    invert ;fallthru
 header 1+       : 1+        d# 1 + ;
+header negate   : negate    invert 1+ ;
 header 1-       : 1-        d# -1 + ;
 header 0=       : 0=        d# 0 = ;
 header cell+    : cell+     d# 2 + ;
 
-header 0<>      : 0<>       d# 0 ;fallthru
 header <>       : <>        = invert ; 
+header 0<>      : 0<>       d# 0 <> ;
 header >        : >         swap < ; 
 header 0<       : 0<        d# 0 < ; 
 header 0>       : 0>        d# 0 > ;
@@ -56,17 +56,17 @@ header key
     h# 1000 io@
 ;
 
-header space
-: space
-    d# 32
-;fallthru
-
 header emit
 : emit
     begin
         d# 1 uart-stat 
     until
     h# 1000 io!
+;
+
+header space
+: space
+    d# 32 emit
 ;
 
 header cr
@@ -102,6 +102,11 @@ header bl
 
 header .x
 : . hex4 space ;
+
+header code@
+: code@
+    h# 2000 or >r
+;
 
 header false    : false d# 0 ; 
 header true     : true  d# -1 ; 
@@ -515,33 +520,29 @@ header cmove>
     drop 2drop
 ;
 
-header code@
-: code@
-    h# 2000 or
-;fallthru
 header execute
 : execute
     >r
 ;
-
-header source
-: source
-    sourceC
-;fallthru
 
 header 2@
 : 2@ \ ( a -- lo hi )
     dup cell+ @ swap @
 ;
 
-: source! ( addr u -- ) \ set the source
-    sourceC
-;fallthru
-
 header 2!
 : 2! \ ( lo hi a -- )
     tuck !
     cell+ !
+;
+
+header source
+: source
+    sourceC 2@
+;
+
+: source! ( addr u -- ) \ set the source
+    sourceC 2!
 ;
 
 \ From Forth200x - public domain
@@ -588,15 +589,15 @@ header parse
     _parse
 ;
 
-header ,
-: w,
-    here !
-    d# 2
-;fallthru
-
 header allot
 : allot
     dp +!
+;
+
+header ,
+: w,
+    here !
+    d# 2 allot
 ;
 
 header c,
@@ -944,10 +945,6 @@ header-imm r@   :noname     inline: r@ ;
 : jumptable ( u -- ) \ add u to the return address
     r> + >r ;
 
-: -throw ( a b -- ) \ if a is nonzero, throw -b
-    negate and
-;fallthru
-
 header throw
 : throw
     ?dup if
@@ -961,6 +958,10 @@ header throw
         .
         d# 0 execute
     then
+;
+
+: -throw ( a b -- ) \ if a is nonzero, throw -b
+    negate and throw
 ;
 
 header abort
