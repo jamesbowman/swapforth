@@ -207,7 +207,7 @@ header tth
 ;
 
 header words : words
-    forth @
+    forth @i
     begin
         dup
     while
@@ -237,7 +237,7 @@ header words : words
 
 header -        : -         negate + ; 
 header abs      : abs       dup 0< if negate then ; 
-header here     : here      dp @ ;
+header here     : here      dp @i ;
 
 header /string
 : /string
@@ -314,7 +314,7 @@ header d2*
     >r
     d2*
     r@ d# 0 < if 
-        scratch @ d# 0 d+ 
+        scratch @i d# 0 d+ 
     then 
     r> 2*
 ;
@@ -369,7 +369,7 @@ header um/mod
 
 header accept
 : accept
-    tethered @ if
+    tethered @i if
         d# 30 emit
     then
     drop dup
@@ -380,7 +380,7 @@ header accept
         h# 0a over= if
             drop
         else
-            tethered @ 0= if
+            tethered @i 0= if
                 dup emit
             then
             over c! 1+
@@ -446,7 +446,7 @@ header align
 
 header sfind
 : sfind
-    forth @
+    forth @i
     begin
         dup
     while
@@ -465,7 +465,7 @@ header sfind
    lower
    dup h# 39 > h# 100 and +
    dup h# 160 > h# 127 and - h# 30 -
-   dup base @ u<
+   dup base @i u<
 ;
 
 \ : ud* ( ud1 u -- ud2 ) \ ud2 is the product of ud1 and u
@@ -480,7 +480,7 @@ header >number
     while
         over c@ digit?
         0= if drop exit then
-        >r 2swap base @
+        >r 2swap base @i
         \ ud*
         tuck * >r um* r> +
         r> m+ 2swap
@@ -566,7 +566,7 @@ header source
 
 header parse-name
 : parse-name ( "name" -- c-addr u )
-    source >in @ /string
+    source >in @i /string
     ['] isspace? xt-skip over >r
     ['] isnotspace?
 ;fallthru
@@ -578,13 +578,13 @@ header parse-name
 ;
 
 : isnotdelim
-    delim @ <>
+    delim @i <>
 ;
 
 header parse
 : parse ( "ccc<char" -- c-addr u )
     delim !
-    source >in @ /string
+    source >in @i /string
     over >r
     ['] isnotdelim
     _parse
@@ -608,7 +608,7 @@ header c,
 ;
 
 : code,
-    dp @ !
+    dp @i !
     d# 2 dp +!
 ;
 
@@ -618,13 +618,13 @@ header compile,
 ;
 
 : attach
-    lastword @ ?dup if
+    lastword @i ?dup if
         forth !
     then
 ;
 
 : sync
-    dp @ syncpt !
+    dp @i syncpt !
 ;
 
 header s,
@@ -657,17 +657,17 @@ header-imm sliteral
 : mkheader
     align
     here lastword !
-    forth @ w,
+    forth @i w,
     parse-name
     s,
     align
-    dp @ thisxt !
+    dp @i thisxt !
     sync
 ;
 
 header immediate
 :noname
-    d# 1 lastword @ +!
+    d# 1 lastword @i +!
 ;
 
 header ]
@@ -690,7 +690,7 @@ header :
 
 header :noname
 :noname
-    align dp @
+    align dp @i
     dup thisxt !
     d# 0 lastword !
     sync
@@ -721,7 +721,7 @@ header-imm ;
 
 header-imm ahead
 : tahead
-    dp @ h# 0000 or
+    dp @i h# 0000 or
     d# 0 code,
 ;
 
@@ -733,14 +733,14 @@ header-imm if
 header-imm then
 : tthen
     dup h# e000 and
-    dp @ 2/ or
+    dp @i 2/ or
     swap h# 1fff and !
     sync
 ;
 
 header-imm begin
 : tbegin
-    dp @ 2/
+    dp @i 2/
 ;
 
 header-imm again
@@ -759,18 +759,18 @@ header-imm until
 \ ;
 \ 
 \ : isliteral ( ptr -- f)
-\     dup @ h# 8000 and 0<>
-\     swap d# 2 + @ h# 608c = and
+\     dup @i h# 8000 and 0<>
+\     swap d# 2 + @i h# 608c = and
 \ ;
 \ 
 \ header compile,
 \ : compile,
-\     dup @ isreturn if
-\         @ h# ff73 and
+\     dup @i isreturn if
+\         @i h# ff73 and
 \         code,
 \     else
 \         dup isliteral if
-\             @ code,
+\             @i code,
 \         else
 \             2/ h# 4000 or
 \             code,
@@ -781,14 +781,14 @@ header-imm until
 header does>
 :noname
     r> 2/
-    lastword @
+    lastword @i
     >xt d# 2 +  \ ready to patch the RETURN
     !
 ;
 
 header-imm recurse
 :noname
-    thisxt @ compile,
+    thisxt @i compile,
 ;
 
 \
@@ -813,13 +813,13 @@ header-imm recurse
 \
 
 : (do)  ( limit start -- start-limit )
-    r> rO @ >r >r
+    r> rO @i >r >r
     over rO !
     swap -
 ;
 
 : (?do)  ( limit start -- start-limit start!=limit )
-    r> rO @ >r >r
+    r> rO @i >r >r
     over rO !
     swap -
     dup 0=
@@ -831,7 +831,7 @@ header-imm recurse
 
 header-imm do
 :noname
-    leaves @ d# 0 leaves !
+    leaves @i d# 0 leaves !
     ['] (do) compile,
     tbegin
     inline: >r
@@ -842,12 +842,12 @@ header-imm do
 \ compile a call to (loopdone)
 
 : resolveleaves
-    leaves @
+    leaves @i
     begin
         dup
     while
         dup @ swap        ( next leafptr )
-        dp @ 2/ swap !
+        dp @i 2/ swap !
     repeat
     drop
     leaves !
@@ -887,8 +887,8 @@ header-imm +loop
 header-imm leave
 : leave
     inline: r>
-    dp @
-    leaves @ code,
+    dp @i
+    leaves @i code,
     leaves !
 ;
 
@@ -908,7 +908,7 @@ header-imm leave
 header i
 : i
     r>
-    r@ rO @ +
+    r@ rO @i +
     swap >r
 ;
 
@@ -1009,7 +1009,7 @@ header abort
 ;
 
 : base((doubleAlso))
-    base @ >r base !
+    base @i >r base !
     ((doubleAlso))
     r> base !
 ;
@@ -1089,7 +1089,7 @@ header-imm postpone
         dup
     while
         sfind
-        state @ +
+        state @i +
         1+ 2* dispatch
     repeat
     2drop
@@ -1105,7 +1105,7 @@ header refill
 
 header evaluate
 :noname
-    source >r >r >in @ >r
+    source >r >r >in @i >r
     source! d# 0 >in !
     interpret
     r> >in ! r> r> source!
@@ -1116,7 +1116,7 @@ header quit
     begin
         refill drop
         interpret
-        state @ 0= if
+        state @i 0= if
             space space
             [char] k
             [char] o 2emit
