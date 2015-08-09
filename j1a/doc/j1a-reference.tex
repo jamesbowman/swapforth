@@ -236,9 +236,9 @@ Providing names from the \wl{Programming-Tools Extensions} word set
 J1a SwapForth is a 16-bit version of SwapForth,
 intended as an interactive Forth system using very little logic and RAM.
 The system currently fits on a Lattice iCE40HX-1k FPGA. \index{FPGA}
-The J1a and peripherals uses 1100 logic elements.
-SwapForth uses 5 Kbytes of RAM,
-leaving about 3 Kbytes for the application. \index{RAM}
+The J1a and peripherals use 1200 logic elements.
+SwapForth uses 4.7 Kbytes of RAM,
+leaving about 3.3 Kbytes for the application. \index{RAM}
 
 After installing the \index{icestorm} \index{icestorm} \index{git} \index{iceprog}
 \href{http://www.clifford.at/icestorm/}{icestorm}
@@ -262,7 +262,7 @@ You should see something like
 \begin{framed}
 \begin{Verbatim}
   Contacting... established
-  Loaded 196 words
+  Loaded 208 words
   >
 \end{Verbatim}
 \end{framed}
@@ -574,11 +574,10 @@ Implemented words are:
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.2540}{\word{]}}
 
 \noindent
-These core words are not implemented:
+These core words
 \word{abort"}
 \word{environment?}
-
-\noindent
+are not implemented.
 J1a SwapForth also implements the following standard words:
 
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0200}{\wordidx{.(}}
