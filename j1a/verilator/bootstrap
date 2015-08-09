@@ -1,7 +1,8 @@
 set -e
 make
 
-(echo 
+python shell.py -p ../ -p ../../common <<END
+#include ../swapforth.fs
 #flash ../build/nuc.hex
-) | python shell.py -p ../ -p ../../common swapforth.fs
-
+#bye
+END
