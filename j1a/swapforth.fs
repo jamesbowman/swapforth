@@ -1,30 +1,19 @@
-: \     source nip >in ! ; immediate \ Now can use comments!
 \       
 \ This file contains definitions in high-level Forth for the
-\ rest of Swapforth. Many words were already defined in
+\ rest of SwapForth. Many words were already defined in
 \ nucleus -- this file fills in the gaps.
 \       
 \ This file is divided into sections for each word set in ANS
 \ Forth.
 \
 \ The only definitions in this file should be specific to
-\ Swapforth Python (sfpy).
+\ J1a SwapForth.
 
 \ #######   CORE AND DOUBLE   #################################
-
-: '
-    parse-name
-    sfind
-    0= -13 and throw
-;
 
 : [']
     ' postpone literal
 ; immediate
-
-: char
-    parse-name drop c@
-;
 
 : [char]
     char postpone literal
@@ -50,16 +39,6 @@
      postpone then
 ; immediate
 
-\ include double0.fs
-
-\ : 2>r   r> -rot swap >r >r >r ;
-\ : 2r>
-\     postpone r>
-\     postpone r>
-\     postpone swap
-\ ; immediate
-\ : 2r@   r> 2r> 2dup 2>r rot >r ;
-
 : create
     :
     here 4 + postpone literal
@@ -71,7 +50,6 @@
 ;
 
 : ?do postpone do ; immediate
-\ include double.fs
 
 : m*
     2dup xor >r
@@ -107,16 +85,15 @@ include core.fs
 
 include core-ext.fs
 
-: ms 0 do 1491 0 do loop loop ;
+: ms 0 do 1325 0 do loop loop ;
 : leds  4 io! ;
 
 : marker
-    forth @
-    here
+    forth 2@        \ preserve FORTH and DP
     create
         , ,
     does>
-        2@ dp ! forth !
+        2@ forth 2! \ restore FORTH and DP
 ;
 
 ( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
@@ -140,30 +117,6 @@ marker |
     hex
     s>d <# # # #> type space
     base !
-;
-
-: dump
-    ?dup
-    if
-        base @ >r hex
-        1- 4 rshift 1+
-        0 do
-            cr dup dup 8 u.r space space
-            16 0 do
-                dup c@ hex2. 1+
-            loop
-            space swap
-            16 0 do
-                dup c@ 127 and
-                dup 0 bl within over 127 = or
-                if drop [char] . then
-                emit 1+
-            loop
-            drop
-        loop
-        r> base !
-    then
-    drop
 ;
 
 : .xt  \ print xt's name
@@ -220,5 +173,26 @@ marker |
     (.s)
 ;
 
-: chars ;
-: char+ 1+ ;
+: dump
+    ?dup
+    if
+        base @ >r hex
+        1- 4 rshift 1+
+        0 do
+            cr dup dup 8 u.r space space
+            16 0 do
+                dup c@ hex2. 1+
+            loop
+            space swap
+            16 0 do
+                dup c@ 127 and
+                dup 0 bl within over 127 = or
+                if drop [char] . then
+                emit 1+
+            loop
+            drop
+        loop
+        r> base !
+    then
+    drop
+;

@@ -15,6 +15,13 @@ header 0<       : 0<        d# 0 < ;
 header 0>       : 0>        d# 0 > ;
 header u>       : u>        swap u< ; 
 
+: off   ( a -- ) \ store 0 to a
+    d# 0 swap
+;fallthru
+: _!    ( x a -- ) \ subroutine version of store
+    !
+;
+
 header lshift
 : lshift
     begin
@@ -122,7 +129,7 @@ header 2drop    : 2drop drop drop ;
 header ?dup     : ?dup  dup if dup then ;
 
 header 2dup     : 2dup  over over ; 
-header +!       : +!    tuck @ + swap ! ; 
+header +!       : +!    tuck @ + swap _! ; 
 header 2swap    : 2swap rot >r rot r> ;
 header 2over    : 2over >r >r 2dup r> r> 2swap ;
 
@@ -139,7 +146,6 @@ header c@
     d# 255 and
 ;
 
-
 header c!
 : c! ( u c-addr -- )
     dup>r d# 1 and if
@@ -150,7 +156,7 @@ header c!
         h# ff00
     then
     r@ @ and
-    or r> !
+    or r> _!
 ;
 
 header count
@@ -160,7 +166,7 @@ header count
 
 header bounds
 : bounds ( a n -- a+n a )
-    over + swap
+    over+ swap
 ;
 
 header type
@@ -169,8 +175,7 @@ header type
     begin
         2dupxor
     while
-        dup c@ emit
-        1+
+        count emit
     repeat
     2drop
 ;
@@ -180,16 +185,15 @@ create forth    0 ,
 create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
-create syncpt   0 ,
+\ create syncpt   0 ,
 create sourceC  0 , 0 ,
 create >in      0 ,
 create state    0 ,
 create rO       0 ,
 create leaves   0 ,
 create tethered 0 ,
-create tib #128 allot
+create tib      #128 allot
 
-header dp    :noname dp ;
 header state :noname state ;
 header base  :noname base ;
 header >in   :noname >in  ;
@@ -210,7 +214,7 @@ header words : words
     begin
         dup
     while
-        dup d# 2 +
+        dup cell+
         count type
         space
         nextword
@@ -320,33 +324,39 @@ header d2*
 
 header um*
 : um*  ( u1 u2 -- ud ) 
-    scratch ! 
+    scratch _! 
     d# 0. rot
     mulstep mulstep mulstep mulstep
     drop 
 ; 
 
-: mul32step ( u2 u1 -- u2 u1 )
-    DOUBLE DOUBLE
-    >r
-    2*
-    r@ d# 0 < if 
-        scratch @i +
-    then 
-    r> 2*
-;
+\ : mul32step ( u2 u1 -- u2 u1 )
+\     DOUBLE DOUBLE
+\     >r
+\     2*
+\     r@ d# 0 < if 
+\         scratch @i +
+\     then 
+\     r> 2*
+\ ;
+\ 
+\ header *
+\ : *
+\     scratch !
+\     d# 0 swap
+\     mul32step mul32step mul32step mul32step
+\     drop
+\ ;
 
 header *
 : *
-    scratch !
-    d# 0 swap
-    mul32step mul32step mul32step mul32step
-    drop
+    um* drop
 ;
 
 \ see Hacker's Delight (2nd ed) 9-4 "Unsigned Long Division"
 
 : divstep  \ ( y x z )
+    DOUBLE DOUBLE
     >r
     dup 0< >r
     d2*
@@ -359,9 +369,6 @@ header *
 
 header um/mod
 : um/mod \ ( ud u1 -- u2 u3 ) ( 6.1.2370 ) 
-    divstep divstep divstep divstep
-    divstep divstep divstep divstep
-    divstep divstep divstep divstep
     divstep divstep divstep divstep
     drop swap 
 ; 
@@ -399,13 +406,13 @@ header accept
 
 : i<> ( c1 c2 -- f ) \ case-insensitive difference
     2dupxor h# 1f and if
-        drop exit
+        drop ;
     then
     lower swap lower xor
 ;
 
 : sameword ( c-addr u wp -- c-addr u wp flag )
-    2dup d# 2 + c@ = if
+    2dup cell+ c@ = if
         3dup
         d# 3 + >r
         bounds
@@ -413,7 +420,7 @@ header accept
             2dupxor
         while
             dup c@ r@ c@ i<> if
-                2drop rdrop false exit
+                2drop rdrop false ;
             then
             1+
             r> 1+ >r
@@ -425,7 +432,7 @@ header accept
 ;
 
 : >xt
-    d# 2 +
+    cell+
     count +
     aligned
 ;
@@ -434,14 +441,9 @@ header align
 : align
     here
     aligned
-    dp !
+    dp _!
 ;
 
-\ lsb 0 means non-immediate, return -1
-\     1 means immediate,     return  1
-: isimmediate ( wp -- -1 | 1 )
-    @ d# 1 and 2* 1-
-;
 
 header sfind
 : sfind
@@ -453,8 +455,11 @@ header sfind
         if 
             nip nip
             dup >xt
-            swap isimmediate
-            exit
+            swap        ( xt wp )
+                        \ wp lsb 0 means non-immediate, return -1
+                        \        1 means immediate,     return  1
+            @ d# 1 and 2* 1-
+            ;
         then
         nextword
     repeat
@@ -478,7 +483,7 @@ header >number
         dup
     while
         over c@ digit?
-        0= if drop exit then
+        0= if drop ; then
         >r 2swap base @i
         \ ud*
         tuck * >r um* r> +
@@ -531,8 +536,8 @@ header 2@
 
 header 2!
 : 2! \ ( lo hi a -- )
-    tuck !
-    cell+ !
+    tuck _!
+    cell+ _!
 ;
 
 header source
@@ -571,7 +576,7 @@ header parse-name
 ;fallthru
 : _parse
     xt-skip ( end-word restlen r: start-word )
-    2dup d# 1 min + source drop - >in !
+    2dup d# 1 min + source drop - >in _!
     drop r>
     tuck -
 ;
@@ -582,7 +587,7 @@ header parse-name
 
 header parse
 : parse ( "ccc<char" -- c-addr u )
-    scratch !
+    scratch _!
     source >in @i /string
     over >r
     ['] isnotdelim
@@ -596,7 +601,7 @@ header allot
 
 header ,
 : w,
-    here !
+    here _!
     d# 2 tallot
 ;
 
@@ -613,7 +618,7 @@ header c,
 \ 
 \ : isliteral ( ptr -- f)
 \     dup @ h# 8000 and 0<>
-\     swap d# 2 + @ h# 608c = and
+\     swap cell+ @ h# 608c = and
 \ ;
 \ 
 \ header compile,
@@ -638,13 +643,13 @@ header compile,
 
 : attach
     lastword @i ?dup if
-        forth !
+        forth _!
     then
 ;
 
-: sync
-    dp @i syncpt !
-;
+\ : sync
+\     dp @i syncpt _!
+\ ;
 
 header s,
 : s,
@@ -675,12 +680,12 @@ header-imm sliteral
 
 : mkheader
     align
-    here lastword !
+    here lastword _!
     forth @i w,
     parse-name
     s,
-    dp @i thisxt !
-    sync
+    dp @i thisxt _!
+    \ sync
 ;
 
 header immediate
@@ -693,7 +698,7 @@ header ]
     d# 3
 ;fallthru
 : state!
-    state !
+    state _!
 ;
 
 header-imm [
@@ -709,15 +714,15 @@ header :
 header :noname
 :noname
     align dp @i
-    dup thisxt !
-    d# 0 lastword !
-    sync
+    dup thisxt _!
+    lastword off
+    \ sync
     t]
 ;
 
 : (loopdone)  ( 0 -- )
     drop
-    r> r> rO ! >r
+    r> r> rO _! >r
 ;
 
 \ : prev
@@ -737,9 +742,9 @@ header :noname
 \             @
 \             h# 4000 xor
 \             prev !
-\             dp @ syncpt @ <> if
+\             \ dp @ syncpt @ <> if
 \                 inline: exit
-\             then
+\             \ then
 \             exit
 \         then
 \     then
@@ -750,7 +755,6 @@ header-imm exit
 : texit
     inline: exit
 ;
-
 
 header-imm ;
 :noname
@@ -766,21 +770,19 @@ header-imm ;
 
 header-imm ahead
 : tahead
-    dp @i h# 0000 or
-    d# 0 w,
+    here h# 0000 w,
 ;
 
 header-imm if
 : tif
-    tahead h# 2000 or
+    here h# 2000 w,
 ;
 
 header-imm then
 : tthen
-    dup h# e000 and
-    dp @i 2/ or
-    swap h# 1fff and !
-    sync
+    here 2/
+    swap +!
+    \ sync
 ;
 
 header-imm begin
@@ -802,8 +804,8 @@ header does>
 :noname
     r> 2/
     lastword @i
-    >xt d# 2 +  \ ready to patch the RETURN
-    !
+    >xt cell+  \ ready to patch the RETURN
+    _!
 ;
 
 header-imm recurse
@@ -834,24 +836,20 @@ header-imm recurse
 
 : (do)  ( limit start -- start-limit )
     r> rO @i >r >r
-    over rO !
+    over rO _!
     swap -
 ;
 
-: (?do)  ( limit start -- start-limit start!=limit )
-    r> rO @i >r >r
-    over rO !
-    swap -
-    dup 0=
-;
-
-: (loopnext)
-    d# 1 + dup
-;
+\ : (?do)  ( limit start -- start-limit start!=limit )
+\     r> rO @i >r >r
+\     over rO _!
+\     swap -
+\     dup 0=
+\ ;
 
 header-imm do
 :noname
-    leaves @i d# 0 leaves !
+    leaves @i leaves off
     ['] (do) compile,
     tbegin
     inline: >r
@@ -867,20 +865,22 @@ header-imm do
         dup
     while
         dup @ swap        ( next leafptr )
-        dp @i 2/ swap !
+        dp @i 2/ swap _!
     repeat
     drop
-    leaves !
+    leaves _!
     ['] (loopdone) compile,
+;
+
+: (loopnext)
+    d# 1 + dup d# 0 =
 ;
 
 header-imm loop
 :noname
     inline: r>
     ['] (loopnext) compile,
-    tif
-    swap tagain
-    tthen
+    tuntil
     resolveleaves
 ;
 
@@ -909,7 +909,7 @@ header-imm leave
     inline: r>
     dp @i
     leaves @i w,
-    leaves !
+    leaves _!
 ;
 
 \ header-imm ?do
@@ -949,10 +949,12 @@ header-imm unloop
 
 header decimal
 : decimal
-    d# 10 base !
+    d# 10
+;fallthru
+: setbase
+    base _!
 ;
 
-header cells    :noname     2*       ;
 header 2*       :noname     2*       ;
 header 2/       :noname     2/       ;
 header !        :noname     !        ;
@@ -975,6 +977,9 @@ header depth    :noname     depth    ;
 header-imm >r   :noname     inline: >r ;
 header-imm r>   :noname     inline: r> ;
 header-imm r@   :noname     inline: r@ ;
+header cells    :noname     2*       ;
+header char+    :noname     1+ ;
+header chars    :noname     noop ;
 
 : jumptable ( u -- ) \ add u to the return address
     r> + >r ;
@@ -996,7 +1001,10 @@ header throw
 
 
 : isvoid ( caddr u -- ) \ any char remains, throw -13
-    nip 0<> d# 13
+    nip 0<>
+;fallthru
+: -13throw ( a -- ) \ if a is nonzero, throw -13
+    d# 13
 ;fallthru
 : -throw ( a b -- ) \ if a is nonzero, throw -b
     negate and throw
@@ -1025,19 +1033,25 @@ header abort
                             \ single number
     isvoid drop
     r> if negate then
+;fallthru
+: return1
     d# 1
 ;
 
 : base((doubleAlso))
-    base @i >r base !
+    base @i >r setbase
     ((doubleAlso))
-    r> base !
+    r> setbase
+;
+
+: is' ( f caddr -- f' ) \ f remains true if caddr is '
+    c@ [char] ' = and
 ;
 
 : is'c' ( caddr u -- f )
     d# 3 =
-    over c@ [char] ' = and
-    swap d# 2 + c@ [char] ' = and
+    over is'
+    swap d# 2 + is'
 ;
 
 \   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
@@ -1046,16 +1060,16 @@ header abort
 
 : (doubleAlso)
     [char] $ consume1 if
-        d# 16 base((doubleAlso)) exit
+        d# 16 base((doubleAlso)) ;
     then
     [char] # consume1 if
-        d# 10 base((doubleAlso)) exit
+        d# 10 base((doubleAlso)) ;
     then
     [char] % consume1 if
-        d# 2 base((doubleAlso)) exit
+        d# 2 base((doubleAlso)) ;
     then
     2dup is'c' if
-        drop 1+ c@ d# 1 exit
+        drop 1+ c@ return1 ;
     then
     ((doubleAlso))
 ;
@@ -1077,12 +1091,29 @@ header-imm literal
 header-imm postpone
 :noname
     parse-name sfind
-    dup 0= d# 13 -throw
+    dup 0= -13throw
     0< if
         tliteral
         ['] compile,
     then
     compile,
+;
+
+header '
+:noname
+    parse-name
+    sfind
+    0= -13throw
+;
+
+header char
+:noname
+    parse-name drop c@
+;
+
+header-imm \
+:noname
+    sourceC @i >in _!
 ;
 
 : doubleAlso,
@@ -1119,16 +1150,18 @@ header refill
 : refill
     tib dup d# 128 accept
     source!
-    d# 0 >in !
     true
+;fallthru
+: 0>in
+    >in off
 ;
 
 header evaluate
 :noname
     source >r >r >in @i >r
-    source! d# 0 >in !
+    source! 0>in
     interpret
-    r> >in ! r> r> source!
+    r> >in _! r> r> source!
 ;
 
 header quit
@@ -1148,7 +1181,7 @@ header quit
 : main
     cr
     decimal
-    d# 0 tethered !
+    tethered off
     key> drop
     quit
 ;

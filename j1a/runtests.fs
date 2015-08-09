@@ -7,8 +7,6 @@
 CR .( Running ANS Forth and Forth 2012 test programs, version 0.11) CR
 
 new
-: char+ 1+ ;
-: chars ;
 
 \ From: John Hayes S1I
 \ Subject: tester.fr
