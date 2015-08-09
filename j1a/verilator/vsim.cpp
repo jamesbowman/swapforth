@@ -193,7 +193,9 @@ extern "C" void initvsimj1a()
   if (PyType_Ready(&v3_V3Type) < 0)
       return;
 
+#if VCD
   Verilated::traceEverOn(true);
+#endif
   m = Py_InitModule("vsimj1a", NULL);
 
   Py_INCREF(&v3_V3Type);
