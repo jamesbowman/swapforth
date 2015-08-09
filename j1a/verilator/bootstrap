@@ -1,0 +1,7 @@
+set -e
+make
+
+(echo 
+#flash ../build/nuc.hex
+) | python shell.py -p ../ -p ../../common swapforth.fs
+
