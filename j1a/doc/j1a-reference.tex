@@ -475,7 +475,7 @@ Implemented words are:
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0490}{\word{<\#}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0530}{\word{=}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0540}{\word{>}}
-% \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0550}{\word{>body}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0550}{\word{>body}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0560}{\word{>in}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0570}{\word{>number}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.0580}{\word{>r}}
@@ -527,7 +527,7 @@ Implemented words are:
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1720}{\word{invert}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1730}{\word{j}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1750}{\word{key}}
-% \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1760}{\word{leave}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1760}{\word{leave}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1780}{\word{literal}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1800}{\word{loop}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.1.1805}{\word{lshift}}
@@ -575,11 +575,8 @@ Implemented words are:
 
 \noindent
 These core words are not implemented:
-
-\word{>body}
 \word{abort"}
 \word{environment?}
-\word{leave}
 
 \noindent
 J1a SwapForth also implements the following standard words:
@@ -655,9 +652,6 @@ Some are traditional Forth words, others are specific to the J1a SwapForth imple
 \longworddef{.x}{( n -- )}{display n as a 4-digit hex number}
 \longworddef{-rot}{( x1 x2 x3 -- x3 x1 x2 )}{rotate the top three stack entries}
 \longworddef{bounds}{( start cnt -- start+cnt start )}{prepare to loop on a range}
-\longworddef{code@}{( addr -- u )}{fetch from code memory}
-\longworddef{cp}{( -- a )}{variable: code memory current pointer}
-\longworddef{dp}{( -- a )}{variable: data memory current pointer}
 \longworddef{forth}{( -- a )}{variable: most recent dictionary entry}
 \longworddef{io!}{( x a -- )}{store \mach{x} to IO port \mach{a}}
 \longworddef{io@}{( a -- x )}{fetch from IO port \mach{a}}
@@ -693,19 +687,10 @@ In addition, \word{accept} does not echo characters as they are typed.
 
 \chapter{Memory}
 
-\section{RAM Types}
+\section{Memory map}
 
-The J1a implementation uses 8Kbytes of RAM in a split configuration. \index{RAM}
-
-The lower 4K is for code.
-This RAM is writable, and executable, but not (directly) readable.
-The variable \mach{CP} (code pointer) points into this area.
-To read from this region, use the special word \wordidx{code@}.
-
-The upper 4K is for data.
-This RAM is writable and readable.
-The dictionary and all variables are located in this section.
-The variable \mach{DP} points into this area.
+The J1a SwapForth implementation uses 8Kbytes of RAM for code and data. \index{RAM}
+The standard Forth words can access this RAM.
 
 \section{Dictionary Layout} \index{dictionary}
 
@@ -718,7 +703,6 @@ Each dictionary entry contains:
 \item \textbf{imm} - immediate bit
 \item \textbf{count} - length of the name, in characters, 1-31
 \item \textbf{name$_1$ - name$_n$} - characters in name. If the length of the name is even, then a padding byte is appended
-\item \textbf{xt} - execution token for the word
 \end{itemize}
 
 \vspace{10pt}
