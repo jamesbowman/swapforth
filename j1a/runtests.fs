@@ -1,3 +1,4 @@
+#noverbose
 \ ANS Forth tests - run all tests
 
 \ Adjust the file paths as appropriate to your system
@@ -74,8 +75,11 @@ CREATE ACTUAL-RESULTS 20 CELLS ALLOT
    THEN ;
 
 include core.fr
-here .x
-new unused decimal .
+decimal
+cr .( At end of tests: ) unused 4 u.r .(  bytes free)
+new
+cr .( Base system:     ) unused 4 u.r .(  bytes free)
+cr cr
 #bye
 marker XX
 include coreplustest.fth
