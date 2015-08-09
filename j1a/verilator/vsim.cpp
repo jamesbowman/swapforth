@@ -1,27 +1,32 @@
 #include <assert.h>
 #include "Vj1a.h"
 #include "verilated.h"
+#define VCD 0
+#if VCD
 #include "verilated_vcd_c.h"
+#endif
 
 #define PY_SSIZE_T_CLEAN
 #undef NDEBUG
 #include <Python.h>
 
-#define VCD 1
-
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
     Vj1a* dut;
+#if VCD
     VerilatedVcdC* tfp;
+#endif
 } v3;
 
 static void
 Vj1a_dealloc(v3* self)
 {
+#if VCD
   if (self->tfp) {
     self->tfp->close();
   }
+#endif
   delete self->dut;
   self->ob_type->tp_free((PyObject*)self);
 }
@@ -44,6 +49,7 @@ Vj1a_init(v3 *self, PyObject *args, PyObject *kwds)
   return 0;
 }
 
+#if VCD
 PyObject *v3_vcd(PyObject *_, PyObject *args)
 {
   v3 *self = (v3*)_;
@@ -61,6 +67,7 @@ PyObject *v3_vcd(PyObject *_, PyObject *args)
   }
   Py_RETURN_NONE;
 }
+#endif
 
 PyObject *v3_reset(PyObject *self, PyObject *args)
 {
