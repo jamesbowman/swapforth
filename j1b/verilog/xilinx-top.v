@@ -83,85 +83,6 @@ module ram16k(
 
 endmodule
 
-module textmode(
-  input wire clk,               // main clock
-  input wire pix,               // pixel clock
-  output reg [2:0] vga_red,     // VGA output signals
-  output reg [2:0] vga_green,
-  output reg [2:0] vga_blue,
-  output reg vga_hsync_n,
-  output reg vga_vsync_n);
-
-  // These timing values come from
-  // http://tinyvga.com/vga-timing/1024x768@60Hz
-
-  // hcounter:
-  //    0- 799   visible area
-  //  800- 839   front porch
-  //  840- 967   sync pulse
-  //  968-1055   back porch
-
-  reg [10:0] hcounter;
-  wire [10:0] hcounterN = (hcounter == 11'd1055) ? 11'd0 : (hcounter + 11'd1);
-
-  // vcounter:
-  //  0  -599     visible area
-  //  600-600     front porch
-  //  601-604     sync pulse
-  //  605-627     back porch
-
-  reg [9:0] vcounter;
-  reg [9:0] vcounterN;
-  always @*
-    if (hcounterN != 11'd0)
-      vcounterN = vcounter;
-    else if (vcounter != 10'd627)
-      vcounterN = vcounter + 10'd1;
-    else
-      vcounterN = 10'd0;
-
-  wire visible = (hcounter < 800) & (vcounter < 600);
-
-  reg [1:0] visible_;
-  reg [1:0] hsync_;
-  always @(posedge clk)
-    if (pix) begin
-      visible_ <= {visible_[0], visible};
-      hsync_ <= {hsync_[0], !((840 <= hcounter) & (hcounter < 968))};
-    end
-  reg [2:0] r, g, b;
-  always @*
-    case (hcounter[3:0] ^ vcounter[3:0])
-    0:    {r, g, b} = { 3'b000, 3'b000, 3'b000 };
-    1:    {r, g, b} = { 3'b000, 3'b000, 3'b100 };
-    2:    {r, g, b} = { 3'b000, 3'b100, 3'b000 };
-    3:    {r, g, b} = { 3'b000, 3'b100, 3'b100 };
-    4:    {r, g, b} = { 3'b100, 3'b000, 3'b000 };
-    5:    {r, g, b} = { 3'b100, 3'b000, 3'b100 };
-    6:    {r, g, b} = { 3'b100, 3'b001, 3'b000 };
-    7:    {r, g, b} = { 3'b100, 3'b100, 3'b100 };
-    8:    {r, g, b} = { 3'b011, 3'b011, 3'b011 };
-    9:    {r, g, b} = { 3'b010, 3'b010, 3'b111 };
-    10:   {r, g, b} = { 3'b010, 3'b111, 3'b010 };
-    11:   {r, g, b} = { 3'b010, 3'b111, 3'b111 };
-    12:   {r, g, b} = { 3'b111, 3'b010, 3'b010 };
-    13:   {r, g, b} = { 3'b111, 3'b010, 3'b111 };
-    14:   {r, g, b} = { 3'b111, 3'b111, 3'b010 };
-    15:   {r, g, b} = { 3'b111, 3'b111, 3'b111 };
-    endcase
-
-  always @(posedge clk)
-    if (pix) begin
-      hcounter <= hcounterN;
-      vcounter <= vcounterN;
-      vga_hsync_n <= hsync_[1];
-      vga_vsync_n <= !((601 <= vcounter) & (vcounter < 605));
-      vga_red   <= visible_[1] ? r : 3'b000;
-      vga_green <= visible_[1] ? g : 3'b000;
-      vga_blue  <= visible_[1] ? b : 3'b000;
-    end
-
-endmodule
 
 module top(
   input wire CLK,
@@ -169,6 +90,12 @@ module top(
   input  wire RXD,
   output wire TXD,
   input  wire DTR,
+
+  output wire [20:0] sram_addr,
+  inout wire [7:0] sram_data,
+  output wire sram_ce,
+  output wire sram_oe,
+  output wire sram_we,
 
   inout wire Arduino_0,
   inout wire Arduino_1,
@@ -226,7 +153,7 @@ module top(
   inout wire Arduino_53
 
   );
-  localparam MHZ = 80;
+  localparam MHZ = 125;
 
   reg  DUO_LED;
   wire fclk;
@@ -333,6 +260,9 @@ module top(
   wire [127:0] gpi;
   reg [127:0] gpio_dir;   // 1:output, 0:input
 
+  reg [20:0] sram_addr_o;
+  reg [7:0] sram_data_o;
+
   always @(posedge fclk) begin
     casez (mem_addr)
     16'h00??: din <= gpi[mem_addr[6:0]];
@@ -346,6 +276,8 @@ module top(
     16'h1014: din <= counter_[31:0];
     16'h1018: din <= counter_[63:32];
 
+    16'h2004: din <= {24'd0, sram_data};
+
     default:  din <= 32'bx;
     endcase
 
@@ -354,12 +286,18 @@ module top(
         16'h00??: gpo[mem_addr_[6:0]] <= dout_[0];
         16'h01??: gpio_dir[mem_addr_[6:0]] <= dout_[0];
 
-        16'h1008: uart_baud <= dout;
+        // 16'h1008: uart_baud <= dout_;
 
         16'h1010: counter_ <= counter;
+
+        16'h2000: sram_addr_o <= dout_[20:0];
+        16'h2004: sram_data_o <= dout_[7:0];
+
       endcase
     end
   end
+
+  assign sram_data = sram_we ? 8'bzzzzzzzz : sram_data_o;
 
   assign uart0_wr = io_wr_ & (mem_addr_ == 16'h1000);
   assign uart0_rd = io_rd_ & (mem_addr_ == 16'h1000);
@@ -474,31 +412,19 @@ module top(
   // assign gpi[52] = Arduino_52;
   assign gpi[53] = Arduino_53;
 
-
-
+  wire [20:0] vga_addr;
+  wire [7:0] vga_rd;
   wire [2:0] vga_red;
   wire [2:0] vga_green;
   wire [2:0] vga_blue;
   wire vga_hsync;
   wire vga_vsync;
 
-  reg [1:0] clkd3;
-  reg [1:0] clkd3N;
-
-  always @*
-    case (clkd3)
-    2'd0:       clkd3N = 2'd1;
-    2'd1:       clkd3N = 2'd2;
-    2'd2:       clkd3N = 2'd0;
-    default:    clkd3N = 2'd0;
-    endcase
-
-  always @(posedge fclk)
-    clkd3 <= clkd3N;
-
-  textmode tm (
+  vga _vga (
     .clk(fclk),
-    .pix(clkd3 == 2'd0),
+    .resetq(resetq),
+    .addr(vga_addr),
+    .rd(sram_data),
     .vga_red(vga_red),
     .vga_green(vga_green),
     .vga_blue(vga_blue),
@@ -519,5 +445,8 @@ module top(
   assign Arduino_36 = vga_blue[2];  // Blue4
   assign Arduino_24 = vga_vsync;    // VSync
   assign Arduino_22 = vga_hsync;    // HSync
+
+  assign {sram_ce, sram_oe, sram_we} = ~gpo[87:85];
+  assign sram_addr = gpo[90] ? sram_addr_o : vga_addr;
 
 endmodule
