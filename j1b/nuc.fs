@@ -215,6 +215,9 @@ header type
     2drop
 ;
 
+create "cold"
+    'c' c, 'o' c, 'l' c, 'd' c,
+
 create base     $a ,
 create forth    0 ,
 create cp       0 ,         \ Code pointer, grows up
@@ -1132,6 +1135,12 @@ header evaluate
 ;
 
 : main
+    "cold" .
+    "cold" d# 4 sfind if
+        execute
+    else
+        2drop
+    then
     begin
         refill drop
         \ source dump
