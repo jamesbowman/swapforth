@@ -22,7 +22,6 @@ module j1(
   reg dstkW;                // D stack write
 
   reg [12:0] pc, pcN;      
-  reg [4:0] rsp, rspN;
   reg rstkW;          // R stack write
   wire [`WIDTH-1:0] rstkD;   // R stack write value
   reg reboot = 1;
@@ -33,8 +32,8 @@ module j1(
 
   // The D and R stacks
   wire [`WIDTH-1:0] st1, rst0;
-  stack dstack(.clk(clk), .ra(dsp), .rd(st1), .we(dstkW), .wa(dspN), .wd(st0));
-  stack rstack(.clk(clk), .ra(rsp), .rd(rst0), .we(rstkW), .wa(rspN), .wd(rstkD));
+  stack #(.DEPTH(32)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
+  stack #(.DEPTH(32)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
 
   always @*
   begin
@@ -58,7 +57,7 @@ module j1(
       8'b011_?1011: st0N = rst0;
       8'b011_?1100: st0N = mem_din;
       8'b011_?1101: st0N = io_din;
-      8'b011_?1110: st0N = {{(`WIDTH - 8){1'b0}}, rsp, dsp};
+      8'b011_?1110: st0N = {{(`WIDTH - 5){1'b0}}, dsp};
       8'b011_?1111: st0N = {`WIDTH{(st1 < st0)}};
       default: st0N = {`WIDTH{1'bx}};
     endcase
@@ -78,23 +77,22 @@ module j1(
 
   assign rstkD = (insn[13] == 1'b0) ? {{(`WIDTH - 14){1'b0}}, pc_plus_1, 1'b0} : st0;
 
-  reg [4:0] dspI, rspI;
+  reg [1:0] dspI, rspI;
   always @*
   begin
     casez ({insn[15:13]})
-    3'b1??:   {dstkW, dspI} = {1'b1,      5'b00001};
-    3'b001:   {dstkW, dspI} = {1'b0,      5'b11111};
-    3'b011:   {dstkW, dspI} = {func_T_N,  {insn[1], insn[1], insn[1], insn[1:0]}};
-    default:  {dstkW, dspI} = {1'b0,      5'b00000};
+    3'b1??:   {dstkW, dspI} = {1'b1,      2'b01};
+    3'b001:   {dstkW, dspI} = {1'b0,      2'b11};
+    3'b011:   {dstkW, dspI} = {func_T_N,  insn[1:0]};
+    default:  {dstkW, dspI} = {1'b0,      2'b00000};
     endcase
-    dspN = dsp + dspI;
+    dspN = dsp + {dspI[1], dspI[1], dspI[1], dspI};
 
     casez ({insn[15:13]})
-    3'b010:   {rstkW, rspI} = {1'b1,      5'b00001};
-    3'b011:   {rstkW, rspI} = {func_T_R,  {insn[3], insn[3], insn[3], insn[3:2]}};
-    default:  {rstkW, rspI} = {1'b0,      5'b00000};
+    3'b010:   {rstkW, rspI} = {1'b1,      2'b01};
+    3'b011:   {rstkW, rspI} = {func_T_R,  insn[3:2]};
+    default:  {rstkW, rspI} = {1'b0,      2'b00};
     endcase
-    rspN = rsp + rspI;
 
     casez ({reboot, insn[15:13], insn[7], |st0})
     6'b1_???_?_?:   pcN = 0;
@@ -110,10 +108,10 @@ module j1(
   begin
     if (!resetq) begin
       reboot <= 1'b1;
-      { pc, dsp, st0, rsp } <= 0;
+      { pc, dsp, st0 } <= 0;
     end else begin
       reboot <= 0;
-      { pc, dsp, st0, rsp } <= { pcN, dspN, st0N, rspN };
+      { pc, dsp, st0 } <= { pcN, dspN, st0N };
     end
   end
 endmodule
