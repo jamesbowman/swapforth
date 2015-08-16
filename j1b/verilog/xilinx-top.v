@@ -160,8 +160,12 @@ module top(
 
   DCM_CLKGEN #(
   .CLKFX_MD_MAX(0.0),     // Specify maximum M/D ratio for timing anlysis
-  .CLKFX_DIVIDE(32),      // Divide value - D - (1-256)
-  .CLKFX_MULTIPLY(MHZ),   // Multiply value - M - (2-256)
+  // .CLKFX_DIVIDE(32),      // Divide value - D - (1-256)
+  // .CLKFX_MULTIPLY(MHZ),   // Multiply value - M - (2-256)
+
+  .CLKFX_DIVIDE(15),      // Divide value - D - (1-256)
+  .CLKFX_MULTIPLY(59),   // Multiply value - M - (2-256)
+
   .CLKIN_PERIOD(31.25),   // Input clock period specified in nS
   .STARTUP_WAIT("FALSE")  // Delay config DONE until DCM_CLKGEN LOCKED (TRUE/FALSE)
   )
@@ -276,8 +280,6 @@ module top(
     16'h1014: din <= counter_[31:0];
     16'h1018: din <= counter_[63:32];
 
-    16'h2004: din <= {24'd0, sram_data};
-
     default:  din <= 32'bx;
     endcase
 
@@ -290,14 +292,11 @@ module top(
 
         16'h1010: counter_ <= counter;
 
-        16'h2000: sram_addr_o <= dout_[20:0];
-        16'h2004: sram_data_o <= dout_[7:0];
+        16'h2000: {sram_addr_o, sram_data_o} <= dout_[20 + 8:0];
 
       endcase
     end
   end
-
-  assign sram_data = sram_we ? 8'bzzzzzzzz : sram_data_o;
 
   assign uart0_wr = io_wr_ & (mem_addr_ == 16'h1000);
   assign uart0_rd = io_rd_ & (mem_addr_ == 16'h1000);
@@ -349,13 +348,20 @@ module top(
   // assign Arduino_44 = gpio_dir[44] ? gpo[44] : 1'bz;
   assign Arduino_45 = gpio_dir[45] ? gpo[45] : 1'bz;
   // assign Arduino_46 = gpio_dir[46] ? gpo[46] : 1'bz;
-  assign Arduino_47 = gpio_dir[47] ? gpo[47] : 1'bz;
+//  assign Arduino_47 = gpio_dir[47] ? gpo[47] : 1'bz;
   // assign Arduino_48 = gpio_dir[48] ? gpo[48] : 1'bz;
-  assign Arduino_49 = gpio_dir[49] ? gpo[49] : 1'bz;
+//  assign Arduino_49 = gpio_dir[49] ? gpo[49] : 1'bz;
   // assign Arduino_50 = gpio_dir[50] ? gpo[50] : 1'bz;
   assign Arduino_51 = gpio_dir[51] ? gpo[51] : 1'bz;
   // assign Arduino_52 = gpio_dir[52] ? gpo[52] : 1'bz;
   assign Arduino_53 = gpio_dir[53] ? gpo[53] : 1'bz;
+
+  reg [31:0] blinker;
+  always @(posedge fclk)
+    blinker <= blinker + 1;
+  assign Arduino_47 = blinker[24];
+  assign Arduino_49 = ~blinker[24];
+
 
   assign gpi[0] = Arduino_0;
   assign gpi[1] = Arduino_1;
@@ -414,39 +420,59 @@ module top(
 
   wire [20:0] vga_addr;
   wire [7:0] vga_rd;
-  wire [2:0] vga_red;
-  wire [2:0] vga_green;
-  wire [2:0] vga_blue;
+  wire [3:0] vga_red;
+  wire [3:0] vga_green;
+  wire [3:0] vga_blue;
   wire vga_hsync;
   wire vga_vsync;
+  wire vga_idle;
+
+  wire vga_write;
 
   vga _vga (
     .clk(fclk),
     .resetq(resetq),
+    .hack(gpo[101:100]),
+    .idle(vga_idle),
     .addr(vga_addr),
-    .rd(sram_data),
+    .rd(sram_we ? sram_data : 8'h80),
     .vga_red(vga_red),
     .vga_green(vga_green),
     .vga_blue(vga_blue),
     .vga_hsync_n(vga_hsync),
     .vga_vsync_n(vga_vsync));
 
-  assign Arduino_52 = 1'b0;         // Red1
-  assign Arduino_50 = vga_red[0];   // Red2
-  assign Arduino_48 = vga_red[1];   // Red3
-  assign Arduino_46 = vga_red[2];   // Red4
-  assign Arduino_38 = 1'b0;         // Green1
-  assign Arduino_40 = vga_green[0]; // Green2
-  assign Arduino_42 = vga_green[1]; // Green3
-  assign Arduino_44 = vga_green[2]; // Green4
-  assign Arduino_26 = 1'b0;         // Blue1
-  assign Arduino_32 = vga_blue[0];  // Blue2
-  assign Arduino_34 = vga_blue[1];  // Blue3
-  assign Arduino_36 = vga_blue[2];  // Blue4
+  assign Arduino_52 = vga_red[0];   // Red1
+  assign Arduino_50 = vga_red[1];   // Red2
+  assign Arduino_48 = vga_red[2];   // Red3
+  assign Arduino_46 = vga_red[3];   // Red4
+  assign Arduino_38 = vga_green[0]; // Green1
+  assign Arduino_40 = vga_green[1]; // Green2
+  assign Arduino_42 = vga_green[2]; // Green3
+  assign Arduino_44 = vga_green[3]; // Green4
+  assign Arduino_26 = vga_blue[0];  // Blue1
+  assign Arduino_32 = vga_blue[1];  // Blue2
+  assign Arduino_34 = vga_blue[2];  // Blue3
+  assign Arduino_36 = vga_blue[3];  // Blue4
+
+  // assign Arduino_52 = vga_blue[0];   // Red1
+  // assign Arduino_50 = vga_blue[1];   // Red2
+  // assign Arduino_48 = vga_blue[2];   // Red3
+  // assign Arduino_46 = vga_blue[3];   // Red4
+  // assign Arduino_38 = vga_red[0]; // Green1
+  // assign Arduino_40 = vga_red[1]; // Green2
+  // assign Arduino_42 = vga_red[2]; // Green3
+  // assign Arduino_44 = vga_red[3]; // Green4
+  // assign Arduino_26 = vga_green[0];  // Blue1
+  // assign Arduino_32 = vga_green[1];  // Blue2
+  // assign Arduino_34 = vga_green[2];  // Blue3
+  // assign Arduino_36 = vga_green[3];  // Blue4
+
   assign Arduino_24 = vga_vsync;    // VSync
   assign Arduino_22 = vga_hsync;    // HSync
 
-  assign {sram_ce, sram_oe, sram_we} = ~gpo[87:85];
-  assign sram_addr = gpo[90] ? sram_addr_o : vga_addr;
+  assign {sram_ce, sram_oe, sram_we} = gpo[87:85];
+  assign sram_addr = sram_we ? vga_addr : sram_addr_o;
+  assign sram_data = sram_we ? 8'bzzzzzzzz : sram_data_o;
 
 endmodule

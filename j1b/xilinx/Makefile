@@ -6,6 +6,6 @@ part = xc6slx9-2-tqg144
 top_module = top
 flashsize = 2048
 
-vfiles = ../verilog/xilinx-top.v ../verilog/uart.v ../verilog/j1.v ../verilog/stack.v 
+vfiles = ../verilog/xilinx-top.v ../verilog/uart.v ../verilog/j1.v ../verilog/stack.v  ../verilog/vga.v
 
 include xilinx.mk

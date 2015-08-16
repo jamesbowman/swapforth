@@ -4,4 +4,4 @@ set -e
 make
 trce -v 10 j1-papilioduo.ncd j1-papilioduo.pcf  -o j1-papilioduo.twr
 
-cd .. ; sh go
+# cd .. ; sh go

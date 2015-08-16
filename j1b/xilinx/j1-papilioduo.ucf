@@ -97,43 +97,43 @@ NET Arduino_53     LOC="P39"  | IOSTANDARD=LVTTL ;
 # 
 # # SRAM
 # 
-# NET "sram_addr<0>" LOC = "P7" | IOSTANDARD=LVTTL | SLEW=FAST;
-# NET "sram_addr<1>" LOC = "P8" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<2>" LOC = "P9" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<3>" LOC = "P10" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<4>" LOC = "P11" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<5>" LOC = "P5" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<6>" LOC = "P2" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<7>" LOC = "P1" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<8>" LOC = "P143" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<9>" LOC = "P142" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<10>" LOC = "P43" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<11>" LOC = "P41" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<12>" LOC = "P40" | IOSTANDARD=LVTTL | SLEW=FAST;
-# NET "sram_addr<13>" LOC = "P35" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<14>" LOC = "P34" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<15>" LOC = "P27" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<16>" LOC = "P29" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<17>" LOC = "P33" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_addr<18>" LOC = "P32" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# #NET "sram_addr<19>" LOC = "P44" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# #NET "sram_addr<20>" LOC = "P30" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# 
-# # Data lines
-# NET "sram_data<0>" LOC = "P14" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<1>" LOC = "P15" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<2>" LOC = "P16" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<3>" LOC = "P17" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<4>" LOC = "P21" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<5>" LOC = "P22" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<6>" LOC = "P23" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_data<7>" LOC = "P24" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# 
-# # Control lines
-# NET "sram_ce" LOC = "P12" | IOSTANDARD=LVTTL | SLEW=FAST;
-# NET "sram_we" LOC = "P6" | IOSTANDARD=LVTTL | SLEW=FAST ;
-# NET "sram_oe" LOC = "P26" | IOSTANDARD=LVTTL | SLEW=FAST;                               
-# 
+NET "sram_addr<0>" LOC = "P7" | IOSTANDARD=LVTTL | SLEW=FAST;
+NET "sram_addr<1>" LOC = "P8" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<2>" LOC = "P9" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<3>" LOC = "P10" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<4>" LOC = "P11" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<5>" LOC = "P5" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<6>" LOC = "P2" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<7>" LOC = "P1" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<8>" LOC = "P143" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<9>" LOC = "P142" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<10>" LOC = "P43" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<11>" LOC = "P41" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<12>" LOC = "P40" | IOSTANDARD=LVTTL | SLEW=FAST;
+NET "sram_addr<13>" LOC = "P35" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<14>" LOC = "P34" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<15>" LOC = "P27" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<16>" LOC = "P29" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<17>" LOC = "P33" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<18>" LOC = "P32" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<19>" LOC = "P44" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_addr<20>" LOC = "P30" | IOSTANDARD=LVTTL | SLEW=FAST ;
+
+# Data lines
+NET "sram_data<0>" LOC = "P14" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<1>" LOC = "P15" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<2>" LOC = "P16" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<3>" LOC = "P17" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<4>" LOC = "P21" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<5>" LOC = "P22" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<6>" LOC = "P23" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_data<7>" LOC = "P24" | IOSTANDARD=LVTTL | SLEW=FAST ;
+
+# Control lines
+NET "sram_ce" LOC = "P12" | IOSTANDARD=LVTTL | SLEW=FAST;
+NET "sram_we" LOC = "P6" | IOSTANDARD=LVTTL | SLEW=FAST ;
+NET "sram_oe" LOC = "P26" | IOSTANDARD=LVTTL | SLEW=FAST;                               
+
 # NET SPI_CS      LOC="P38"   | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST;          # FLASH_CS   OK
 # NET SPI_SCK     LOC="P70"  | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST;          # FLASH_CK   OK
 # NET SPI_MOSI    LOC="P64"  | IOSTANDARD=LVTTL | DRIVE=8 | SLEW=FAST;          # FLASH_SI   OK
