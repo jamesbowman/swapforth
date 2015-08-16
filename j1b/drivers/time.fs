@@ -9,15 +9,17 @@ LOCALWORDS
     $1014 io@ $1018 io@
 ;
 
-: tu ( u -- d ) \ return time in 1/u of a second
+\ return time in 1/u of a second
+
+: tu ( u -- d )
     clk@ rot freq m*/
 ;
 
 PUBLICWORDS
 
-: ms@   1000 tu d>s ;
-: us@   1000000 tu ;
-: ns@   1000000000 tu ;
+: ms@   1000 tu d>s ;       \ in milliseconds, single prec
+: us@   1000000 tu ;        \ in microseconds, double prec
+: ns@   1000000000 tu ;     \ in nanoseconds, double prec
 
 : ms
     s>d freq 1000 m*/
