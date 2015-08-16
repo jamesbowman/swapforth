@@ -159,3 +159,11 @@ include structures.fs
     s" | marker |" evaluate
 ;
 marker |
+
+include comus.fs
+include mini-oof.fs
+
+include drivers/gpio.fs
+include drivers/spi.fs
+include drivers/serialize.fs
+include drivers/time.fs

@@ -148,6 +148,10 @@ variable wordstart
     t,
 ;
 
+:: c,
+    tc,
+;
+
 :: allot
     0 ?do
         0 tc,
@@ -346,7 +350,10 @@ next-arg 2dup .trim >str constant prefix.
 
 target included                         \ include the program.fs
 
-[ tcp @ 0 org ] bootloader main [ org ]
+[ tcp @ 0 org ]
+\ bootloader 
+main
+[ org ]
 meta
 
 decimal
