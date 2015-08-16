@@ -1,0 +1,4 @@
+(cd .. && gforth cross.fs basewords.fs nuc.fs )
+make &&
+echo |
+time python shell.py -p ../ -p ../../common -p ../../anstests/ -e '#noverbose' swapforth.fs ../runtests.fs # ../../demos/factorials.fs

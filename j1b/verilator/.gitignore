@@ -1,0 +1,4 @@
+log
+obj_dir/
+build/
+*.vcd

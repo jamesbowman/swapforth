@@ -3,7 +3,7 @@ meta
 target
 
 $1000 constant UART-D
-$1004 constant UART-STATUS
+$2000 constant UART-STATUS
 
 
 : b.key
@@ -57,11 +57,13 @@ header 0>       : 0>        d# 0 > ;
 header 0<>      : 0<>       d# 0 <> ;
 header u>       : u>        swap u< ; 
 
+: uart-stat ( mask -- f ) \ is bit in UART status register on?
+    h# 2000 io@ and
+;
+
 header key?
 : key?
-    UART-STATUS io@
-    d# 4 and
-    0<>
+    d# 2 uart-stat 0<>
 ;
 
 header key
@@ -72,15 +74,11 @@ header key
     UART-D io@
 ;
 
-: ready
-    UART-STATUS io@
-    d# 2 and
-    0=
-;
-
 header emit
 : emit
-    begin ready until
+    begin
+        d# 1 uart-stat 
+    until
     UART-D io!
 ;
 
@@ -1135,7 +1133,6 @@ header evaluate
 ;
 
 : main
-    "cold" .
     "cold" d# 4 sfind if
         execute
     else
