@@ -250,13 +250,14 @@ module top(
     00xx  GPIO rd         GPIO wr
     01xx                  GPIO direction
 
-    1000  UART RX         UART TX
-    1004  UART status 
     1008  baudrate        baudrate
+    1000  UART RX         UART TX
+    2000  UART status 
 
     1010  master freq     snapshot clock
     1014  clock[31:0]
     1018  clock[63:32]
+
   */
 
   reg [63:0] counter_;
@@ -272,9 +273,9 @@ module top(
     16'h00??: din <= gpi[mem_addr[6:0]];
     16'h01??: din <= gpio_dir[mem_addr[6:0]];
 
-    16'h1000: din <= {24'd0, uart0_data};
-    16'h1004: din <= {24'd0, 4'd0, DTR, uart0_valid, uart0_busy, DUO_SW1};
     16'h1008: din <= uart_baud;
+    16'h1000: din <= {24'd0, uart0_data};
+    16'h2000: din <= {30'd0, uart0_valid, !uart0_busy};
 
     16'h1010: din <= MHZ * 1000000;
     16'h1014: din <= counter_[31:0];
@@ -292,7 +293,7 @@ module top(
 
         16'h1010: counter_ <= counter;
 
-        16'h2000: {sram_addr_o, sram_data_o} <= dout_[20 + 8:0];
+        16'h4000: {sram_addr_o, sram_data_o} <= dout_[20 + 8:0];
 
       endcase
     end
