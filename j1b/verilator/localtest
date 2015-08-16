@@ -9,4 +9,4 @@ make
 # # grep 1,405,006,117,752,879,898,543,142,606,244,511,569,936,384,000,000,000
 
 echo |
-python shell.py -p ../ -p ../../common -p ../../anstests/ swapforth.fs ../runtests.fs # ../../demos/factorials.fs
+python shell.py -p ../ -p ../../common -p ../../anstests/ -e '#noverbose' swapforth.fs ../runtests.fs # ../../demos/factorials.fs
