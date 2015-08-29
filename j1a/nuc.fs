@@ -690,7 +690,8 @@ header-imm sliteral
 
 header immediate
 :noname
-    d# 1 lastword @i +!
+    lastword @i
+    dup @ d# 1 or swap _!
 ;
 
 header ]

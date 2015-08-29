@@ -74,39 +74,37 @@ CREATE ACTUAL-RESULTS 20 CELLS ALLOT
    ELSE >IN ! DROP [CHAR] * EMIT
    THEN ;
 
+marker TST1
 include core.fr
 decimal
-cr .( At end of tests: ) unused 4 u.r .(  bytes free)
-new
-cr .( Base system:     ) unused 4 u.r .(  bytes free)
-cr cr
-#bye
-marker XX
+cr .( At end of core    : ) unused 4 u.r .(  bytes free) cr
+TST1
+\ Hack. These were defined in core.fr, but MARKER loses them
+0 INVERT			CONSTANT MAX-UINT
+0 INVERT 1 RSHIFT		CONSTANT MAX-INT
+0 INVERT 1 RSHIFT INVERT	CONSTANT MIN-INT
+0 INVERT 1 RSHIFT		CONSTANT MID-UINT
+0 INVERT 1 RSHIFT INVERT	CONSTANT MID-UINT+1
+
 include coreplustest.fth
-include errorreport.fth
-marker XX
-include coreexttest.fth
-XX
-marker XX
-include doubletest.fth
-XX
+cr .( At end of coreplus: ) unused 4 u.r .(  bytes free) cr
+
+\ include coreexttest.fth
+\ include errorreport.fth
+\ include coreexttest.fth
+\ include doubletest.fth
 \ include exceptiontest.fth
-marker XX
-include facilitytest.fth
-XX
-\ \ include filetest.fth
-\ \ include localstest.fth
+\ include facilitytest.fth
+\ include filetest.fth
+\ include localstest.fth
 \ include memorytest.fth
-marker XX
-include toolstest.fth
-XX
-\ \ include searchordertest.fth
-marker XX
-include stringtest.fth
-XX
-REPORT-ERRORS
+\ include toolstest.fth
+\ include searchordertest.fth
+\ include stringtest.fth
+\ REPORT-ERRORS
 
 CR CR .( Forth tests completed ) CR CR
 
-
-
+new
+cr .( Base system:        ) unused 4 u.r .(  bytes free)
+cr cr
