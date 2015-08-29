@@ -661,9 +661,53 @@ Some are traditional Forth words, others are specific to the J1a SwapForth imple
 % \worddef{sfind}{( dir pin -- )}{Like standard word \mach{find}, but uses a
 \longworddef{tth}{( -- a )}{variable: tethered mode}
 
-\chapter{The SwapForth Shell}
+\chapter{Using SwapForth}
 
-\section{Command reference}
+\section{Raw UART access}
+
+At boot, SwapForth listens for a command on the UART. \index{UART}
+Connection parameters are 115200 8N1, and any terminal program should be able to connect.
+\index{DTR} \index{reset}
+Note that the hardware board uses DTR as a reset signal, so you should make sure that it is set OFF by the terminal program:
+
+\begin{verbatim}
+$ miniterm.py --dtr=0 /dev/ttyUSB5 115200
+--- Miniterm on /dev/ttyUSB5: 115200,8,N,1 ---
+--- Quit: Ctrl+]  |  Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
+--- forcing DTR inactive
+
+  ok
+  ok
+  ok
+\end{verbatim}
+
+% Raw UART access does not provide the conveniences of the SwapForth shell.
+
+\section{The SwapForth shell} \index{shell}
+
+The SwapForth shell is a Python program that runs on the host PC.
+It has a number of advantages over raw UART access:
+
+\begin{itemize}
+\item command-line editing
+\item command history
+\item word completion on TAB
+\item local file \mach{include}
+\item \mach{\^{}C} for interrupt
+\end{itemize}
+
+\subsection{Command reference}
+
+\newcommand{\shcmd}[2]{
+  \subsubsection{\mach{\##1} - #2}
+  \index{#1@\mach{\##1}}
+  \index{\##1@\mach{\##1}}
+}
+\shcmd{bye}{quit SwapForth shell}
+\shcmd{flash}{copy the target state to a local file}
+\shcmd{include}{send local source file}
+\shcmd{noverbose}{turn off include echo}
+\shcmd{time}{measure execution time}
 
 \section{Tethered Mode}
 
@@ -689,20 +733,11 @@ In addition, \word{accept} does not echo characters as they are typed.
 \section{Memory map}
 
 The J1a SwapForth implementation uses 8Kbytes of RAM for code and data. \index{RAM}
-The standard Forth words can access this RAM.
+The standard Forth words access this RAM.
+Cells are 16-bits, and must be aligned to a 16-bit boundary.
 
+\newpage
 \section{Dictionary Layout} \index{dictionary}
-
-The SwapForth dictionary is a linked list;
-the variable \mach{forth} holds the start of this list.
-Each dictionary entry contains:
-
-\begin{itemize}
-\item \textbf{next pointer} - address of the next dictionary entry, or zero for the last dictionary entry
-\item \textbf{imm} - immediate bit
-\item \textbf{count} - length of the name, in characters, 1-31
-\item \textbf{name$_1$ - name$_n$} - characters in name. If the length of the name is even, then a padding byte is appended
-\end{itemize}
 
 \vspace{10pt}
 \noindent
@@ -712,8 +747,21 @@ Each dictionary entry contains:
     \bitbox{8}{name$_1$} & \bitbox{8}{count} \\
     \bitbox{16}{...} \\
     \bitbox{8}{name$_n$} & \bitbox{8}{name$_{n-1}$} \\
-    \bitbox{16}{xt} \\
+    \bitbox[lr]{16}{start of word's code} \\
+    \bitbox[lr]{16}{...} \\
+    \bitbox[lrb]{16}{} \\
 \end{bytefield}
+
+The SwapForth dictionary is a linked list;
+the variable \mach{forth} holds the start of this list.
+Each dictionary entry has the following fields:
+
+\begin{itemize}
+\item \textbf{next pointer} - address of the next dictionary entry, or zero for the last dictionary entry
+\item \textbf{imm} - immediate bit, set if the word is immediate
+\item \textbf{count} - length of the name, in characters, 1-31
+\item \textbf{name$_1$ - name$_n$} - characters in name. If the length of the name is even, then a padding byte is appended
+\end{itemize}
 
 \chapter{iCEstick Hardware interface}
 
