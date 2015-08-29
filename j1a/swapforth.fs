@@ -49,8 +49,6 @@
     @ 32767 and
 ;
 
-: ?do postpone do ; immediate
-
 : m*
     2dup xor >r
     abs swap abs um*
