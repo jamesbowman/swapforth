@@ -779,7 +779,7 @@ header-imm if
     here h# 2000 w,
 ;
 
-header-imm then
+header-imm then     ( addr -- )
 : tthen
     here 2/
     swap +!
@@ -849,6 +849,7 @@ header-imm recurse
 header-imm do
 :noname
     do-common
+: dotail
     tbegin
     inline: >r
 ;
@@ -862,17 +863,12 @@ header-imm leave
     leaves _!
 ;
 
-: (?do)  ( start-limit -- start-limit start!=limit )
-    d# 0 over=
-;
-
 header-imm ?do
 :noname
     do-common
-    ['] (?do) compile,
-    tif leave, tthen
-    tbegin
-    inline: >r
+    inline: dup
+    leave,
+    dotail
 ;
 
 \ Finish compiling DO..LOOP
@@ -885,7 +881,7 @@ header-imm ?do
         dup
     while
         dup @ swap        ( next leafptr )
-        dp @i 2/ swap _!
+        tthen
     repeat
     drop
     leaves _!
@@ -893,7 +889,7 @@ header-imm ?do
 ;
 
 : (loopnext)
-    d# 1 + dup d# 0 =
+    d# 1 + d# 0 over=
 ;
 
 header-imm loop
