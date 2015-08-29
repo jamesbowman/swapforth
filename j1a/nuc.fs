@@ -841,17 +841,36 @@ header-imm recurse
     swap -
 ;
 
-\ : (?do)  ( limit start -- start-limit start!=limit )
-\     r> rO @i >r >r
-\     over rO _!
-\     swap -
-\     dup 0=
-\ ;
+: do-common     \ common prefix for DO and ?DO
+    leaves @i leaves off
+    ['] (do) compile,
+;
 
 header-imm do
 :noname
-    leaves @i leaves off
-    ['] (do) compile,
+    do-common
+    tbegin
+    inline: >r
+;
+
+header-imm leave
+: leave
+    inline: r>
+: leave,
+    dp @i
+    leaves @i w,
+    leaves _!
+;
+
+: (?do)  ( start-limit -- start-limit start!=limit )
+    d# 0 over=
+;
+
+header-imm ?do
+:noname
+    do-common
+    ['] (?do) compile,
+    tif leave, tthen
     tbegin
     inline: >r
 ;
@@ -904,27 +923,6 @@ header-imm +loop
     tuntil
     resolveleaves
 ;
-
-header-imm leave
-: leave
-    inline: r>
-    dp @i
-    leaves @i w,
-    leaves _!
-;
-
-\ header-imm ?do
-\ :noname
-\     leaves @ d# 0 leaves !
-\     ['] (?do) compile,
-\     tif
-\         dp @
-\         leaves @ w,
-\         leaves !
-\     tthen
-\     tbegin
-\     inline: >r
-\ ;
 
 header i
 : i
