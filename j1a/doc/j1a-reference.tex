@@ -683,6 +683,20 @@ $ miniterm.py --dtr=0 /dev/ttyUSB5 115200
 
 % Raw UART access does not provide the conveniences of the SwapForth shell.
 
+\section{\mach{THROW} codes} \index{\mach{THROW} codes}
+
+SwapForth uses standard ANS throw codes
+(section 9.3.5 of the ANS spec)
+and reports the code in hex.
+
+\vspace{10pt}
+\begin{tabular}{ccl}
+SwapForth code & ANS code & meaning \\
+\hline
+\mach{ffff} & -1 & \mach{ABORT} \\    \index{ffff@\mach{ffff}, throw code}
+\mach{fff3} & -13 & undefined word \\ \index{fff3@\mach{fff3}, throw code}
+\end{tabular}
+
 \section{The SwapForth shell} \index{shell}
 
 The SwapForth shell is a Python program that runs on the host PC.
