@@ -83,7 +83,7 @@ include core.fs
 
 include core-ext.fs
 
-: ms 0 do 1325 0 do loop loop ;
+: ms 0 do 1490 0 do loop loop ;
 : leds  4 io! ;
 
 : marker
@@ -130,21 +130,21 @@ marker |
     '
     32 bounds
     begin
-        cr dup .
+        cr dup .x
         dup @ >r
-        r@ 4 .r
+        r@ .x
         6 spaces
         r@ 15 rshift if
-            [char] L emit space
-            r@ 32767 and .
+            [char] $ emit
+            r@ 32767 and .x
         else
             r@ 13 rshift 0 = if
                 [char] J emit space
-                r@ 8191 and 2* .
+                r@ 8191 and 2* .x
             then
             r@ 13 rshift 1 = if
                 [char] Z emit space
-                r@ 8191 and 2* .
+                r@ 8191 and 2* .x
             then
             r@ 13 rshift 2 = if
                 r@ 8191 and 2* .xt

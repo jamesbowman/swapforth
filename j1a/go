@@ -1,6 +1,16 @@
-set -e -x
+set -e
 
-make -C icestorm
-iceprog icestorm/j1a.bin
-PORT=`icestorm/findserial`
-python shell.py -h $PORT -p ../common -p ../demos swapforth.fs spi2.fs
+if true
+then
+  make -C icestorm
+  iceprog icestorm/j1a.bin
+  PORT=`icestorm/findserial`
+  python shell.py -h $PORT -p ../common -p ../demos # us.fs # swapforth.fs spi2.fs
+  exit
+fi
+
+make
+cd verilator
+obj_dir/Vj1a ../build/nuc.hex
+# python shell.py -p ../ -p ../../common
+# python shell.py -p ../ -p ../../common ../swapforth.fs ../../demos/factorials.fs -e '42 fac .fac' -e '.( 1,405,006,117,752,879,898,543,142,606,244,511,569,936,384,000,000,000' < /dev/null

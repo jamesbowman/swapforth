@@ -1,4 +1,3 @@
-#bye
 \ Micron N25Q032A SPI flash driver
 
 \ Uses port $0008 bits:

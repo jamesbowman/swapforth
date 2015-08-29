@@ -863,11 +863,15 @@ header-imm leave
     leaves _!
 ;
 
+: (?do)  ( start-limit -- start-limit start=limit )
+    d# 0 over=
+;
+
 header-imm ?do
 :noname
     do-common
-    inline: dup
-    leave,
+    ['] (?do) compile,
+    tif leave, tthen
     dotail
 ;
 
@@ -880,8 +884,9 @@ header-imm ?do
     begin
         dup
     while
-        dup @ swap        ( next leafptr )
-        tthen
+        dup @ swap        ( next leaveptr )
+        here 2/
+        swap _!
     repeat
     drop
     leaves _!
