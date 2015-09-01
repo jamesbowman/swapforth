@@ -73,5 +73,20 @@ class TetheredJ1b(swapforth.TetheredTarget):
                 if c == chr(30):
                     break
 
+    def reset(self):
+        ser = self.ser
+        ser.setDTR(1)
+        ser.setDTR(0)
+        time.sleep(0.01)
+
+        while 1:
+            c = ser.read(1)
+            print repr(c)
+            if c == chr(30):
+                break
+
+    def interrupt(self):
+        self.reset()
+
 if __name__ == '__main__':
     swapforth.main(TetheredJ1b)
