@@ -373,28 +373,6 @@ header um/mod
     drop swap 
 ; 
 
-header accept
-: accept
-    tethered @i if
-        d# 30 emit
-    then
-    drop dup
-    begin
-        key
-        h# 0d overxor
-    while
-        h# 0a over= if
-            drop
-        else
-            tethered @i 0= if
-                dup emit
-            then
-            over c! 1+
-        then
-    repeat
-    drop swap -
-;
-
 : 3rd   >r over r> swap ;
 : 3dup  3rd 3rd 3rd ;
 
@@ -1146,6 +1124,48 @@ header-imm \
     2drop
 ;
 
+\ Unicode-friendly ACCEPT contibuted by Matthias Koch
+
+: delchar ( addr len -- addr len )
+    dup if d# 8 emit d# 32 emit d# 8 emit then
+
+    begin
+        dup 0= if exit then
+        1- 2dup + c@
+        h# C0 and h# 80 <>
+      until
+;
+
+header accept
+: accept
+    tethered @i if d# 30 emit then
+    
+    >r d# 0  ( addr len R: maxlen )
+
+    begin
+        key    ( addr len key R: maxlen )
+        
+        d# 9 over= if drop d# 32 then
+        d# 127 over= if drop d# 8 then
+        
+        dup d# 31 u>
+        if
+            over r@ u<
+            if
+                tethered @i 0= if dup emit then
+                >r 2dup + r@ swap c! 1+ r>
+            then
+        then
+        
+        d# 8 over= if >r delchar r> then
+          
+        d# 10 over= swap d# 13 = or
+    until
+    
+    rdrop nip
+    space
+;
+
 header refill
 : refill
     tib dup d# 128 accept
@@ -1169,12 +1189,10 @@ header quit
     begin
         refill drop
         interpret
-        state @i 0= if
-            space space
+            space
             [char] k
             [char] o 2emit
             cr
-        then
     again
 ;
 
