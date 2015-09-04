@@ -22,7 +22,7 @@
 .global _start
 _start:
 
-        jmp     0x3fffc
+        jmp     __PMSIZE-4
         jmp     0 /* ft900_watchdog */
         jmp     interrupt_0
         jmp     interrupt_1
@@ -1187,37 +1187,6 @@ header "um*",u_m_star
         sti     $r27,0,$r2
         return
 
-header "um/mod",u_m_slash_mod
-        ldi     $r2,$r27,0
-        ldi     $r3,$r27,4              /* $r2:$r3 is the dividend */
-                                       /* $r0 is the divisor */
-        push    $r28
-        ldk     $r28,-32
-u_m_slash_mod_0:
-        lshr    $r4,$r3,31
-        ashl    $r3,$r3,1
-        cmp     $r2,0
-        ashl    $r2,$r2,1
-        or      $r2,$r2,$r4
-       /* large $r2 case. $r2 is 0x1xxxxxxxx after shifting, so certainly greater than $r0 */
-        jmpc    lt,u_m_slash_mod_2
-
-        cmp     $r2,$r0
-        jmpc    b,u_m_slash_mod_1
-u_m_slash_mod_2:
-        sub     $r2,$r2,$r0
-        add     $r3,$r3,1
-u_m_slash_mod_1:
-        add     $r28,$r28,1
-        cmp     $r28,0
-        jmpc    nz,u_m_slash_mod_0
-        pop     $r28
-
-        add     $r27,$r27,4
-        sti     $r27,0,$r2
-        move    $r0,$r3
-        return
-
 header  "unloop",unloop
         pop     $r1
         pop     $r29
@@ -1227,7 +1196,6 @@ header  "unloop",unloop
 header  "until",until,1
         call    check_compiling
         jmp     paren_if_paren
-
 
 fheader "xor"
         _r1_n
@@ -2802,11 +2770,164 @@ header  "int-caller",int_caller
         ldi     $r1,$sp,20*4
         jmp     push_r1
 
+# From Hacker's Delight, 2nd ed. p.195-196
+#
+# unsigned divlu2(unsigned u1, unsigned u0, unsigned v,
+#                 unsigned *r) {
+#    const unsigned b = 65536; // Number base (16 bits).
+#    unsigned un1, un0,        // Norm. dividend LSD's.
+#             vn1, vn0,        // Norm. divisor digits.
+#             q1, q0,          // Quotient digits.
+#             un32, un21, un10,// Dividend digit pairs.
+#             rhat;            // A remainder.
+#    int s;                    // Shift amount for norm.
+# 
+#    if (u1 >= v) {            // If overflow, set rem.
+#       if (r != NULL)         // to an impossible value,
+#          *r = 0xFFFFFFFF;    // and return the largest
+#       return 0xFFFFFFFF;}    // possible quotient.
+# 
+#    s = nlz(v);               // 0 <= s <= 31.
+#    v = v << s;               // Normalize divisor.
+#    vn1 = v >> 16;            // Break divisor up into
+#    vn0 = v & 0xFFFF;         // two 16-bit digits.
+# 
+#    un32 = (u1 << s) | (u0 >> 32 - s) & (-s >> 31);
+#    un10 = u0 << s;           // Shift dividend left.
+# 
+#    un1 = un10 >> 16;         // Break right half of
+#    un0 = un10 & 0xFFFF;      // dividend into two digits.
+# 
+#    q1 = un32/vn1;            // Compute the first
+#    rhat = un32 - q1*vn1;     // quotient digit, q1.
+# again1:
+#    if (q1 >= b || q1*vn0 > b*rhat + un1) {
+#      q1 = q1 - 1;
+#      rhat = rhat + vn1;
+#      if (rhat < b) goto again1;}
+# 
+#    un21 = un32*b + un1 - q1*v;  // Multiply and subtract.
+# 
+#    q0 = un21/vn1;            // Compute the second
+#    rhat = un21 - q0*vn1;     // quotient digit, q0.
+# again2:
+#    if (q0 >= b || q0*vn0 > b*rhat + un0) {
+#      q0 = q0 - 1;
+#      rhat = rhat + vn1;
+#      if (rhat < b) goto again2;}
+# 
+#    if (r != NULL)            // If remainder is wanted,
+#       *r = (un21*b + un0 - q0*v) >> s;     // return it.
+#    return q1*b + q0;
+# }
+
+# un1   r1
+# un0   r2      also un10
+# vn1   r3
+# vn0   r4
+# q1    r5
+# q0    r6
+# un32  r7
+# un21  r8
+#       r9
+# rhat  r10
+# s     r11
+
+header "um/mod",u_m_slash_mod
+        ldi     $r1,$r27,0              # v:r0 u1:r1 r0:r2
+        ldi     $r2,$r27,4
+        add     $r27,$r27,4
+
+        move    $r9,$r0
+        nlz     $r9,$r12                # 0 <= s <= 31.
+        ashl    $r0,$r0,$r9             # Normalize divisor.
+        lshr    $r3,$r0,16              # Break divisor up into
+        bins    $r4,$r0,16              # two 16-bit digits.
+
+        cmp     $r9,0
+        jmpc    nz,1f
+        move    $r7,$r1
+        jmp     2f
+1:
+        ashl    $r7,$r1,$r9
+        ldk     $r12,32
+        sub     $r12,$r12,$r9
+        lshr    $r12,$r2,$r12
+        or      $r7,$r7,$r12
+        ashl    $r2,$r2,$r9
+2:
+
+        lshr    $r1,$r2,16              # Break right half of
+        bins    $r2,$r2,16              # dividend into two digits.
+
+        udiv    $r5,$r7,$r3             # Compute the first
+        mul     $r12,$r5,$r3
+        sub     $r10,$r7,$r12           # quotient digit, q1.
+
+again1:
+        btst    $r5,16
+        jmpc    nz,1f
+                                        # q1*vn0 > b*rhat + un1
+        mul     $cc,$r5,$r4
+        ashl    $r12,$r10,16
+        add     $r12,$r12,$r1
+        cmp     $cc,$r12
+        jmpc    be,2f
+1:
+        sub     $r5,$r5,1               # q1 = q1 - 1;
+        add     $r10,$r10,$r3           # rhat = rhat + vn1;
+        btst    $r10,16
+        jmpc    z,again1
+2:
+
+#    un21 = un32*b + un1 - q1*v;  // Multiply and subtract.
+# 
+#    q0 = un21/vn1;            // Compute the second
+#    rhat = un21 - q0*vn1;     // quotient digit, q0.
+
+        ashl    $r8,$r7,16              # Multiply and subtract.
+        add     $r8,$r8,$r1             # un21 = un32*b + un1 - q1*v;
+        mul     $r12,$r5,$r0
+        sub     $r8,$r8,$r12
+
+        udiv    $r6,$r8,$r3             # Compute the second
+        mul     $r12,$r6,$r3
+        sub     $r10,$r8,$r12           # quotient digit, q0.
+
+again2:
+        btst    $r6,16
+        jmpc    nz,1f
+                                        # q1*vn0 > b*rhat + un1
+        mul     $cc,$r6,$r4
+        ashl    $r12,$r10,16
+        add     $r12,$r12,$r2
+        cmp     $cc,$r12
+        jmpc    be,2f
+1:
+        sub     $r6,$r6,1               # q0 = q0 - 1;
+        add     $r10,$r10,$r3           # rhat = rhat + vn1;
+        btst    $r10,16
+        jmpc    z,again2
+2:
+                                        # *r = (un21*b + un0 - q0*v) >> s;
+        ashl    $r8,$r8,16
+        add     $r8,$r8,$r2
+        mul     $r12,$r6,$r0
+        sub     $r8,$r8,$r12
+        lshr    $r8,$r8,$r9
+        sti     $r27,0,$r8
+        
+#    return q1*b + q0;                  # quotient
+        ashl    $r0,$r5,16
+        add     $r0,$r0,$r6
+        return
+
 #######   BOOT   #####################################################
 
 h80000000:      .long   0x80000000
 
 codestart:
+        ldk     $sp,__RAMSIZE-4
 
         ldk     $r1,0x80
         sta.b   sys_regmsc0cfg_b3,$r1
