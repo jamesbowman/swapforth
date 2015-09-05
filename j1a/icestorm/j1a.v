@@ -152,12 +152,10 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   wire [7:0] uart0_data;
   wire uart0_wr = io_wr_ & io_addr_[12];
   wire uart0_rd = io_rd_ & io_addr_[12];
-  reg [31:0] uart_baud = 115200;
   wire UART0_RX;
-  buart #(.CLKFREQ(MHZ * 1000000)) _uart0 (
+  buart _uart0 (
      .clk(clk),
      .resetq(1'b1),
-     .baud(uart_baud),
      .rx(RXD),
      .tx(TXD),
      .rd(uart0_rd),
