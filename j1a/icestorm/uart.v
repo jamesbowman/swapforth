@@ -1,28 +1,47 @@
 `default_nettype none
 
+`define CLKFREQ   12000000    // frequency of incoming signal 'clk'
+
+// Simple baud generator for transmitter
+// ser_clk pulses at 115200 Hz
+
 module baudgen(
   input wire clk,
-  input wire resetq,
-  input wire [31:0] baud,
+  output wire ser_clk);
+
+  localparam lim = (`CLKFREQ / 115200) - 1; 
+  localparam w = $clog2(lim);
+  wire [w-1:0] limit = lim;
+  reg [w-1:0] counter;
+  assign ser_clk = (counter == limit);
+
+  always @(posedge clk)
+    counter <= ser_clk ? 0 : (counter + 1);
+endmodule
+
+// For receiver, a similar baud generator.
+//
+// Need to restart the counter when the transmission starts
+// Generate 2X the baud rate to allow sampling on bit boundary
+// So ser_clk pulses at 2*115200 Hz
+
+module baudgen2(
+  input wire clk,
   input wire restart,
   output wire ser_clk);
-  parameter CLKFREQ = 1000000;
 
-  wire [38:0] aclkfreq = CLKFREQ;
-  reg [38:0] d;
-  wire [38:0] dInc = d[38] ? ({4'd0, baud}) : (({4'd0, baud}) - aclkfreq);
-  wire [38:0] dN = restart ? 0 : (d + dInc);
-  wire fastclk = ~d[38];
-  assign ser_clk = fastclk;
+  localparam lim = (`CLKFREQ / (2 * 115200)) - 1; 
+  localparam w = $clog2(lim);
+  wire [w-1:0] limit = lim;
+  reg [w-1:0] counter;
+  assign ser_clk = (counter == limit);
 
-  always @(negedge resetq or posedge clk)
-  begin
-    if (!resetq) begin
-      d <= 0;
-    end else begin
-      d <= dN;
-    end
-  end
+  always @(posedge clk)
+    if (restart)
+      counter <= 0;
+    else
+      counter <= ser_clk ? 0 : (counter + 1);
+
 endmodule
 
 /*
@@ -42,12 +61,9 @@ module uart(
    output wire uart_busy,       // High means UART is transmitting
    output reg uart_tx,          // UART transmit wire
 
-   input wire [31:0] baud,
    input wire uart_wr_i,        // Raise to transmit byte
    input wire [7:0] uart_dat_i
 );
-  parameter CLKFREQ = 1000000;
-
   reg [3:0] bitcount;           // 0 means idle, so this is a 1-based counter
   reg [8:0] shifter;
 
@@ -57,11 +73,9 @@ module uart(
   wire ser_clk;
 
   wire starting = uart_wr_i & ~uart_busy;
-  baudgen #(.CLKFREQ(CLKFREQ)) _baudgen(
+
+  baudgen _baudgen(
     .clk(clk),
-    .resetq(resetq),
-    .baud(baud),
-    .restart(1'b0),
     .ser_clk(ser_clk));
 
   always @(negedge resetq or posedge clk)
@@ -88,13 +102,10 @@ endmodule
 module rxuart(
    input wire clk,
    input wire resetq,
-   input wire [31:0] baud,
    input wire uart_rx,      // UART recv wire
    input wire rd,           // read strobe
    output wire valid,       // has data 
    output wire [7:0] data); // data
-  parameter CLKFREQ = 1000000;
-
   reg [4:0] bitcount;
   reg [7:0] shifter;
 
@@ -108,10 +119,9 @@ module rxuart(
   wire [7:0] shifterN = sample ? {hh[1], shifter[7:1]} : shifter;
 
   wire ser_clk;
-  baudgen #(.CLKFREQ(CLKFREQ)) _baudgen(
+
+  baudgen2 _baudgen(
     .clk(clk),
-    .baud({baud[30:0], 1'b0}),
-    .resetq(resetq),
     .restart(startbit),
     .ser_clk(ser_clk));
 
@@ -148,7 +158,6 @@ endmodule
 module buart(
    input wire clk,
    input wire resetq,
-   input wire [31:0] baud,
    input wire rx,           // recv wire
    output wire tx,          // xmit wire
    input wire rd,           // read strobe
@@ -158,20 +167,16 @@ module buart(
    input wire [7:0] tx_data,
    output wire [7:0] rx_data // data
 );
-  parameter CLKFREQ = 1000000;
-
-  rxuart #(.CLKFREQ(CLKFREQ)) _rx (
+  rxuart _rx (
      .clk(clk),
      .resetq(resetq),
-     .baud(baud),
      .uart_rx(rx),
      .rd(rd),
      .valid(valid),
      .data(rx_data));
-  uart #(.CLKFREQ(CLKFREQ)) _tx (
+  uart _tx (
      .clk(clk),
      .resetq(resetq),
-     .baud(baud),
      .uart_busy(busy),
      .uart_tx(tx),
      .uart_wr_i(wr),
