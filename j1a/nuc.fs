@@ -192,6 +192,7 @@ create state    0 ,
 create rO       0 ,
 create leaves   0 ,
 create tethered 0 ,
+create fineforoptimisation 0 ,
 create tib      #128 allot
 
 header state :noname state ;
@@ -674,7 +675,8 @@ header immediate
 
 header ]
 : t]
-    d# 3
+    fineforoptimisation off  \  : --> No opcodes written yet - never recognize header bytes as opcodes !
+    d# 3                      \ ] --> Something strange might just went on. Careful !
 ;fallthru
 : state!
     state _!
@@ -730,8 +732,26 @@ header :noname
 \     inline: exit
 \ ;
 
+: prev
+    dp @i d# 2 -
+;
+
+\ Do not handle ALU instructions for size reasons, as only negative literals and R-Stack cause ALUs to be compiled
+
 header-imm exit
 : texit
+    fineforoptimisation @i
+    if
+      prev @ h# 4000 xor             
+      dup h# e000 and
+      if
+        drop
+      else
+        prev _!
+        exit
+      then
+    then
+    
     inline: exit
 ;
 
@@ -1102,15 +1122,28 @@ header-imm \
     tliteral
 ;
 
+
+: opticompile,  \ Classic compilation gives no pathological cases.
+  compile,       \ Cannot handle this in compile, as some of the pathological cases use compile, themselves.
+  true fineforoptimisation _!
+;
+
+\ Literals are fine for optimisation, too, but currently no optimisation cases handle literals.
+
+: optiexecute   \ All pathological conditions are caused by immediate definitions.
+  execute
+  fineforoptimisation off
+;
+
 : dispatch
     jumptable ;fallthru
     jmp execute                 \      -1      0       non-immediate
     jmp doubleAlso              \      0       0       number
     jmp execute                 \      1       0       immediate
 
-    jmp compile,                \      -1      2       non-immediate
+    jmp opticompile,            \      -1      2       non-immediate
     jmp doubleAlso,             \      0       2       number
-    jmp execute                 \      1       2       immediate
+    jmp optiexecute             \      1       2       immediate
 
 : interpret
     begin
