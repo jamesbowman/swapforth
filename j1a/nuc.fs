@@ -44,13 +44,11 @@ header rshift
     drop
 ;
 
-: uart-stat ( mask -- f ) \ is bit in UART status register on?
-    h# 2000 io@ and
-;
-
 header key?
 : key?
-    d# 2 uart-stat 0<>
+    d# 2
+: uart-stat ( mask -- f ) \ is bit in UART status register on?
+    h# 2000 io@ and
 ;
 
 header key
