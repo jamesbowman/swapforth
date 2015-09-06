@@ -159,6 +159,7 @@ class TetheredTarget:
                     else:
                         write(r)
                         # print repr(r)
+                        self.log.write(r)
             return
         print "Cannot find file %s in %r" % (filename, self.searchpath)
         raise Bye
