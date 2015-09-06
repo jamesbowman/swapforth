@@ -48,7 +48,7 @@ header key?
 : key?
     d# 2
 : uart-stat ( mask -- f ) \ is bit in UART status register on?
-    h# 2000 io@ and
+    h# 2000 io@ and 0<>
 ;
 
 header key
@@ -104,6 +104,9 @@ header bl
     +
     emit
 ;
+
+header .x2
+: .x2 hex2 space ;
 
 header .x
 : . hex4 space ;
@@ -253,7 +256,7 @@ header /string
 
 header aligned
 : aligned
-    1+ d# -2 and
+    1+ 2/ 2*
 ; 
 
 header d+
@@ -373,11 +376,9 @@ header um/mod
 ; 
 
 : 3rd   >r over r> swap ;
-: 3dup  3rd 3rd 3rd ;
 
 : lower ( c1 -- c2 ) \ c2 is the lower-case of c1
-    h# 40 over <
-    over h# 5b < and
+    dup [char] A - d# 26 u<
     h# 20 and +
 ;
 
@@ -389,9 +390,9 @@ header um/mod
 ;
 
 : sameword ( c-addr u wp -- c-addr u wp flag )
-    2dup cell+ c@ = if
-        3dup
-        d# 3 + >r
+    2dup cell+ c@ = if              \ lengths match?
+        3rd 3rd 3rd                 \ 3dup
+        d# 3 + >r                   \ R: word in dictionary
         bounds
         begin
             2dupxor
@@ -1225,6 +1226,16 @@ header quit
             [char] o 2emit
             cr
     again
+;
+
+header .s
+: .s
+    [char] < emit depth hex2 [char] > emit space
+: (.s)
+    depth if
+        >r (.s) r>
+        dup .
+    then
 ;
 
 : main

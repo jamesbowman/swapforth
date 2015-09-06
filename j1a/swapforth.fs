@@ -110,87 +110,60 @@ include core-ext.fs
 ;
 marker |
 
-: hex2. ( u -- )
-    base @ swap
-    hex
-    s>d <# # # #> type space
-    base !
-;
+\ Construct a 4-entry jump table called _
+\ for the four J1 opcodes
 
-: .xt  \ print xt's name
-    begin
-        2 -
-        dup c@ 20 <
-    until
-    count type
-;
+( 3:ALU     ) :noname ." alu: " 2/ .x ;
+( 2:CALL    ) :noname  \ print xt's name
+                  begin
+                      2 -
+                      dup c@ 20 <
+                  until
+                  count type
+              ;
+( 1:0BRANCH ) :noname [char] Z emit space .x ;
+( 0:JUMP    ) :noname [char] J emit space .x ;
+create _ , , , ,
 
 : see
-    base @ hex
     '
     32 bounds
     begin
         cr dup .x
-        dup @ >r
-        r@ .x
+        dup @
+        dup .x
         6 spaces
-        r@ 15 rshift if
+        dup 0< if
             [char] $ emit
-            r@ 32767 and .x
+            32767 and .x
         else
-            r@ 13 rshift 0 = if
-                [char] J emit space
-                r@ 8191 and 2* .x
-            then
-            r@ 13 rshift 1 = if
-                [char] Z emit space
-                r@ 8191 and 2* .x
-            then
-            r@ 13 rshift 2 = if
-                r@ 8191 and 2* .xt
-            then
+            dup 8191 and 2*
+            swap 13 rshift cells _ + @ execute
         then
-        r> drop
-        2 +
+        cell+
         2dup =
     until
     2drop
-    base !
-;
-
-
-: (.s)
-    depth if
-        >r recurse r>
-        dup .x
-    then
-;
-
-: .s
-    [char] < emit depth .x [char] > emit space
-    (.s)
 ;
 
 : dump
     ?dup
     if
-        base @ >r hex
         1- 4 rshift 1+
         0 do
             cr dup dup 8 u.r space space
             16 0 do
-                dup c@ hex2. 1+
+                dup c@ .x2 1+
             loop
             space swap
             16 0 do
-                dup c@ 127 and
-                dup 0 bl within over 127 = or
-                if drop [char] . then
+                dup c@ dup bl 127 within invert if
+                    drop [char] .
+                then
                 emit 1+
             loop
             drop
         loop
-        r> base !
     then
     drop
 ;
