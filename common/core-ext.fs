@@ -24,15 +24,15 @@
     ' compile,
 ; immediate
 
-create tmpbuf 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
+create _ 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
 
 : s"
     [char] " parse
     state @ if
         postpone sliteral
     else
-        tuck tmpbuf swap cmove
-        tmpbuf swap
+        tuck _ swap cmove
+        _ swap
     then
 ; immediate
 

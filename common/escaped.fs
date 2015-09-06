@@ -128,9 +128,9 @@ create CRLF$    \ -- addr ; CR/LF as counted string
 \ ** the rules of *\fo{parse\"} above, returning the address
 \ ** of the translated counted string in *\fo{POCKET}.
   source >in @ /string tuck             \ -- len caddr len
-  tmpbuf parse\" nip
+  _ parse\" nip
   - >in +!
-  tmpbuf
+  _
 ;
 
 PUBLICWORDS \ }{
