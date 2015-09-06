@@ -177,6 +177,7 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
       0002  1                   PMOD direction
       0004  2                   LEDS
       0008  3                   misc.out
+      0800  11                  sb_warmboot
       1000  12  UART RX         UART TX
       2000  13  misc.in
   */
@@ -187,6 +188,14 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
     (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
     (io_addr_[13] ? {12'd0, PIO1_19, PIOS_01, uart0_valid, !uart0_busy} : 16'd0);
 
+  reg boot, s0, s1;
+
+  SB_WARMBOOT _sb_warmboot (
+    .BOOT(boot),
+    .S0(s0),
+    .S1(s1)
+    );
+
   always @(posedge clk) begin
     if (io_wr_ & io_addr_[0])
       pmod_out <= dout_[7:0];
@@ -196,14 +205,9 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
       LEDS <= dout_[4:0];
     if (io_wr_ & io_addr_[3])
       PIOS <= dout_[4:0];
+    if (io_wr_ & io_addr_[11])
+      {boot, s1, s0} <= dout_[2:0];
   end
-
-  /*
-  SB_IO #(
-    .PIN_TYPE(6'b011001)
-  ) io0 (
-	.PACKAGE_PIN(PIO1_02));
-  */
 
   always @(negedge resetq or posedge clk)
     if (!resetq)
