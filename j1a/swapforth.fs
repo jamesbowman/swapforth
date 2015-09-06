@@ -151,7 +151,7 @@ create _ , , , ,
     if
         1- 4 rshift 1+
         0 do
-            cr dup dup 8 u.r space space
+            cr dup dup .x space space
             16 0 do
                 dup c@ .x2 1+
             loop
