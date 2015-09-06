@@ -96,15 +96,6 @@ include core-ext.fs
 
 ( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
 
-: serialize \ print out all of memory as base-36 cells
-    base @
-    #36 base !
-    $2000 $0000 do
-        i @ .
-    2 +loop
-    base !
-;
-
 : new
     s" | marker |" evaluate
 ;

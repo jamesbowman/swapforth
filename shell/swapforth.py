@@ -164,6 +164,10 @@ class TetheredTarget:
         print "Cannot find file %s in %r" % (filename, self.searchpath)
         raise Bye
 
+    def serialize(self):
+        l = self.command_response('serialize')
+        return [int(x, 36) for x in l.split()[:-1]]
+
     def shellcmd(self, cmd):
         ser = self.ser
         if cmd.startswith('#noverbose'):
@@ -185,8 +189,7 @@ class TetheredTarget:
             else:
                 print 'please wait...'
                 dest = cmd[1]
-                l = self.command_response('serialize')
-                d = [int(x, 36) for x in l.split()[:-1]]
+                d = self.serialize()
                 print 'Image is', self.cellsize*len(d), 'bytes'
                 if self.cellsize == 4:
                     if dest.endswith('.hex'):
