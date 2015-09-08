@@ -981,35 +981,18 @@ header chars    :noname     noop ;
 : jumptable ( u -- ) \ add u to the return address
     r> + >r ;
 
-header throw
-: throw
-    ?dup if
-        [char] e emit
-        [char] r emit
-        [char] r emit
-        [char] o emit
-        [char] r emit
-        [char] : emit
-        space
-        .
-        d# 0 execute
-    then
-;
-
-
-: isvoid ( caddr u -- ) \ any char remains, throw -13
-    nip 0<>
-;fallthru
-: -13throw ( a -- ) \ if a is nonzero, throw -13
-    d# 13
-;fallthru
-: -throw ( a b -- ) \ if a is nonzero, throw -b
-    negate and throw
-;
-
 header abort
 : abort
-    d# -1 throw
+    [char] ? emit
+    d# 0 execute
+;
+
+: isvoid ( caddr u -- ) \ any char remains, abort
+    nip 0<>
+: ?abort
+    if
+        abort
+    then
 ;
 
 : consume1 ( caddr u ch -- caddr' u' f )
@@ -1088,7 +1071,7 @@ header-imm literal
 header-imm postpone
 :noname
     parse-name sfind
-    dup 0= -13throw
+    dup 0= ?abort
     0< if
         tliteral
         ['] compile,
@@ -1100,7 +1083,7 @@ header '
 :noname
     parse-name
     sfind
-    0= -13throw
+    0= ?abort
 ;
 
 header char
