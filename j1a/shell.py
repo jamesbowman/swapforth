@@ -19,11 +19,16 @@ import swapforth
 class TetheredJ1a(swapforth.TetheredTarget):
     cellsize = 2
 
-    def reset(self):
+    def reset(self, fullreset = True):
+        print 'reset'
         ser = self.ser
         ser.setDTR(1)
+        if fullreset:
+            ser.setRTS(1)
+            ser.setRTS(0)
         ser.setDTR(0)
-        time.sleep(0.01)
+        if fullreset:
+            time.sleep(0.1)
 
         for c in ' 1 tth !':
             ser.write(c)
@@ -45,7 +50,7 @@ class TetheredJ1a(swapforth.TetheredTarget):
         print 'established'
 
     def interrupt(self):
-        self.reset()
+        self.reset(False)
 
     def serialize(self):
         l = self.command_response('0 here dump')
