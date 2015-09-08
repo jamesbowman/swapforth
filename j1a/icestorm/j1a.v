@@ -62,6 +62,46 @@ module SB_RAM2048x2(
 
 endmodule
 
+module ioport(
+  input clk,
+  inout [7:0] pins,
+  input we,
+  input [7:0] wd,
+  output [7:0] rd,
+  input [7:0] dir);
+
+  genvar i;
+  generate 
+    for (i = 0; i < 8; i = i + 1) begin : io
+      // 1001   PIN_OUTPUT_REGISTERED_ENABLE 
+      //     01 PIN_INPUT 
+      SB_IO #(.PIN_TYPE(6'b1001_01)) _io (
+        .PACKAGE_PIN(pins[i]),
+        .CLOCK_ENABLE(we),
+        .OUTPUT_CLK(clk),
+        .D_OUT_0(wd[i]),
+        .D_IN_0(rd[i]),
+        .OUTPUT_ENABLE(dir[i]));
+    end
+  endgenerate
+
+endmodule
+
+module outpin(
+  input clk,
+  output pin,
+  input we,
+  input wd,
+  output rd);
+
+  SB_IO #(.PIN_TYPE(6'b0101_01)) _io (
+        .PACKAGE_PIN(pin),
+        .CLOCK_ENABLE(we),
+        .OUTPUT_CLK(clk),
+        .D_OUT_0(wd),
+        .D_IN_0(rd));
+endmodule
+
 module top(input clk, output D1, output D2, output D3, output D4, output D5,
 
            output TXD,        // UART TX
@@ -134,17 +174,15 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   // ######   PMOD   ##########################################
 
   reg [7:0] pmod_dir;   // 1:output, 0:input
-  reg [7:0] pmod_out;
   wire [7:0] pmod_in;
+  wire w0 = io_wr_ & io_addr_[0];
 
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io0 (.PACKAGE_PIN(PIO1_02), .D_OUT_0(pmod_out[0]), .D_IN_0(pmod_in[0]), .OUTPUT_ENABLE(pmod_dir[0]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io1 (.PACKAGE_PIN(PIO1_03), .D_OUT_0(pmod_out[1]), .D_IN_0(pmod_in[1]), .OUTPUT_ENABLE(pmod_dir[1]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io2 (.PACKAGE_PIN(PIO1_04), .D_OUT_0(pmod_out[2]), .D_IN_0(pmod_in[2]), .OUTPUT_ENABLE(pmod_dir[2]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io3 (.PACKAGE_PIN(PIO1_05), .D_OUT_0(pmod_out[3]), .D_IN_0(pmod_in[3]), .OUTPUT_ENABLE(pmod_dir[3]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io4 (.PACKAGE_PIN(PIO1_06), .D_OUT_0(pmod_out[4]), .D_IN_0(pmod_in[4]), .OUTPUT_ENABLE(pmod_dir[4]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io5 (.PACKAGE_PIN(PIO1_07), .D_OUT_0(pmod_out[5]), .D_IN_0(pmod_in[5]), .OUTPUT_ENABLE(pmod_dir[5]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io6 (.PACKAGE_PIN(PIO1_08), .D_OUT_0(pmod_out[6]), .D_IN_0(pmod_in[6]), .OUTPUT_ENABLE(pmod_dir[6]));
-  SB_IO #(.PIN_TYPE(6'b1010_01)) io7 (.PACKAGE_PIN(PIO1_09), .D_OUT_0(pmod_out[7]), .D_IN_0(pmod_in[7]), .OUTPUT_ENABLE(pmod_dir[7]));
+  ioport _mod (.clk(clk),
+               .pins({PIO1_09, PIO1_08, PIO1_07, PIO1_06, PIO1_05, PIO1_04, PIO1_03, PIO1_02}),
+               .we(io_wr_ & io_addr_[0]),
+               .wd(dout_),
+               .rd(pmod_in),
+               .dir(pmod_dir));
 
   // ######   UART   ##########################################
 
@@ -167,8 +205,14 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
 
   reg [4:0] PIOS;
   assign {PIO1_20, PIO1_18, PIOS_00, PIOS_02, PIOS_03} = PIOS;
-  reg [4:0] LEDS;
-  assign {D1,D2,D3,D4,D5} = LEDS;
+  wire [4:0] LEDS;
+  wire w4 = io_wr_ & io_addr_[2];
+
+  outpin led0 (.clk(clk), .we(w4), .pin(D5), .wd(dout_[0]), .rd(LEDS[0]));
+  outpin led1 (.clk(clk), .we(w4), .pin(D4), .wd(dout_[1]), .rd(LEDS[1]));
+  outpin led2 (.clk(clk), .we(w4), .pin(D3), .wd(dout_[2]), .rd(LEDS[2]));
+  outpin led3 (.clk(clk), .we(w4), .pin(D2), .wd(dout_[3]), .rd(LEDS[3]));
+  outpin led4 (.clk(clk), .we(w4), .pin(D1), .wd(dout_[4]), .rd(LEDS[4]));
 
   // ######   IO PORTS   ######################################
 
@@ -183,8 +227,9 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   */
 
   assign io_din =
-    (io_addr_[ 0] ? {8'd0, pmod_in}                                    : 16'd0) |
+    (io_addr_[ 0] ? {8'd0, pmod_in}                                     : 16'd0) |
     (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0) |
+    (io_addr_[ 2] ? {11'd0, LEDS}                                       : 16'd0) |
     (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
     (io_addr_[13] ? {12'd0, PIO1_19, PIOS_01, uart0_valid, !uart0_busy} : 16'd0);
 
@@ -197,12 +242,8 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
     );
 
   always @(posedge clk) begin
-    if (io_wr_ & io_addr_[0])
-      pmod_out <= dout_[7:0];
     if (io_wr_ & io_addr_[1])
       pmod_dir <= dout_[7:0];
-    if (io_wr_ & io_addr_[2])
-      LEDS <= dout_[4:0];
     if (io_wr_ & io_addr_[3])
       PIOS <= dout_[4:0];
     if (io_wr_ & io_addr_[11])
