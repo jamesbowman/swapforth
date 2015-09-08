@@ -61,8 +61,6 @@ include core.fs
 : /         /mod nip ;
 : mod       /mod drop ;
 
-\ #######   CORE EXT   ########################################
-
 : ."
     [char] " parse
     state @ if
@@ -72,6 +70,15 @@ include core.fs
         type
     then
 ; immediate
+
+: abort"
+    postpone if
+    postpone ."
+    postpone abort
+    postpone then
+; immediate
+
+\ #######   CORE EXT   ########################################
 
 : unused
     $2000 here -
@@ -83,9 +90,6 @@ include core.fs
 
 include core-ext.fs
 
-: ms 0 do 1490 0 do loop loop ;
-: leds  4 io! ;
-
 : marker
     forth 2@        \ preserve FORTH and DP
     create
@@ -93,6 +97,9 @@ include core-ext.fs
     does>
         2@ forth 2! \ restore FORTH and DP
 ;
+
+: ms 0 do 1490 0 do loop loop ;
+: leds  4 io! ;
 
 ( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
 
