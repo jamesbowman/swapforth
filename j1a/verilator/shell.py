@@ -26,7 +26,7 @@ class TetheredJ1a(swapforth.TetheredTarget):
 
         while 1:
             c = ser.read(1)
-            print repr(c)
+            # print repr(c)
             if c == chr(30):
                 break
 
@@ -37,6 +37,16 @@ class TetheredJ1a(swapforth.TetheredTarget):
 
     def interrupt(self):
         self.reset()
-        
+
+    def serialize(self):
+        l = self.command_response('0 here dump')
+        lines = l.strip().replace('\r', '').split('\n')
+        s = []
+        for l in lines:
+            l = l.split()
+            s += [int(b, 16) for b in l[1:17]]
+        s = array.array('B', s).tostring().ljust(8192, chr(0xff))
+        return array.array('H', s)
+
 if __name__ == '__main__':
     swapforth.main(TetheredJ1a)
