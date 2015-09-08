@@ -203,16 +203,23 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
      .tx_data(dout_[7:0]),
      .rx_data(uart0_data));
 
-  reg [4:0] PIOS;
-  assign {PIO1_20, PIO1_18, PIOS_00, PIOS_02, PIOS_03} = PIOS;
   wire [4:0] LEDS;
   wire w4 = io_wr_ & io_addr_[2];
+
+  wire [4:0] PIOS;
+  wire w8 = io_wr_ & io_addr_[3];
 
   outpin led0 (.clk(clk), .we(w4), .pin(D5), .wd(dout_[0]), .rd(LEDS[0]));
   outpin led1 (.clk(clk), .we(w4), .pin(D4), .wd(dout_[1]), .rd(LEDS[1]));
   outpin led2 (.clk(clk), .we(w4), .pin(D3), .wd(dout_[2]), .rd(LEDS[2]));
   outpin led3 (.clk(clk), .we(w4), .pin(D2), .wd(dout_[3]), .rd(LEDS[3]));
   outpin led4 (.clk(clk), .we(w4), .pin(D1), .wd(dout_[4]), .rd(LEDS[4]));
+
+  outpin pio0 (.clk(clk), .we(w8), .pin(PIOS_03), .wd(dout_[0]), .rd(PIOS[0]));
+  outpin pio1 (.clk(clk), .we(w8), .pin(PIOS_02), .wd(dout_[1]), .rd(PIOS[1]));
+  outpin pio2 (.clk(clk), .we(w8), .pin(PIOS_00), .wd(dout_[2]), .rd(PIOS[2]));
+  outpin pio3 (.clk(clk), .we(w8), .pin(PIO1_18), .wd(dout_[3]), .rd(PIOS[3]));
+  outpin pio4 (.clk(clk), .we(w8), .pin(PIO1_20), .wd(dout_[4]), .rd(PIOS[4]));
 
   // ######   IO PORTS   ######################################
 
@@ -230,6 +237,7 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
     (io_addr_[ 0] ? {8'd0, pmod_in}                                     : 16'd0) |
     (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0) |
     (io_addr_[ 2] ? {11'd0, LEDS}                                       : 16'd0) |
+    (io_addr_[ 3] ? {11'd0, PIOS}                                       : 16'd0) |
     (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
     (io_addr_[13] ? {12'd0, PIO1_19, PIOS_01, uart0_valid, !uart0_busy} : 16'd0);
 
@@ -244,8 +252,6 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
   always @(posedge clk) begin
     if (io_wr_ & io_addr_[1])
       pmod_dir <= dout_[7:0];
-    if (io_wr_ & io_addr_[3])
-      PIOS <= dout_[4:0];
     if (io_wr_ & io_addr_[11])
       {boot, s1, s0} <= dout_[2:0];
   end
