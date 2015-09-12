@@ -23,7 +23,6 @@ module bram_tdp #(
 reg [DATA-1:0] mem [(2**ADDR)-1:0];
   initial begin
     $readmemh("../build/nuc.hex", mem);
-    // $readmemh("../ans.hex", mem);
   end
  
 // Port A
@@ -183,6 +182,15 @@ module top(
   always @(posedge fclk)
     counter <= counter + 64'd1;
 
+  reg [31:0] ms;
+  reg [17:0] subms;
+  localparam [17:0] lim = (MHZ * 1000) - 1;
+  always @(posedge fclk) begin
+    subms <= (subms == lim) ? 18'd0 : (subms + 18'd1);
+    if (subms == lim)
+      ms <= ms + 32'd1;
+  end
+
   // ------------------------------------------------------------------------
 
   wire uart0_valid, uart0_busy;
@@ -280,6 +288,7 @@ module top(
     16'h1010: din <= MHZ * 1000000;
     16'h1014: din <= counter_[31:0];
     16'h1018: din <= counter_[63:32];
+    16'h101c: din <= ms;
 
     default:  din <= 32'bx;
     endcase
@@ -324,45 +333,22 @@ module top(
   assign Arduino_19 = gpio_dir[19] ? gpo[19] : 1'bz;
   assign Arduino_20 = gpio_dir[20] ? gpo[20] : 1'bz;
   assign Arduino_21 = gpio_dir[21] ? gpo[21] : 1'bz;
-  // assign Arduino_22 = gpio_dir[22] ? gpo[22] : 1'bz;
   assign Arduino_23 = gpio_dir[23] ? gpo[23] : 1'bz;
-  // assign Arduino_24 = gpio_dir[24] ? gpo[24] : 1'bz;
   assign Arduino_25 = gpio_dir[25] ? gpo[25] : 1'bz;
-  // assign Arduino_26 = gpio_dir[26] ? gpo[26] : 1'bz;
   assign Arduino_27 = gpio_dir[27] ? gpo[27] : 1'bz;
   assign Arduino_28 = gpio_dir[28] ? gpo[28] : 1'bz;
   assign Arduino_29 = gpio_dir[29] ? gpo[29] : 1'bz;
   assign Arduino_30 = gpio_dir[30] ? gpo[30] : 1'bz;
   assign Arduino_31 = gpio_dir[31] ? gpo[31] : 1'bz;
-  // assign Arduino_32 = gpio_dir[32] ? gpo[32] : 1'bz;
   assign Arduino_33 = gpio_dir[33] ? gpo[33] : 1'bz;
-  // assign Arduino_34 = gpio_dir[34] ? gpo[34] : 1'bz;
   assign Arduino_35 = gpio_dir[35] ? gpo[35] : 1'bz;
-  // assign Arduino_36 = gpio_dir[36] ? gpo[36] : 1'bz;
   assign Arduino_37 = gpio_dir[37] ? gpo[37] : 1'bz;
-  // assign Arduino_38 = gpio_dir[38] ? gpo[38] : 1'bz;
   assign Arduino_39 = gpio_dir[39] ? gpo[39] : 1'bz;
-  // assign Arduino_40 = gpio_dir[40] ? gpo[40] : 1'bz;
   assign Arduino_41 = gpio_dir[41] ? gpo[41] : 1'bz;
-  // assign Arduino_42 = gpio_dir[42] ? gpo[42] : 1'bz;
   assign Arduino_43 = gpio_dir[43] ? gpo[43] : 1'bz;
-  // assign Arduino_44 = gpio_dir[44] ? gpo[44] : 1'bz;
   assign Arduino_45 = gpio_dir[45] ? gpo[45] : 1'bz;
-  // assign Arduino_46 = gpio_dir[46] ? gpo[46] : 1'bz;
-//  assign Arduino_47 = gpio_dir[47] ? gpo[47] : 1'bz;
-  // assign Arduino_48 = gpio_dir[48] ? gpo[48] : 1'bz;
-//  assign Arduino_49 = gpio_dir[49] ? gpo[49] : 1'bz;
-  // assign Arduino_50 = gpio_dir[50] ? gpo[50] : 1'bz;
   assign Arduino_51 = gpio_dir[51] ? gpo[51] : 1'bz;
-  // assign Arduino_52 = gpio_dir[52] ? gpo[52] : 1'bz;
   assign Arduino_53 = gpio_dir[53] ? gpo[53] : 1'bz;
-
-  reg [31:0] blinker;
-  always @(posedge fclk)
-    blinker <= blinker + 1;
-  assign Arduino_47 = blinker[24];
-  assign Arduino_49 = ~blinker[24];
-
 
   assign gpi[0] = Arduino_0;
   assign gpi[1] = Arduino_1;
@@ -386,39 +372,64 @@ module top(
   assign gpi[19] = Arduino_19;
   assign gpi[20] = Arduino_20;
   assign gpi[21] = Arduino_21;
-  // assign gpi[22] = Arduino_22;
   assign gpi[23] = Arduino_23;
-  // assign gpi[24] = Arduino_24;
   assign gpi[25] = Arduino_25;
-  // assign gpi[26] = Arduino_26;
   assign gpi[27] = Arduino_27;
   assign gpi[28] = Arduino_28;
   assign gpi[29] = Arduino_29;
   assign gpi[30] = Arduino_30;
   assign gpi[31] = Arduino_31;
-  // assign gpi[32] = Arduino_32;
   assign gpi[33] = Arduino_33;
-  // assign gpi[34] = Arduino_34;
   assign gpi[35] = Arduino_35;
-  // assign gpi[36] = Arduino_36;
   assign gpi[37] = Arduino_37;
-  // assign gpi[38] = Arduino_38;
   assign gpi[39] = Arduino_39;
-  // assign gpi[40] = Arduino_40;
   assign gpi[41] = Arduino_41;
-  // assign gpi[42] = Arduino_42;
   assign gpi[43] = Arduino_43;
-  // assign gpi[44] = Arduino_44;
   assign gpi[45] = Arduino_45;
-  // assign gpi[46] = Arduino_46;
   assign gpi[47] = Arduino_47;
-  // assign gpi[48] = Arduino_48;
   assign gpi[49] = Arduino_49;
-  // assign gpi[50] = Arduino_50;
   assign gpi[51] = Arduino_51;
-  // assign gpi[52] = Arduino_52;
   assign gpi[53] = Arduino_53;
 
+`ifndef WANT_VGA
+
+  assign Arduino_26 = gpio_dir[26] ? gpo[26] : 1'bz;
+  assign Arduino_22 = gpio_dir[22] ? gpo[22] : 1'bz;
+  assign Arduino_24 = gpio_dir[24] ? gpo[24] : 1'bz;
+  assign Arduino_32 = gpio_dir[32] ? gpo[32] : 1'bz;
+  assign Arduino_34 = gpio_dir[34] ? gpo[34] : 1'bz;
+  assign Arduino_36 = gpio_dir[36] ? gpo[36] : 1'bz;
+  assign Arduino_38 = gpio_dir[38] ? gpo[38] : 1'bz;
+  assign Arduino_40 = gpio_dir[40] ? gpo[40] : 1'bz;
+  assign Arduino_42 = gpio_dir[42] ? gpo[42] : 1'bz;
+  assign Arduino_44 = gpio_dir[44] ? gpo[44] : 1'bz;
+  assign Arduino_46 = gpio_dir[46] ? gpo[46] : 1'bz;
+  assign Arduino_47 = gpio_dir[47] ? gpo[47] : 1'bz;
+  assign Arduino_48 = gpio_dir[48] ? gpo[48] : 1'bz;
+  assign Arduino_49 = gpio_dir[49] ? gpo[49] : 1'bz;
+  assign Arduino_50 = gpio_dir[50] ? gpo[50] : 1'bz;
+  assign Arduino_52 = gpio_dir[52] ? gpo[52] : 1'bz;
+
+  assign gpi[22] = Arduino_22;
+  assign gpi[24] = Arduino_24;
+  assign gpi[26] = Arduino_26;
+  assign gpi[32] = Arduino_32;
+  assign gpi[34] = Arduino_34;
+  assign gpi[36] = Arduino_36;
+  assign gpi[38] = Arduino_38;
+  assign gpi[40] = Arduino_40;
+  assign gpi[42] = Arduino_42;
+  assign gpi[44] = Arduino_44;
+  assign gpi[46] = Arduino_46;
+  assign gpi[48] = Arduino_48;
+  assign gpi[50] = Arduino_50;
+  assign gpi[52] = Arduino_52;
+
+  assign {sram_ce, sram_oe, sram_we} = 3'b111;
+  assign sram_addr = 0;
+  assign sram_data = 0;
+  
+`else
   wire [20:0] vga_addr;
   wire [7:0] vga_rd;
   wire [3:0] vga_red;
@@ -443,37 +454,24 @@ module top(
     .vga_hsync_n(vga_hsync),
     .vga_vsync_n(vga_vsync));
 
-  assign Arduino_52 = vga_red[0];   // Red1
-  assign Arduino_50 = vga_red[1];   // Red2
-  assign Arduino_48 = vga_red[2];   // Red3
-  assign Arduino_46 = vga_red[3];   // Red4
-  assign Arduino_38 = vga_green[0]; // Green1
-  assign Arduino_40 = vga_green[1]; // Green2
-  assign Arduino_42 = vga_green[2]; // Green3
-  assign Arduino_44 = vga_green[3]; // Green4
+  assign Arduino_22 = vga_hsync;    // HSync
+  assign Arduino_24 = vga_vsync;    // VSync
   assign Arduino_26 = vga_blue[0];  // Blue1
   assign Arduino_32 = vga_blue[1];  // Blue2
   assign Arduino_34 = vga_blue[2];  // Blue3
   assign Arduino_36 = vga_blue[3];  // Blue4
-
-  // assign Arduino_52 = vga_blue[0];   // Red1
-  // assign Arduino_50 = vga_blue[1];   // Red2
-  // assign Arduino_48 = vga_blue[2];   // Red3
-  // assign Arduino_46 = vga_blue[3];   // Red4
-  // assign Arduino_38 = vga_red[0]; // Green1
-  // assign Arduino_40 = vga_red[1]; // Green2
-  // assign Arduino_42 = vga_red[2]; // Green3
-  // assign Arduino_44 = vga_red[3]; // Green4
-  // assign Arduino_26 = vga_green[0];  // Blue1
-  // assign Arduino_32 = vga_green[1];  // Blue2
-  // assign Arduino_34 = vga_green[2];  // Blue3
-  // assign Arduino_36 = vga_green[3];  // Blue4
-
-  assign Arduino_24 = vga_vsync;    // VSync
-  assign Arduino_22 = vga_hsync;    // HSync
+  assign Arduino_38 = vga_green[0]; // Green1
+  assign Arduino_40 = vga_green[1]; // Green2
+  assign Arduino_42 = vga_green[2]; // Green3
+  assign Arduino_44 = vga_green[3]; // Green4
+  assign Arduino_46 = vga_red[3];   // Red4
+  assign Arduino_48 = vga_red[2];   // Red3
+  assign Arduino_50 = vga_red[1];   // Red2
+  assign Arduino_52 = vga_red[0];   // Red1
 
   assign {sram_ce, sram_oe, sram_we} = gpo[87:85];
   assign sram_addr = sram_we ? vga_addr : sram_addr_o;
   assign sram_data = sram_we ? 8'bzzzzzzzz : sram_data_o;
+`endif
 
 endmodule
