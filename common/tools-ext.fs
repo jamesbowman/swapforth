@@ -23,8 +23,8 @@
             loop
             space swap
             16 0 do
-                dup c@ 127 and
-                dup 0 bl within over 127 = or
+                dup c@
+                dup bl 127 within invert
                 if drop [char] . then
                 emit 1+
             loop
