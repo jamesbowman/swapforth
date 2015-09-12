@@ -20,10 +20,9 @@ class TetheredJ1b(swapforth.TetheredTarget):
     def reset(self):
         ser = self.ser
         ser.reset()
-        if 0:
-            for c in '    1 tth !':
-                ser.write(c)
-            ser.write('\r')
+        for c in '    1 tth !':
+            ser.write(c)
+        ser.write('\r')
 
         while 1:
             c = ser.read(1)

@@ -57,6 +57,10 @@ header 0>       : 0>        d# 0 > ;
 header 0<>      : 0<>       d# 0 <> ;
 header u>       : u>        swap u< ; 
 
+: off
+    d# 0 swap !
+;
+
 : uart-stat ( mask -- f ) \ is bit in UART status register on?
     h# 2000 io@ and
 ;
@@ -231,6 +235,7 @@ create state    0 ,
 create delim    0 ,
 create rO       0 ,
 create leaves   0 ,
+create tethered 0 ,
 create tib $80 allot
 
 header dp    :noname dp ;
@@ -239,6 +244,12 @@ header state :noname state ;
 header base  :noname base ;
 header >in   :noname >in  ;
 header forth :noname forth ;
+
+\ tethered mode flag
+header tth
+: tth
+    tethered
+;
 
 : nextword
     uw@ d# -2 and
@@ -391,21 +402,46 @@ header um/mod
     drop swap 
 ; 
 
+\ Unicode-friendly ACCEPT contibuted by Matthias Koch
+
+: delchar ( addr len -- addr len )
+    dup if d# 8 emit d# 32 emit d# 8 emit then
+
+    begin
+        dup 0= if exit then
+        1- 2dup + c@
+        h# C0 and h# 80 <>
+      until
+;
+
 header accept
 : accept
-    d# 30 emit
-    drop dup
+    tethered @ if d# 30 emit then
+    
+    >r d# 0  ( addr len R: maxlen )
+
     begin
-        key
-        dup h# 0d xor
-    while
-        dup h# 0a = if
-            drop
-        else
-            over c! 1+
+        key    ( addr len key R: maxlen )
+        
+        d# 9 over= if drop d# 32 then
+        d# 127 over= if drop d# 8 then
+        
+        dup d# 31 u>
+        if
+            over r@ u<
+            if
+                tethered @ 0= if dup emit then
+                >r 2dup + r@ swap c! 1+ r>
+            then
         then
-    repeat
-    drop swap -
+        
+        d# 8 over= if >r delchar r> then
+          
+        d# 10 over= swap d# 13 = or
+    until
+    
+    rdrop nip
+    space
 ;
 
 : 3rd   >r over r> swap ;
@@ -578,7 +614,7 @@ header source-id
     over c@ r@ execute
     over 0<> and
     WHILE
-	d# 1 /string
+    d# 1 /string
     REPEAT
     r> drop ;
 
@@ -965,9 +1001,9 @@ header io!      :noname     io!      ;
 header io@      :noname     io@      ;
 header rshift   :noname     rshift   ;
 header lshift   :noname     lshift   ;
-header-imm >r       :noname     inline: >r ;
-header-imm r>       :noname     inline: r> ;
-header-imm r@       :noname     inline: r@ noop ;
+header-imm >r   :noname     inline: >r ;
+header-imm r>   :noname     inline: r> ;
+header-imm r@   :noname     inline: r@ noop ;
 
 : jumptable ( u -- ) \ add u to the return address
     r> + >r ;
@@ -1132,25 +1168,26 @@ header evaluate
     r> >in ! r> sourceA ! r> sourceC !
 ;
 
+header quit
+: quit
+    begin
+        refill drop
+        interpret
+        space
+        [char] o emit
+        [char] k emit
+        cr
+    again
+;
+
 : main
     "cold" d# 4 sfind if
         execute
     else
         2drop
     then
-    begin
-        refill drop
-        \ source dump
-        \ cr parse-name sfind
-        \ if
-        \     execute
-        \ then
-        interpret
-        space space
-        [char] o emit
-        [char] k emit
-        cr
-    again
+    tethered off
+    quit
 ;
 
 meta

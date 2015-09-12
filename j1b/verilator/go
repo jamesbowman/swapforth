@@ -1,3 +1,4 @@
+set -e
 (cd .. && gforth cross.fs basewords.fs nuc.fs )
 make &&
 echo |

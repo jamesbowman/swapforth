@@ -53,6 +53,15 @@ class TetheredJ1b(swapforth.TetheredTarget):
             ser.write(struct.pack('II', len(data) + 0x4000, 0x4000))
             ser.write(data)
             print 'completed load of %d+%d bytes' % (len(code), len(data))
+
+        for c in ' 1 tth !':
+            ser.write(c)
+            ser.flush()
+            time.sleep(0.001)
+            ser.flushInput()
+            # print repr(ser.read(ser.inWaiting()))
+        ser.write('\r')
+
         while 1:
             c = ser.read(1)
             print  repr(c)

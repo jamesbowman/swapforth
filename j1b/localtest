@@ -2,8 +2,8 @@ set -e -x
 gforth cross.fs basewords.fs nuc.fs
 PORT=/dev/papilio
 $HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -d 'Papilio DUO' -f xilinx/j1-papilioduo.bit
-echo | python shell.py -h $PORT -i build/nuc.hex -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ swapforth.fs runtests.fs
+echo | python shell.py -h $PORT -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ swapforth.fs runtests.fs
 
 echo |
-python shell.py -h $PORT -i build/nuc.hex -p ../common/ swapforth.fs ../demos/factorials.fs -e '42 FAC .FAC' |
+python shell.py -h $PORT -p ../common/ swapforth.fs ../demos/factorials.fs -e '42 FAC .FAC' |
 grep 1,405,006,117,752,879,898,543,142,606,244,511,569,936,384,000,000,000
