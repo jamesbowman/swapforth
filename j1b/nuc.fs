@@ -600,7 +600,7 @@ header source-id
 \ From Forth200x - public domain
 
 : isspace? ( c -- f )
-    bl 1+ u< ;
+    h# 21 u< ;
 
 : isnotspace? ( c -- f )
     isspace? 0= ;
@@ -609,10 +609,10 @@ header source-id
     \ skip all characters satisfying xt ( c -- f )
     >r
     BEGIN
-    over c@ r@ execute
-    over 0<> and
+        over c@ r@ execute
+        overand
     WHILE
-    d# 1 /string
+        d# 1 /string
     REPEAT
     r> drop ;
 
