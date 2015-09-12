@@ -530,7 +530,7 @@ header source
 \ From Forth200x - public domain
 
 : isspace? ( c -- f )
-    bl 1+ u< ;
+    h# 21 u< ;
 
 : isnotspace? ( c -- f )
     isspace? 0= ;
@@ -539,10 +539,10 @@ header source
     \ skip all characters satisfying xt ( c -- f )
     >r
     BEGIN
-    over c@ r@ execute
-    over 0<> and
+        over c@ r@ execute
+        overand
     WHILE
-	1/string
+        1/string
     REPEAT
     r> drop ;
 
@@ -636,8 +636,7 @@ header s,
     begin
         2dupxor
     while
-        dup c@ c,
-        1+
+        count c,
     repeat
     2drop
     align
