@@ -17,7 +17,7 @@ LOCALWORDS
 
 PUBLICWORDS
 
-: ms@   1000 tu d>s ;       \ in milliseconds, single prec
+: ms@   $101c io@ ;         \ in milliseconds, single prec
 : us@   1000000 tu ;        \ in microseconds, double prec
 : ns@   1000000000 tu ;     \ in nanoseconds, double prec
 

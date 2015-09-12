@@ -61,13 +61,11 @@ header u>       : u>        swap u< ;
     d# 0 swap !
 ;
 
-: uart-stat ( mask -- f ) \ is bit in UART status register on?
-    h# 2000 io@ and
-;
-
 header key?
 : key?
-    d# 2 uart-stat 0<>
+    d# 2
+: uart-stat ( mask -- f ) \ is bit in UART status register on?
+    h# 2000 io@ and 0<>
 ;
 
 header key
@@ -641,22 +639,28 @@ header parse
     drop r> tuck -
 ;
 
+
+header allot
+: tallot
+    dp +!
+;
+
 header ,
 :noname
     here !
-    d# 4 dp +!
+    d# 4 tallot
 ;
 
 header w,
 : w,
     here w!
-    d# 2 dp +!
+    d# 2 tallot
 ;
 
 header c,
 : c,
     here c!
-    d# 1 dp +!
+    d# 1 tallot
 ;
 
 : code,
@@ -674,20 +678,24 @@ header c,
     cp @ syncpt !
 ;
 
-: mkheader
-    calign
-    here lastword !
-    forth @ w,
-    parse-name
+header s,
+: s,
     dup c,
     bounds
     begin
         2dupxor
     while
-        dup c@ c,
-        1+
+        count c,
     repeat
     2drop
+;
+
+: mkheader
+    calign
+    here lastword !
+    forth @ w,
+    parse-name
+    s,
     calign
     cp @ w,
     cp @ thisxt !
