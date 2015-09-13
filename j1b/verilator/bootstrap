@@ -1,0 +1,8 @@
+set -e
+make
+
+python shell.py -p ../ -p ../../common <<END
+#include ../swapforth.fs
+#flash ../build/nuc.hex
+#bye
+END
