@@ -1,5 +1,4 @@
 *.bgn
-*.bit
 *_bitgen.xwbt
 *.bld
 *.cfi

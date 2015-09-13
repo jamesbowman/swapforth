@@ -1061,7 +1061,13 @@ header-imm unloop
     ['] (loopdone) compile,
 ;
 
-header decimal  :noname     d# 10 base ! ;
+header decimal
+: decimal
+    d# 10
+;fallthru
+: setbase
+    base !
+;
 
 header !        :noname     !        ;
 header +        :noname     +        ;
@@ -1161,9 +1167,9 @@ header-imm literal
 ;
 
 : base((doubleAlso))
-    base @ >r base !
+    base @ >r setbase
     ((doubleAlso))
-    r> base !
+    r> setbase
 ;
 
 : is'c' ( caddr u -- f )
@@ -1262,12 +1268,13 @@ header quit
 ;
 
 : main
+    decimal
+    tethered off
     "cold" d# 4 sfind if
         execute
     else
         2drop
     then
-    tethered off
     quit
 ;
 
