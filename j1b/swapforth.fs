@@ -197,6 +197,10 @@ create J1op , , , ,
     base !
 ;
 
+: environment?
+    2drop false
+;
+
 \ #######   EVERYTHING ELSE   #################################
 
 include float0.fs
@@ -218,14 +222,14 @@ include forth2012.fs
 include structures.fs
 \ include memory.fs
 
-: new
-    s" | marker |" evaluate
-;
-marker |
-
 include comus.fs
 include mini-oof.fs
 
 include drivers/gpio.fs
 include drivers/spi.fs
 include drivers/time.fs
+
+: new
+    s" | marker |" evaluate
+;
+marker |
