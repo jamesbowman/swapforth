@@ -223,6 +223,15 @@ class TetheredTarget:
             print 'unknown: ', pp(set(words) - set(allwords))
             print 'extra:', pp(set(allwords) & (set(words) - set(dpansf.words['CORE'])))
             extra = (set(allwords) & (set(words) - set(dpansf.words['CORE'])))
+            for ws in sorted(dpansf.words):
+                s = set(dpansf.words[ws])
+                if s & set(words):
+                    missing = s - set(words)
+                    if missing:
+                        m = 'Providing names from the \wl{%s} word set'
+                    else:
+                        m = 'Providing the \wl{%s} word set'
+                    print m % dpansf.ws[ws]
             if 0:
                 for w in sorted(extra):
                     ref = allwords[w]

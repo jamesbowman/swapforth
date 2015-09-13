@@ -265,6 +265,7 @@ module top(
     1010  master freq     snapshot clock
     1014  clock[31:0]
     1018  clock[63:32]
+    101c  millisecond uptime
 
   */
 
@@ -298,7 +299,7 @@ module top(
         16'h00??: gpo[mem_addr_[6:0]] <= dout_[0];
         16'h01??: gpio_dir[mem_addr_[6:0]] <= dout_[0];
 
-        // 16'h1008: uart_baud <= dout_;
+        16'h1008: uart_baud <= dout_;
 
         16'h1010: counter_ <= counter;
 
@@ -390,6 +391,8 @@ module top(
   assign gpi[49] = Arduino_49;
   assign gpi[51] = Arduino_51;
   assign gpi[53] = Arduino_53;
+
+  assign gpi[64] = DUO_SW1;
 
 `ifndef WANT_VGA
 

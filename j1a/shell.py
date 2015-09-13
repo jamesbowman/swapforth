@@ -20,7 +20,6 @@ class TetheredJ1a(swapforth.TetheredTarget):
     cellsize = 2
 
     def reset(self, fullreset = True):
-        print 'reset'
         ser = self.ser
         ser.setDTR(1)
         if fullreset:

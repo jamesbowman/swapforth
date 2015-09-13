@@ -204,6 +204,10 @@ words = {
         "2CONSTANT" :      "8.6.1.0360",
         "2VARIABLE" :      "8.6.1.0440",
     },
+    'DOUBLE-EXT' : {
+        "DU<" :      "8.6.2.1270",
+        "2ROT" :      "8.6.2.0420",
+    },
     'FACILITY' : {
         "KEY?" :     "10.6.1.1755",
         "PAGE" :     "10.6.1.2005",
@@ -259,6 +263,28 @@ words = {
     },
 }
 
+# Human-friendlier names of wordsets
+ws = {
+    'CORE' : 'Core',
+    'CORE-EXT' : 'Core Extensions',
+    'DOUBLE' : 'Double-Number',
+    'DOUBLE-EXT' : 'Double-Number Extensions',
+    'EXCEPTION' : 'Exception',
+    'EXCEPTION-EXT' : 'Exception Extensions',
+    'FACILITY' : 'Facility',
+    'FACILITY-EXT' : 'Facility Extensions',
+    'FILE' : 'File Access',
+    'FILE-EXT' : 'File Access Extensions',
+    'FLOATING' : 'Floating-Point',
+    'FLOATING-EXT' : 'Floating-Point Extensions',
+    'MEMORY' : 'Memory-Allocation',
+    'SEARCH' : 'Search-Order',
+    'SEARCH-EXT' : 'Search-Order Extensions',
+    'STRING' : 'String',
+    'TOOLS' : 'Programming-Tools',
+    'TOOLS-EXT' : 'Programming-Tools Extensions',
+}
+
 # BLOCK                     "BLK" :      "7.6.1.0790",
 # BLOCK                    "LOAD" :      "7.6.1.1790",
 # BLOCK                   "BLOCK" :      "7.6.1.0800",
@@ -273,8 +299,6 @@ words = {
 # BLOCK-EXT                "THRU" :      "7.6.2.2280",
 # BLOCK-EXT              "REFILL" :      "7.6.2.2125",
 # BLOCK-EXT       "EMPTY-BUFFERS" :      "7.6.2.1330",
-# DOUBLE-EXT                "DU<" :      "8.6.2.1270",
-# DOUBLE-EXT               "2ROT" :      "8.6.2.0420",
 # FILE                        "(" :     "11.6.1.0080",
 # FILE                       "S"" :     "11.6.1.2165",
 # FILE                      "BIN" :     "11.6.1.0765",

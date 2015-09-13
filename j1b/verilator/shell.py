@@ -37,6 +37,16 @@ class TetheredJ1b(swapforth.TetheredTarget):
 
     def interrupt(self):
         self.reset()
-        
+
+    def serialize(self):
+        l = self.command_response('0 here dump')
+        lines = l.strip().replace('\r', '').split('\n')
+        s = []
+        for l in lines:
+            l = l.split()
+            s += [int(b, 16) for b in l[1:17]]
+        s = array.array('B', s).tostring().ljust(32768, chr(0xff))
+        return array.array('i', s)
+
 if __name__ == '__main__':
     swapforth.main(TetheredJ1b)
