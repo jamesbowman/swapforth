@@ -12,7 +12,6 @@
 
 \ #######   CORE AND DOUBLE   #################################
 include core0.fs
-include double0.fs
 
 : align     here aligned dp ! ;
 
@@ -229,5 +228,4 @@ include mini-oof.fs
 
 include drivers/gpio.fs
 include drivers/spi.fs
-include drivers/serialize.fs
 include drivers/time.fs

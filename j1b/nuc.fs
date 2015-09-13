@@ -325,9 +325,80 @@ header dabs
 header s>d
 : s>d dup 0< ;
 
-header m+
-: m+
-    s>d d+
+header 2@
+: 2@ \ ( a -- lo hi )
+    dup cell+ @ swap @
+;
+
+header 2!
+: 2! \ ( lo hi a -- )
+    tuck !
+    cell+ !
+;
+
+header 2rot
+: 2rot
+    >r >r 2swap r> r> 2swap
+;
+
+header d>s
+: d>s   drop ;
+
+header d=
+: d=                        \ a b c d -- f ) 
+    >r                      \ a b c 
+    rot =                   \ b a=c 
+    swap r> =               \ a=c b=d 
+    and
+; 
+
+header d<
+: d<            \ ( al ah bl bh -- flag ) 
+    rot         \ al bl bh ah 
+    2dup = 
+    if 
+        2drop u< 
+    else 
+        > nip nip
+    then 
+; 
+
+header du<
+: du<           \ ( al ah bl bh -- flag ) 
+    rot         \ al bl bh ah 
+    2dup = 
+    if 
+        2drop u< 
+    else 
+        u> nip nip
+    then 
+; 
+
+header d-
+: d-
+    dnegate d+
+;
+
+header d0<
+: d0<
+    nip 0<
+;
+
+header d0=
+: d0=
+    or 0=
+;
+
+header d2*
+: d2*
+    2dup d+
+; 
+
+header d2/
+: d2/
+    >r 1 rshift r@
+    d# 31 lshift
+    or r> 2/
 ;
 
 \ : snap
@@ -540,7 +611,7 @@ header >number
         over c@ digit?
         0= if drop exit then
         >r 2swap base @ ud*
-        r> m+ 2swap
+        r> s>d d+ 2swap
         d# 1 /string
     repeat
 ;
@@ -1113,6 +1184,11 @@ header-imm literal
         then
     then
     
+;
+
+header-imm 2literal
+: 2literal
+    swap tliteral tliteral
 ;
 
 header-imm postpone
