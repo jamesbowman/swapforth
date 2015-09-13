@@ -1,0 +1,45 @@
+\section{The SwapForth shell} \index{shell}
+
+The SwapForth shell is a Python program that runs on the host PC.
+It has a number of advantages over raw UART access:
+
+\begin{itemize}
+\item command-line editing
+\item command history
+\item word completion on TAB
+\item local file \mach{include}
+\item \mach{\^{}C} for interrupt
+\end{itemize}
+
+\subsection{Command reference}
+
+\newcommand{\shcmd}[2]{
+  \subsubsection{\mach{\##1} - #2}
+  \index{#1@\mach{\##1}}
+  \index{\##1@\mach{\##1}}
+}
+\shcmd{bye}{quit SwapForth shell}
+\shcmd{flash}{copy the target state to a local file}
+\shcmd{include}{send local source file}
+\shcmd{noverbose}{turn off include echo}
+\shcmd{time}{measure execution time}
+
+\section{Tethered Mode}
+
+J1b SwapForth supports
+\term{tethered mode},
+which makes the UART protocol easier to use for host programs.
+The SwapForth shell uses
+tethered mode.
+To enter tethered mode, write one to the variable \wordidx{tth}:
+
+\begin{framed}
+\begin{Verbatim}
+1 tth !
+\end{Verbatim}
+\end{framed}
+
+In tethered mode, \word{accept} transmits byte value 30 (hex \mach{1e}, ASCII code RS).
+This allows the listening program to know that the target machine is ready to accept a line of input.
+In addition, \word{accept} does not echo characters as they are typed.
+

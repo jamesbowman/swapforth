@@ -1,0 +1,163 @@
+%\documentclass[letterpaper, 10 pt, conference]{ieeeconf}  % Comment this line out
+                                                          % if you need a4paper
+%\documentclass[onecolumn,a4paper, 10pt, conference]{ieeeconf}      % Use this line for a4
+\documentclass[10pt]{book}
+
+\usepackage[paperwidth=6.69in, paperheight=9.61in]{geometry}
+
+% \usepackage[T1]{fontenc}
+% \usepackage[scaled]{helvet}
+% \renewcommand*\familydefault{\sfdefault}
+
+\usepackage{lmodern}
+
+% \usepackage[T1]{fontenc}
+% \usepackage[urw-garamond]
+
+% See the \addtolength command later in the file to balance the column lengths
+% on the last page of the document
+
+\usepackage{makeidx}         % allows index generation
+\makeindex
+\usepackage{graphicx}        % standard LaTeX graphics tool
+                             % when including figure files
+\usepackage{multicol}        % used for the two-column index
+% \usepackage[bottom]{footmisc}% places footnotes at page bottom
+\usepackage{amsmath}
+\usepackage{longtable}
+\usepackage{color}
+\usepackage{fancyvrb}
+\usepackage{rotating}
+\usepackage{supertabular}
+\usepackage{bytefield}
+\usepackage{url}
+\usepackage{array}
+\usepackage{verbatim}
+\usepackage{setspace}
+\usepackage[]{caption}
+\usepackage{listings}
+\usepackage{wrapfig}
+\usepackage{framed}
+\usepackage{alltt}
+\captionsetup{font=small}
+
+% The following packages can be found on http:\\www.ctan.org
+\usepackage{graphics} % for pdf, bitmapped graphics files
+\usepackage{epsfig} % for postscript graphics files
+\usepackage{tikz}
+\usetikzlibrary{arrows,decorations.pathmorphing,backgrounds,positioning,fit,petri,shapes.misc}
+\usepackage{hyperref}
+
+\usepackage{xcolor}
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+
+\usepackage[dotinlabels]{titletoc}
+
+\newlength\widest
+\settowidth\widest{99.99.}
+
+\titlecontents{section}[1pc]
+{\addvspace{0pc}}
+{\parbox[t]{\widest}{\hfill\thecontentslabel.}
+\hspace{3mm}}
+{}
+{\normalsize\titlerule*[6pt]{.}\contentspage}
+[\addvspace{0pt}]
+
+% Customizations for this document only
+\definecolor{light-gray}{gray}{0.90}
+
+\newcommand{\gdtwo}{Gameduino 2 }
+\newcommand{\gdtwos}{Gameduino 2's }
+\newcommand{\itwoc}{I$^{\textrm{2}}$C }
+\newcommand{\digilentpmod}{Digilent Pmod\texttrademark{}}
+
+\newcommand{\png}[1]{
+\begin{center}
+\includegraphics[width=0.8\textwidth]{assets/#1.png}
+\end{center}
+}
+
+\newcommand{\szpng}[2]{
+\begin{center}
+\includegraphics[width=#1\textwidth]{#2.png}
+\end{center}
+}
+
+\newcommand{\minipng}[1]{
+\begin{center}
+\includegraphics[width=0.4\textwidth]{assets/#1.png}
+\end{center}
+}
+
+\newcommand{\mach}[1]{\texttt{#1}}
+
+\newcommand{\word}[1]{
+\texttt{\textbf{#1}}
+}
+
+\newcommand{\wordidx}[1]{
+\texttt{\textbf{#1}}
+\index{#1@\mach{#1}}
+}
+
+\newcommand{\wl}[1]{\textbf{#1}}
+
+\newcommand{\defidx}[1]{
+\index{#1@\mach{#1}}
+}
+\newcommand{\cmdidx}[1]{
+\index{#1@\mach{#1()}}
+}
+\newcommand{\cmd}[1]{\cmdidx{cmd\_#1}\nameref{cmd:#1}}
+\newcommand{\dcmd}[1]{\cmdidx{#1}\nameref{#1}}
+
+\newcommand{\xref}[1]{\textit{\nameref{#1}} on  p.\pageref{#1}}
+
+\newcommand{\boldindex}[1]{\textbf{\hyperpage{#1}}}
+
+\newcommand{\term}[1]{\emph{#1}\index{#1}}
+
+\newcommand{\worddef}[3]{
+% \begin{samepage}
+\vspace{1pt}
+\noindent \word{#1} \mach{#2} #3
+\\
+}
+
+\newcommand{\longworddef}[3]{
+\begin{samepage}
+\vspace{1pt}
+
+\noindent \word{#1}
+\index{#1@\mach{#1}}
+
+\vspace{4pt}
+
+\mach{#2}
+
+\vspace{4pt}
+
+\setlength{\parindent}{0cm}
+
+#3
+
+\end{samepage}
+
+\noindent
+\textcolor{lightgray}{\rule{\textwidth}{1pt}}
+}
+
+\author{James Bowman \\
+	{\tt\small jamesb@excamera.com} \\
+  Excamera Labs \\
+  Pescadero \\
+  California USA \\
+}
+\date{}
+

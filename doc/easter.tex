@@ -1,0 +1,54 @@
+There is an
+\href{http://www.wilbaden.com/neil_bawd/easter.txt}{Easter date calculator}
+\index{easter} \index{computus@\textit{computus}}
+
+\begin{framed}
+\begin{Verbatim}
+    new
+    #include ../demos/easter.fs
+\end{Verbatim}
+\end{framed}
+    
+Now you can do
+
+\begin{framed}
+\begin{Verbatim}
+    >2015 .easter
+    2015 April 5   ok
+\end{Verbatim}
+\end{framed}
+
+Or even
+
+\begin{framed}
+\begin{Verbatim}
+    >: 20easters
+    +  2035 2015 do
+    +    cr i .easter
+    +  loop
+    +;
+     ok
+    >20easters
+
+    2015 April 5 
+    2016 March 27 
+    2017 April 16 
+    2018 April 1 
+    2019 April 21 
+    2020 April 12 
+    2021 April 4 
+    2022 April 17 
+    2023 April 9 
+    2024 March 31 
+    2025 April 20 
+    2026 April 5 
+    2027 March 28 
+    2028 April 16 
+    2029 April 1 
+    2030 April 21 
+    2031 April 13 
+    2032 March 28 
+    2033 April 17 
+    2034 April 9   ok
+\end{Verbatim}
+\end{framed}

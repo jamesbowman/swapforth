@@ -1,11 +1,11 @@
 %
-% j1a SwapForth manual
+% j1b SwapForth manual
 %
 
 \input{../../doc/front.tex}
 
 \title{\LARGE \bf
-J1a\\
+J1b\\
 SwapForth \\
 Reference
 }
@@ -26,23 +26,17 @@ All rights reserved
 
 \underline{ANS Forth Compliance Label}
 
-J1a SwapForth is an ANS Forth System
+J1b SwapForth is an ANS Forth System
 
 Providing names from the \wl{Core Extensions} word set \\
-Providing names from the \wl{Double-Number} word set \\
-% Providing the \wl{Double-Number Extensions} word set \\
-% Providing the \wl{Exception} word set \\
-Providing names from the \wl{Facility} word set \\
+Providing the \wl{Double-Number} word set \\
+Providing the \wl{Double-Number Extensions} word set \\
+Providing names from the \wl{Exception} word set \\
+Providing the \wl{Exception Extensions} word set \\
+Providing the \wl{Facility} word set \\
 Providing names from the \wl{Facility Extensions} word set \\
-% Providing names from the \wl{File Access} word set \\
-% Providing names from the \wl{File Access Extensions} word set \\
-% Providing names from the \wl{Floating-Point} word set \\
-% Providing names from the \wl{Floating-Point Extensions} word set \\
-% Providing the \wl{Memory-Allocation} word set \\
-% Providing the \wl{Search-Order} word set \\
-% Providing the \wl{Search-Order Extensions} word set \\
-Providing names from the \wl{String} word set \\
-Providing names from the \wl{Programming-Tools} word set \\
+Providing the \wl{String} word set \\
+Providing the \wl{Programming-Tools} word set \\
 Providing names from the \wl{Programming-Tools Extensions} word set
 
 \end{framed}
@@ -57,40 +51,40 @@ Providing names from the \wl{Programming-Tools Extensions} word set
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Getting started}
 
-\begin{center}
-\includegraphics[width=0.8\textwidth]{icestick-reva-front-2400.png}
-\end{center}
+% \begin{center}
+% \includegraphics[width=0.8\textwidth]{icestick-reva-front-2400.png}
+% \end{center}
 
-J1a SwapForth is a 16-bit version of SwapForth,
+J1b SwapForth is a 32-bit version of SwapForth,
 intended as an interactive Forth system using very little logic and RAM.
-The system currently fits on a Lattice iCE40HX-1k FPGA. \index{FPGA}
-The J1a and peripherals use 1200 logic elements.
-SwapForth uses 4.7 Kbytes of RAM,
-leaving about 3.3 Kbytes for the application. \index{RAM}
+% The system currently fits on a Lattice iCE40HX-1k FPGA.
+\index{FPGA}
+The J1b and peripherals use 1200 logic elements.
+SwapForth uses 10.5 Kbytes of RAM,
+leaving about 22 Kbytes for the application. \index{RAM}
 
-After installing the \index{icestorm} \index{icestorm} \index{git} \index{iceprog}
-\href{http://www.clifford.at/icestorm/}{icestorm}
+After installing the Papilio
 tools, you can run on a
-\href{http://www.latticesemi.com/icestick}{Lattice iCEstick}
+Papilio DUO
 like this
 
 \begin{framed}
 \begin{Verbatim}
   git clone git@github.com:jamesbowman/swapforth.git
-  cd swapforth/j1a
-  iceprog icestorm/j1a.bin
+  cd swapforth/j1b
+  papilio-prog -v -f xilinx/j1-papilioduo.bit
   python shell.py -h /dev/ttyUSB0
 \end{Verbatim}
 \end{framed}
 
 \noindent
-(where \mach{/dev/ttyUSB0} is the appropriate port your iCEstick was assigned).
+(where \mach{/dev/ttyUSB0} is the appropriate port your DUO was assigned).
 You should see something like
 
 \begin{framed}
 \begin{Verbatim}
   Contacting... established
-  Loaded 208 words
+  Loaded 299 words
   >
 \end{Verbatim}
 \end{framed}
@@ -104,38 +98,11 @@ And you can now try the usual Forth things, e.g.
 \end{Verbatim}
 \end{framed}
 
-There is a fairly complete 
+There is a complete 
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm}{core ANS-compatible Forth system}
 running on the board, including a compiler.
 
 \section{Some demos} \index{demos}
-
-You can control the five on-board LEDs \index{LEDs}
-
-\begin{framed}
-\begin{Verbatim}[commandchars=\\\{\}]
-\underline{\textbf{-1 leds}}
-  ok
-
-\underline{\textbf{0 leds}}
-  ok
-\end{Verbatim}
-\end{framed}
-
-\noindent
-and to make them blink
-
-\begin{framed}
-\begin{Verbatim}[commandchars=\\\{\}]
-: blink
-  32 0 do
-    i leds
-    100 ms
-  loop
-;
-blink
-\end{Verbatim}
-\end{framed}
 
 \input{../../doc/easter.tex}
 
@@ -145,17 +112,17 @@ After installing the icestorm tools, run
 
 \begin{Verbatim}
 rm build/*
-make -C icestorm
+make -C xilinx
 \end{Verbatim}
 
 \noindent
-This will produce \mach{j1a.bin} - but it only contains the very bare-bones system;
+This will produce \mach{j1-papilioduo.bit} - but it only contains the very bare-bones system;
 the rest of SwapForth still needs to be compiled.
-To do this, load \mach{j1a.bin} and start the shell:
+To do this, load \mach{j1-papilioduo.bit} and start the shell:
 
 \begin{framed}
 \begin{Verbatim}
-  $ iceprog icestorm/j1a.bin
+  $ papilio-prog -v -f xilinx/j1-papilioduo.bit
   $ python shell.py -h /dev/ttyUSB0 -p ../common/
   Contacting... established
   Loaded 127 words
@@ -173,7 +140,7 @@ Then compile the rest of SwapForth and write the finished executable with these 
 \end{Verbatim}
 \end{framed}
 
-Now run \mach{make -C icestorm} again - this compiles an FPGA image with the complete code base built-in.
+Now run \mach{make -C xilinx} again - this compiles an FPGA image with the complete code base built-in.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -181,7 +148,7 @@ Now run \mach{make -C icestorm} again - this compiles an FPGA image with the com
 
 \section{ANS Core Words} \index{ANS}
 
-J1a SwapForth implements most of the core ANS 94 Forth standard.
+J1b SwapForth implements most of the core ANS 94 Forth standard.
 Implemented words are:
 
 \input{../../doc/core.tex}
@@ -190,29 +157,52 @@ Implemented words are:
 The core word
 \word{environment?}
 is not implemented.
-J1a SwapForth also implements the following standard words:
+J1b SwapForth also implements the following standard words:
 
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0170}{\wordidx{-trailing}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0200}{\wordidx{.(}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0210}{\wordidx{.r}}
 \href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.0220}{\wordidx{.s}}
 \href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0245}{\wordidx{/string}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0260}{\wordidx{0<>}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0280}{\wordidx{0>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0340}{\wordidx{2>r}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.0360}{\wordidx{2constant}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.0390}{\wordidx{2literal}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0410}{\wordidx{2r>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0415}{\wordidx{2r@}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.0440}{\wordidx{2variable}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0455}{\wordidx{:noname}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0500}{\wordidx{<>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.0600}{\wordidx{?}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0620}{\wordidx{?do}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0700}{\wordidx{again}}
 \href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.0702}{\wordidx{ahead}}
+\href{http://forth.sourceforge.net/std/dpans/dpans10.htm#10.6.1.0742}{\wordidx{at-xy}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0780}{\wordidx{blank}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0855}{\wordidx{c"}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0873}{\wordidx{case}}
 \href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0910}{\wordidx{cmove}}
 \href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0920}{\wordidx{cmove>}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.0935}{\wordidx{compare}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0945}{\wordidx{compile,}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.0970}{\wordidx{convert}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.1015}{\wordidx{cs-pick}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.1020}{\wordidx{cs-roll}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1040}{\wordidx{d+}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1050}{\wordidx{d-}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1060}{\wordidx{d.}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1070}{\wordidx{d.r}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1075}{\wordidx{d0<}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1080}{\wordidx{d0=}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1090}{\wordidx{d2*}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1100}{\wordidx{d2/}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1110}{\wordidx{d<}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1120}{\wordidx{d=}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1140}{\wordidx{d>s}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1160}{\wordidx{dabs}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1210}{\wordidx{dmax}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1220}{\wordidx{dmin}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1230}{\wordidx{dnegate}}
 \href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.1280}{\wordidx{dump}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1342}{\wordidx{endcase}}
@@ -221,26 +211,38 @@ J1a SwapForth also implements the following standard words:
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1485}{\wordidx{false}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1660}{\wordidx{hex}}
 \href{http://forth.sourceforge.net/std/dpans/dpans10.htm#10.6.1.1755}{\wordidx{key?}}
+\href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1820}{\wordidx{m*/}}
 \href{http://forth.sourceforge.net/std/dpans/dpans8.htm#8.6.1.1830}{\wordidx{m+}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1850}{\wordidx{marker}}
 \href{http://forth.sourceforge.net/std/dpans/dpans10.htm#10.6.2.1905}{\wordidx{ms}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1930}{\wordidx{nip}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.1950}{\wordidx{of}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2000}{\wordidx{pad}}
+\href{http://forth.sourceforge.net/std/dpans/dpans10.htm#10.6.1.2005}{\wordidx{page}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2008}{\wordidx{parse}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2030}{\wordidx{pick}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2125}{\wordidx{refill}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2148}{\wordidx{restore-input}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2150}{\wordidx{roll}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2182}{\wordidx{save-input}}
+\href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.2191}{\wordidx{search}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.2194}{\wordidx{see}}
 \href{http://forth.sourceforge.net/std/dpans/dpans17.htm#17.6.1.2212}{\wordidx{sliteral}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2218}{\wordidx{source-id}}
 \href{http://forth.sourceforge.net/std/dpans/dpans9.htm#9.6.1.2275}{\wordidx{throw}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2295}{\wordidx{to}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2298}{\wordidx{true}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2300}{\wordidx{tuck}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2330}{\wordidx{u.r}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2350}{\wordidx{u>}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2395}{\wordidx{unused}}
+\href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2405}{\wordidx{value}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2440}{\wordidx{within}}
 \href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.1.2465}{\wordidx{words}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2530}{\wordidx{[compile]}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.2531}{\wordidx{[else]}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.2532}{\wordidx{[if]}}
+\href{http://forth.sourceforge.net/std/dpans/dpans15.htm#15.6.2.2533}{\wordidx{[then]}}
 \href{http://forth.sourceforge.net/std/dpans/dpans6.htm#6.2.2535}{\wordidx{\textbackslash}}
 
 \noindent
@@ -256,35 +258,38 @@ is also implemented.
 \section{Additional Words}
 
 The following words are not standard.
-Some are traditional Forth words, others are specific to the J1a SwapForth implementation.
+Some are traditional Forth words, others are specific to the J1b SwapForth implementation.
 
 \vspace{10pt}
 
-\longworddef{.x}{( n -- )}{display n as a 4-digit hex number}
+\longworddef{.x}{( n -- )}{display n as an 8-digit hex number}
 \longworddef{-rot}{( x1 x2 x3 -- x3 x1 x2 )}{rotate the top three stack entries}
 \longworddef{bounds}{( start cnt -- start+cnt start )}{prepare to loop on a range}
 \longworddef{forth}{( -- a )}{variable: most recent dictionary entry}
 \longworddef{io!}{( x a -- )}{store \mach{x} to IO port \mach{a}}
 \longworddef{io@}{( a -- x )}{fetch from IO port \mach{a}}
-\longworddef{leds}{( x -- )}{write \mach{x} to the onboard LEDs}
 \longworddef{new}{( -- )}{restore code and data pointers to the power-up state}
 \longworddef{s,}{( a u -- )}{add the \mach{u}-character string \mach{a} to the data space}
-% \longworddef{serialize}{( -- )}{display all of current memory in base 36}
+\longworddef{serialize}{( -- )}{display all of current memory in base 36}
 % \worddef{sfind}{( dir pin -- )}{Like standard word \mach{find}, but uses a
 \longworddef{tth}{( -- a )}{variable: tethered mode}
+\longworddef{w!}{( -- a )}{16-bit store}
+\longworddef{w@}{( -- a )}{16-bit signed fetch}
+\longworddef{uw@}{( -- a )}{16-bit unsigned fetch}
+\longworddef{pinMode}{( mode pin -- )}{Set \mach{pin} to either output or input}
 
 \chapter{Using SwapForth}
 
 \section{Raw UART access}
 
 At boot, SwapForth listens for a command on the UART. \index{UART}
-Connection parameters are 115200 8N1, and any terminal program should be able to connect.
+Connection parameters are 921600 8N1, and any terminal program should be able to connect.
 \index{DTR} \index{reset}
 Note that the hardware board uses DTR as a reset signal, so you should make sure that it is set OFF by the terminal program:
 
 \begin{verbatim}
-$ miniterm.py --dtr=0 /dev/ttyUSB5 115200
---- Miniterm on /dev/ttyUSB5: 115200,8,N,1 ---
+$ miniterm.py --dtr=0 /dev/ttyUSB5 921600
+--- Miniterm on /dev/ttyUSB5: 921600,8,N,1 ---
 --- Quit: Ctrl+]  |  Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
 --- forcing DTR inactive
 
@@ -315,9 +320,9 @@ $ miniterm.py --dtr=0 /dev/ttyUSB5 115200
 
 \section{Memory map}
 
-The J1a SwapForth implementation uses 8Kbytes of RAM for code and data. \index{RAM}
+The J1b SwapForth implementation uses 16 Kbytes of RAM for code, and 16 Kbytes data. \index{RAM}
 The standard Forth words access this RAM.
-Cells are 16-bits, and must be aligned to a 16-bit boundary.
+Cells are 32-bits, and must be aligned to a 32-bit boundary.
 
 \newpage
 \section{Dictionary Layout} \index{dictionary}
@@ -346,151 +351,72 @@ Each dictionary entry has the following fields:
 \item \textbf{name$_1$ - name$_n$} - characters in name. If the length of the name is even, then a padding byte is appended
 \end{itemize}
 
-\chapter{iCEstick Hardware interface}
+\chapter{Papilio DUO Hardware interface}
 
 \begin{center}
-\includegraphics[width=0.8\textwidth]{icestick-reva-front-2400.png}
+\includegraphics[width=0.8\textwidth]{PapilioDUO.png}
 \end{center}
 
-The J1a for iCEstick includes connections to the iCEstick peripherals:
-\begin{itemize}
-\item SPI flash \index{SPI flash}
-\item LEDs \index{LEDs}
-\item IrDA tranceiver \index{IrDA}
-\item \digilentpmod{} connector \index{Pmod}
-% \item prototyping connectors
-\item UART \index{UART}
-\end{itemize}
-
+The J1a for Papilio DUO includes connections to the Papilio DUO IO pins.
 Access to peripherals is via the
 \mach{io@} and \mach{io!} words.
 Peripherals are port-mapped into a 16-bit IO address space.
-Most ports are either read-only or write-only.
-For read-only ports, writing to the port has no effect.
-For write-only ports, reading from the port gives zero.
 
-As an example of direct port access, this word
-blinks the on-board LEDs when a signal on IrDA is detected. \index{blink}
+\newpage
+For example, to flash the onboard LED
 
 \begin{framed}
 \begin{Verbatim}
-: x
+: blink
+  OUTPUT 13 pinMode \ Set pin 13 to OUTPUT
+  0                 \ LED initially off
   begin
-    $2000 io@     \ read from input port
-    8 and 0=      \ true if bit 3 (IrDA RXD) is 0
-    $0004 io!     \ write to LEDS
+    dup 13 io!      \ write to LED
+    invert          \ flip LED state
+    200 ms          \ pause 1/5 of second
   again
 ;
+blink
 \end{Verbatim}
 \end{framed}
 
 \newpage
 \section{Port Map}
-\subsection{\$0001: \digilentpmod{} data}
+\subsection{\$0000-\$036: IO pins}
 
-The read-write port at address \$0001 is for direct access to the \digilentpmod{}
-connector. The port pins are assigned:
+The read-write port at address \$0001 is for direct access to the 54 IO pins
+on the Papilio DUO header.
+Reading a port gives the current state of the pin.
+If the pin is set for OUTPUT,
+then writing 0 or 1 to the port sets the pin state.
 
-\vspace{10pt}
-\begin{tabular}{cccc}
-\textbf{connection} & \textbf{Left row pins} & \textbf{right row pins} & \textbf{connection} \\
-\hline
-bit 0 & 1 &  7 & bit 4 \\
-bit 1 & 2 &  8 & bit 5 \\
-bit 2 & 3 &  9 & bit 6 \\
-bit 3 & 4 & 10 & bit 7 \\
-ground & 5 & 11 & ground \\
-3.3v & 6 & 12 & 3.3v \\
-\end{tabular}
-\vspace{10pt}
+Note that pin direction is controlled by the corresponding registers at \$0100-\$136
 
-Correspondingly the port bits are assigned to pins as follows:
+\subsection{\$0040: switch SW1}
 
-\vspace{10pt}
-\noindent
-\begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
-  \bitheader{0-15} \\
-    \bitbox{8}{} &
-    \bitbox{1}{10} &
-    \bitbox{1}{9} &
-    \bitbox{1}{8} &
-    \bitbox{1}{7} &
-    \bitbox{1}{4} &
-    \bitbox{1}{3} &
-    \bitbox{1}{2} &
-    \bitbox{1}{1}
-\end{bytefield}
-\vspace{10pt}
+Reads the current state of the user switch, either 0 or 1.
 
-Note that pin direction is controlled by the corresponding bit the port at address \$0002.
+\begin{center}
+\includegraphics[width=0.1\textwidth]{switch-callout.png}
+\end{center}
 
-\subsection{\$0002: \digilentpmod{} direction}
+\subsection{\$0100-\$136: IO pin direction}
 
-Each of the 8 bits controls the direction of the corresponding pin of the \digilentpmod{} connector.
+Each port controls the direction of the corresponding IO pin.
 0 sets the pin to input, 1 means sets the pin to output.
-The bit-to-pin mapping is the same as for port \$0001.
+At boot all pins are inputs.
+The SwapForth words
+\mach{INPUT},
+\mach{OUTPUT} and
+\mach{pinMode}
+can be used to set the direction of pins, for example:
 
-\subsection{\$0004: LEDs}
-
-The five on-board LEDS are controlled by write-only port at address \$0004.
-Setting a bit to 1 lights the corresponding LED.
-
-\vspace{10pt}
-\noindent
-\begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
-  \bitheader{0-15} \\
-    \bitbox{11}{} &
-    \bitbox{1}{\tiny{LED5}} &
-    \bitbox{1}{\tiny{LED4}} &
-    \bitbox{1}{\tiny{LED3}} &
-    \bitbox{1}{\tiny{LED2}} &
-    \bitbox{1}{\tiny{LED1}}
-\end{bytefield}
-
-Built-in word
-\wordidx{leds}
-writes to this port.
-
-\subsection{\$0008: PIO output}
-
-%  assign {PIO1_20, PIO1_18, PIOS_00, PIOS_02, PIOS_03} = PIOS;
-
-Write-only port \$0008 controls the flash and IrDA outputs.
-
-\vspace{10pt}
-\noindent
-\begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
-  \bitheader{0-15} \\
-    \bitbox{11}{} &
-    \bitbox{1}{\tiny{IrDA\\SD}} &
-    \bitbox{1}{\tiny{IrDA\\TXD}} &
-    \bitbox{1}{\tiny{flash\\SCK}} &
-    \bitbox{1}{\tiny{flash\\MOSI}} &
-    \bitbox{1}{\tiny{flash\\CS}}
-\end{bytefield}
-
-
-\subsection{\$0800: SB\_WARMBOOT control} \index{SB\_WARMBOOT} \index{reconfigure}
-
-Write-only port \$0800 is an interface to the SB\_WARMBOOT module.
-When activated, the FPGA loads a new configuration from external flash.
-There can be up to four external configurations;
-configuration 0 is the base SwapForth, and configurations 1-3 are available for other uses.
-So to reload the base system:
-
+\begin{framed}
 \begin{Verbatim}
-  4 $800 io!
+  OUTPUT 13 pinMode \ Set pin 13 to OUTPUT
+  INPUT 52 pinMode  \ Set pin 52 to INPUT
 \end{Verbatim}
-
-\vspace{10pt}
-\noindent
-\begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
-  \bitheader{0-15} \\
-    \bitbox{13}{} &
-    \bitbox{1}{\tiny{BOOT}} &
-    \bitbox{1}{\tiny{S1}} &
-    \bitbox{1}{\tiny{S0}}
-\end{bytefield}
+\end{framed}
 
 \subsection{\$1000: UART data}
 
@@ -504,24 +430,22 @@ can be used to access this port.
 
 \vspace{10pt}
 \noindent
-\begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
-  \bitheader{0-15} \\
-    \bitbox{8}{} &
+\begin{bytefield}[endianness=big, bitwidth=1.0em]{32}
+  \bitheader{0-31} \\
+    \bitbox{24}{} &
     \bitbox{8}{byte}
 \end{bytefield}
 
-\subsection{\$2000: IrDA, flash and UART inputs}
+\subsection{\$2000: UART status}
 
 Read-only port \$2000 contains the input signals from the
-IrDA receiver, SPI flash, and UART.
+UART.
 
 \vspace{10pt}
 \noindent
 \begin{bytefield}[endianness=big, bitwidth=2.0em]{16}
   \bitheader{0-15} \\
-    \bitbox{12}{} &
-    \bitbox{1}{\tiny{IrDA\\RXD}} &
-    \bitbox{1}{\tiny{flash\\MISO}} &
+    \bitbox{14}{} &
     \bitbox{1}{\tiny{UART\\key?}} &
     \bitbox{1}{\tiny{UART\\busy}}
 \end{bytefield}
