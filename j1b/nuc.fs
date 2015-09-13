@@ -100,6 +100,9 @@ header bl
     d# 32
 ;
 
+: hex8 dup d# 16 rshift DOUBLE
+: hex4 dup d# 8 rshift DOUBLE
+: hex2 dup d# 4 rshift DOUBLE
 : hex1
     h# f and
     dup d# 10 < if
@@ -110,10 +113,6 @@ header bl
     +
     emit
 ;
-
-: hex2 dup d# 4 rshift hex1 hex1 ;
-: hex4 dup d# 8 rshift hex2 hex2 ;
-: hex8 dup d# 16 rshift hex4 hex4 ;
 
 header .x
 : . hex8 space ;
@@ -225,8 +224,7 @@ create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
 create syncpt   0 ,
-create sourceA  0 ,
-create sourceC  0 ,
+create sourceC  0 , 0 ,
 create sourceid 0 ,
 create >in      0 ,
 create state    0 ,
@@ -396,7 +394,7 @@ header d2*
 
 header d2/
 : d2/
-    >r 1 rshift r@
+    >r d# 1 rshift r@
     d# 31 lshift
     or r> 2/
 ;
@@ -660,7 +658,11 @@ header execute
 
 header source
 : source
-    sourceA @ sourceC @
+    sourceC 2@
+;
+
+: source! ( addr u -- ) \ set the source
+    sourceC 2!
 ;
 
 header source-id
@@ -1110,6 +1112,28 @@ header throw
     negate and throw
 ;
 
+header-imm 2literal
+: 2literal
+    swap DOUBLE
+header-imm literal
+: tliteral
+    dup 0< if
+        invert tliteral
+        inline: invert
+    else
+        dup h# ffff8000 and if
+            dup d# 15 rshift tliteral
+            d# 15 tliteral
+            inline: lshift
+            h# 7fff and tliteral
+            inline: or
+        else
+            h# 8000 or code,
+        then
+    then
+    
+;
+
 : isvoid ( caddr u -- ) \ any char remains, throw -13
     nip 0<> d# 13 -throw
 ;
@@ -1127,12 +1151,13 @@ header throw
     [char] . consume1 if
         isvoid              \ double number
         r> if dnegate then
-        d# 2 exit
+        ['] 2literal exit
     then
                             \ single number
     isvoid drop
     r> if negate then
-    d# 1
+: single
+    ['] tliteral
 ;
 
 : base((doubleAlso))
@@ -1158,37 +1183,13 @@ header throw
         d# 2 base((doubleAlso)) exit
     then
     2dup is'c' if
-        drop 1+ c@ d# 1 exit
+        drop 1+ c@ single exit
     then
     ((doubleAlso))
 ;
 
 : doubleAlso
     (doubleAlso) drop
-;
-
-header-imm literal
-: tliteral
-    dup 0< if
-        invert tliteral
-        inline: invert
-    else
-        dup h# ffff8000 and if
-            dup d# 15 rshift tliteral
-            d# 15 tliteral
-            inline: lshift
-            h# 7fff and tliteral
-            inline: or
-        else
-            h# 8000 or code,
-        then
-    then
-    
-;
-
-header-imm 2literal
-: 2literal
-    swap tliteral tliteral
 ;
 
 header-imm postpone
@@ -1204,10 +1205,7 @@ header-imm postpone
 
 : doubleAlso,
     (doubleAlso)
-    1- if
-        swap tliteral
-    then
-    tliteral
+    execute
 ;
 
 : dispatch
@@ -1235,9 +1233,8 @@ header refill
 : refill
     source-id 0= dup
     if
-        tib d# 128 accept
-        sourceC !
-        tib sourceA !
+        tib dup d# 128 accept
+        source!
         d# 0 >in !
     then
 ;
@@ -1246,10 +1243,10 @@ header evaluate
 :noname
     source >r >r >in @ >r
     source-id >r d# -1 sourceid !
-    sourceC ! sourceA ! d# 0 >in !
+    source! d# 0 >in !
     interpret
     r> sourceid !
-    r> >in ! r> sourceA ! r> sourceC !
+    r> >in ! r> r> source!
 ;
 
 header quit
