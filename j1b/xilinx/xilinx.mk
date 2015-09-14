@@ -41,7 +41,7 @@ xil_env ?= . $(isedir)/settings64.sh
 flashsize ?= 8192
 
 libmks = $(patsubst %,$(libdir)/%/module.mk,$(libs)) 
-mkfiles = Makefile $(libmks) xilinx.mk
+mkfiles = Makefile $(libmks) xilinx.mk $(ifiles)
 include $(libmks)
 
 corengcs = $(foreach core,$(xilinx_cores),$(core:.xco=.ngc))
