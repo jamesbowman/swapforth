@@ -152,18 +152,17 @@ module top(
   inout wire Arduino_53
 
   );
-  localparam MHZ = 125;
+  localparam MHZ = 80;
 
-  reg  DUO_LED;
   wire fclk;
 
   DCM_CLKGEN #(
   .CLKFX_MD_MAX(0.0),     // Specify maximum M/D ratio for timing anlysis
-  // .CLKFX_DIVIDE(32),      // Divide value - D - (1-256)
-  // .CLKFX_MULTIPLY(MHZ),   // Multiply value - M - (2-256)
+  .CLKFX_DIVIDE(32),      // Divide value - D - (1-256)
+  .CLKFX_MULTIPLY(MHZ),   // Multiply value - M - (2-256)
 
-  .CLKFX_DIVIDE(15),      // Divide value - D - (1-256)
-  .CLKFX_MULTIPLY(59),   // Multiply value - M - (2-256)
+  // .CLKFX_DIVIDE(15),      // Divide value - D - (1-256)
+  // .CLKFX_MULTIPLY(59),   // Multiply value - M - (2-256)
 
   .CLKIN_PERIOD(31.25),   // Input clock period specified in nS
   .STARTUP_WAIT("FALSE")  // Delay config DONE until DCM_CLKGEN LOCKED (TRUE/FALSE)
