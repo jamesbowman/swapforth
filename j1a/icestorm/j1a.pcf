@@ -22,3 +22,21 @@ set_io PIO1_06 87
 set_io PIO1_07 88
 set_io PIO1_08 90
 set_io PIO1_09 91
+
+set_io PIO0_02 112
+set_io PIO0_03 113
+set_io PIO0_04 114
+set_io PIO0_05 115
+set_io PIO0_06 116
+set_io PIO0_07 117
+set_io PIO0_08 118
+set_io PIO0_09 119
+
+set_io PIO2_10 44
+set_io PIO2_11 45
+set_io PIO2_12 47
+set_io PIO2_13 48
+set_io PIO2_14 56
+set_io PIO2_15 60
+set_io PIO2_16 61
+set_io PIO2_17 62
