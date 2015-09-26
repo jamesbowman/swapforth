@@ -15,3 +15,10 @@ Simulated hosts include:
 
  * Python in 16-, 32- and 64-bit big- and little-endian
  * J1a and J1b under Verilator
+
+## Recent changes:
+
+### 2015-09-26
+
+ * Both Python 2.x and 3.x are supported
+ * The shell now runs on Windows, with and without [pyreadline](https://pypi.python.org/pypi/pyreadline)

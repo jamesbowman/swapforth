@@ -40,7 +40,7 @@ class TetheredJ1a(swapforth.TetheredTarget):
 
         while 1:
             c = ser.read(1)
-            print(repr(c))
+            # print(repr(c))
             if c == b'\x1e':
                 break
 
