@@ -290,15 +290,19 @@ class TetheredTarget:
         pass
 
     def shell(self, autocomplete = True):
-        import readline
-        import os
-        histfile = os.path.join(os.path.expanduser("~"), ".swapforthhist")
         try:
-            readline.read_history_file(histfile)
-        except IOError:
-            pass
-        import atexit
-        atexit.register(readline.write_history_file, histfile)
+            import readline
+            import os
+            histfile = os.path.join(os.path.expanduser("~"), ".swapforthhist")
+            try:
+                readline.read_history_file(histfile)
+            except IOError:
+                pass
+            import atexit
+            atexit.register(readline.write_history_file, histfile)
+        except ImportError:
+            autocomplete = False
+            print('[readline library not found - continuing anyway]')
 
         if autocomplete:
             words = sorted((self.command_response('words')).split())
