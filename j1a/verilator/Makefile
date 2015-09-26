@@ -15,6 +15,7 @@ build/lib/python/vsimj1a.so: setup.py obj_dir/Vj1a__ALL.a vsim.cpp
 	python setup.py install --home build
 
 clean:
+	rm -rf build
 	rm -rf obj_dir
 	rm -f newmem.dat
 

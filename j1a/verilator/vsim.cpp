@@ -10,6 +10,22 @@
 #undef NDEBUG
 #include <Python.h>
 
+#if PY_MAJOR_VERSION >= 3
+  #define MOD_ERROR_VAL NULL
+  #define MOD_SUCCESS_VAL(val) val
+  #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+          static struct PyModuleDef moduledef = { \
+            PyModuleDef_HEAD_INIT, name, doc, -1, methods, }; \
+          ob = PyModule_Create(&moduledef);
+#else
+  #define MOD_ERROR_VAL
+  #define MOD_SUCCESS_VAL(val)
+  #define MOD_INIT(name) extern "C" void init##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+          ob = Py_InitModule3(name, methods, doc);
+#endif
+
 typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
@@ -28,7 +44,7 @@ Vj1a_dealloc(v3* self)
   }
 #endif
   delete self->dut;
-  self->ob_type->tp_free((PyObject*)self);
+  Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static int
@@ -81,7 +97,11 @@ PyObject *v3_reset(PyObject *self, PyObject *args)
 
 PyObject *v3_inWaiting(PyObject *self, PyObject *args)
 {
+#if PY_MAJOR_VERSION < 3
   return PyInt_FromLong(1);
+#else
+  return PyLong_FromLong(1);
+#endif
 }
 
 #define CYCLE() (dut->clk = 0, dut->eval(), dut->clk = 1, dut->eval())
@@ -105,7 +125,11 @@ PyObject *v3_read(PyObject *_, PyObject *args)
     buf[i] = dut->uart_w;
   }
 
+#if PY_MAJOR_VERSION < 3
   return PyString_FromStringAndSize(buf, len);
+#else
+  return PyBytes_FromStringAndSize(buf, len);
+#endif
 }
 
 PyObject *v3_write(PyObject *_, PyObject *args)
@@ -144,8 +168,7 @@ static PyMethodDef Vj1a_methods[] = {
 };
 
 static PyTypeObject v3_V3Type = {
-    PyObject_HEAD_INIT(NULL)
-    0,                        /*ob_size*/
+    PyVarObject_HEAD_INIT(NULL, 0)
     "parts.v3", /*tp_name*/
     sizeof(v3),               /*tp_basicsize*/
     0,                        /*tp_itemsize*/
@@ -185,21 +208,21 @@ static PyTypeObject v3_V3Type = {
     0,                        /* tp_new */
 };
 
-extern "C" void initvsimj1a()
+MOD_INIT(vsimj1a)
 {
   PyObject *m;
 
   v3_V3Type.tp_new = PyType_GenericNew;
   if (PyType_Ready(&v3_V3Type) < 0)
-      return;
+      return MOD_ERROR_VAL;
 
 #if VCD
   Verilated::traceEverOn(true);
 #endif
-  m = Py_InitModule("vsimj1a", NULL);
+
+  MOD_DEF(m, "vsimj1a", "", NULL)
 
   Py_INCREF(&v3_V3Type);
   PyModule_AddObject(m, "vsimj1a", (PyObject *)&v3_V3Type);
-
-  m = Py_InitModule("parts", NULL);
+  return MOD_SUCCESS_VAL(m);
 }
