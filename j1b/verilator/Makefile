@@ -14,4 +14,10 @@ obj_dir/Vj1b obj_dir/Vj1b__ALL.a: $(VERILOGS) sim_main.cpp Makefile
 build/lib/python/vsimj1b.so: setup.py obj_dir/Vj1b__ALL.a vsim.cpp
 	python setup.py install --home build
 
+clean:
+	rm -rf build
+	rm -rf obj_dir
+	rm -f newmem.dat
+
+
 .PHONY: all

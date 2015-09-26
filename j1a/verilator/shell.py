@@ -24,11 +24,10 @@ class TetheredJ1a(swapforth.TetheredTarget):
         for c in '    1 tth !':
             ser.write(c)
         ser.write('\r')
-        print('here')
 
         while 1:
             c = ser.read(1)
-            print(repr(c))
+            # print(repr(c))
             if c == b'\x1e':
                 break
 

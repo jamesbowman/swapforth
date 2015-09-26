@@ -1,5 +1,6 @@
 set -e
 (cd .. && gforth cross.fs basewords.fs nuc.fs )
+make clean
 make &&
 # echo |
-time python shell.py -p ../ -p ../../common -p ../../anstests/ swapforth.fs # ../runtests.fs ../../demos/factorials.fs
+time python shell.py -p ../ -p ../../common -p ../../anstests/ swapforth.fs ../runtests.fs # ../../demos/factorials.fs

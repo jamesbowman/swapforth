@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 from datetime import datetime
 import time
@@ -26,14 +27,14 @@ class TetheredJ1b(swapforth.TetheredTarget):
 
         while 1:
             c = ser.read(1)
-            print repr(c)
-            if c == chr(30):
+            # print(repr(c))
+            if c == b'\x1e':
                 break
 
     def boot(self, bootfile = None):
         sys.stdout.write('Contacting... ')
         self.reset()
-        print 'established'
+        print('established')
 
     def interrupt(self):
         self.reset()
