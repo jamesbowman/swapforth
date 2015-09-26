@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import sys
 from datetime import datetime
@@ -9,6 +10,8 @@ import os
 
 import dpansf
 
+if sys.version_info[0] < 3:
+    input = raw_input
 
 class Bye(Exception):
     pass
@@ -16,12 +19,12 @@ class Bye(Exception):
 def collect_screenshot(dest, ser):
     import Image
     t0 = time.time()
-    match = "!screenshot"
-    have = "X" * len(match)
+    match = b"!screenshot"
+    have = b"X" * len(match)
     while have != match:
         have = (have + ser.read(1))[-len(match):]
     (w, h) = struct.unpack("II", ser.read(8))
-    print '%dx%d image' % (w, h),
+    print('%dx%d image' % (w, h),)
     sys.stdout.flush()
     if 0:
         imd = ser.read(4 * w * h)
@@ -54,8 +57,8 @@ def collect_screenshot(dest, ser):
     im = Image.merge("RGBA", (r, g, b, a))
     im.convert("RGB").save(dest)
     took = time.time() - t0
-    print 'took %.1fs. Wrote RGB image to %s' % (took, dest)
-    ser.write('k')
+    print('took %.1fs. Wrote RGB image to %s' % (took, dest))
+    ser.write(b'k')
 
 class TetheredTarget:
     verbose = True
@@ -71,7 +74,7 @@ class TetheredTarget:
         try:
             import serial
         except:
-            print "This tool needs PySerial, but it was not found"
+            print("This tool needs PySerial, but it was not found")
             sys.exit(1)
         self.ser = serial.Serial(port, speed, timeout=None, rtscts=0)
 
@@ -85,19 +88,19 @@ class TetheredTarget:
         self.tex.write(s.replace('\r', '\n'))
 
     def listen(self):
-        print 'listen'
+        print('listen')
         while 1:
             c = self.ser.read(1)
-            print repr(c)
+            print(repr(c))
 
     def command_response(self, cmd):
         ser = self.ser
         # print
         # print 'cmd', repr(cmd)
-        ser.write(cmd + '\r')
+        ser.write(cmd.encode('utf-8') + b'\r')
         r = []
         while True:
-            c = ser.read(max(1, ser.inWaiting()))
+            c = ser.read(max(1, ser.inWaiting())).decode('utf-8')
             # print 'got', repr(c)
             r.append(c.replace(chr(30), ''))
             if chr(30) in c:
@@ -107,12 +110,12 @@ class TetheredTarget:
     def interactive_command(self, cmd = None):
         ser = self.ser
         if cmd is not None:
-            ser.write(cmd + '\r')
+            ser.write(cmd.encode('utf-8') + b'\r')
         r = []
         while True:
             if ser.inWaiting() == 0:
                 sys.stdout.flush()
-            c = ser.read(max(1, ser.inWaiting()))
+            c = ser.read(max(1, ser.inWaiting())).decode('utf-8')
             clean = c.replace(chr(30), '')
             sys.stdout.write(clean)
             r.append(clean)
@@ -136,7 +139,7 @@ class TetheredTarget:
                 while l.endswith('\n') or l.endswith('\r'):
                     l = l[:-1]
                 if self.verbose:
-                    print repr(l)
+                    print(repr(l))
                 if l == "#bye":
                     raise Bye
                 l = l.expandtabs(4)
@@ -152,7 +155,7 @@ class TetheredTarget:
                     if r.endswith(' ok\r\n'):
                         r = r[:-5]
                     if 'error: ' in r:
-                        print '--- ERROR ---'
+                        print('--- ERROR ---')
                         sys.stdout.write(l + '\n')
                         sys.stdout.write(r)
                         raise Bye
@@ -161,7 +164,7 @@ class TetheredTarget:
                         # print repr(r)
                         self.log.write(r)
             return
-        print "Cannot find file %s in %r" % (filename, self.searchpath)
+        print("Cannot find file %s in %r" % (filename, self.searchpath))
         raise Bye
 
     def serialize(self):
@@ -175,7 +178,7 @@ class TetheredTarget:
         elif cmd.startswith('#include'):
             cmd = cmd.split()
             if len(cmd) != 2:
-                print 'Usage: #include <source-file>'
+                print('Usage: #include <source-file>')
             else:
                 try:
                     self.include(cmd[1])
@@ -184,13 +187,13 @@ class TetheredTarget:
         elif cmd.startswith('#flash'):
             cmd = cmd.split()
             if len(cmd) != 2:
-                print 'Usage: #flash <dest-file>'
-                ser.write('\r')
+                print('Usage: #flash <dest-file>')
+                ser.write(b'\r')
             else:
-                print 'please wait...'
+                print('please wait...')
                 dest = cmd[1]
                 d = self.serialize()
-                print 'Image is', self.cellsize*len(d), 'bytes'
+                print('Image is', self.cellsize*len(d), 'bytes')
                 if self.cellsize == 4:
                     if dest.endswith('.hex'):
                         open(dest, "w").write("".join(["%08x\n" % (x & 0xffffffff) for x in d]))
@@ -204,7 +207,7 @@ class TetheredTarget:
         elif cmd.startswith('#setclock'):
             n = datetime.utcnow()
             cmd = "decimal %d %d %d %d %d %d >time&date" % (n.second, n.minute, n.hour, n.day, n.month, n.year)
-            ser.write(cmd + "\r\n")
+            ser.write(cmd.encode('utf-8') + b'\r')
             ser.readline()
         elif cmd.startswith('#bye'):
             sys.exit(0)
@@ -212,16 +215,16 @@ class TetheredTarget:
             def pp(s):
                 return " ".join(sorted(s))
             words = sorted((self.command_response('words')).upper().split()[:-1])
-            print 'duplicates:', pp(set([w for w in words if words.count(w) > 1]))
-            print 'have CORE words: ', pp(set(dpansf.words['CORE']) & set(words))
-            print 'missing CORE words: ', pp(set(dpansf.words['CORE']) - set(words))
-            print
-            print pp(words)
+            print('duplicates:', pp(set([w for w in words if words.count(w) > 1])))
+            print('have CORE words: ', pp(set(dpansf.words['CORE']) & set(words)))
+            print('missing CORE words: ', pp(set(dpansf.words['CORE']) - set(words)))
+            print()
+            print(pp(words))
             allwords = {}
             for ws in dpansf.words.values():
                 allwords.update(ws)
-            print 'unknown: ', pp(set(words) - set(allwords))
-            print 'extra:', pp(set(allwords) & (set(words) - set(dpansf.words['CORE'])))
+            print('unknown: ', pp(set(words) - set(allwords)))
+            print('extra:', pp(set(allwords) & (set(words) - set(dpansf.words['CORE']))))
             extra = (set(allwords) & (set(words) - set(dpansf.words['CORE'])))
             for ws in sorted(dpansf.words):
                 s = set(dpansf.words[ws])
@@ -231,25 +234,24 @@ class TetheredTarget:
                         m = 'Providing names from the \wl{%s} word set'
                     else:
                         m = 'Providing the \wl{%s} word set'
-                    print m % dpansf.ws[ws]
+                    print(m % dpansf.ws[ws])
             if 0:
                 for w in sorted(extra):
                     ref = allwords[w]
                     part = ref[:ref.index('.')]
-                    print '\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower())
+                    print('\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower()))
         elif cmd.startswith('#time '):
             t0 = time.time()
-            r = self.shellcmd(cmd[6:])
+            self.shellcmd(cmd[6:])
             t1 = time.time()
-            print r
-            print 'Took %.6f seconds' % (t1 - t0)
+            print('Took %.6f seconds' % (t1 - t0))
         elif cmd.startswith('#measure'):
             ser = self.ser
             # measure the board's clock
             cmd = ":noname begin $21 emit 100000000 0 do loop again ; execute\r\n"
             time.time() # warmup
-            ser.write(cmd)
-            while ser.read(1) != '!':
+            ser.write(cmd.encode('utf-8') + b'\r')
+            while ser.read(1).decode('utf-8') != '!':
                 pass
             t0 = time.time()
             n = 0
@@ -257,28 +259,28 @@ class TetheredTarget:
                 ser.read(1)
                 t = time.time()
                 n += 1
-                print "%.6f MHz" % ((2 * 100.000000 * n) / (t - t0))
+                print("%.6f MHz" % ((2 * 100.000000 * n) / (t - t0)))
         elif cmd.startswith('#screenshot'):
             cmd = cmd.split()
             if len(cmd) != 2:
-                print 'Usage: #screenshot <dest-image-file>'
-                ser.write('\r')
+                print('Usage: #screenshot <dest-image-file>')
+                ser.write(b'\r')
             else:
                 dest = cmd[1]
-                ser.write('GD.screenshot\r\n')
+                ser.write(b'GD.screenshot\r\n')
                 collect_screenshot(dest, ser)
-                ser.write('\r\n')
+                ser.write(b'\r\n')
         elif cmd.startswith('#movie'):
             cmd = cmd.split()
             if len(cmd) != 2:
-                print 'Usage: #movie <command>'
-                ser.write('\r')
+                print('Usage: #movie <command>')
+                ser.write(b'\r')
             else:
                 dest = cmd[1]
-                ser.write('%s\r' % cmd[1])
+                ser.write(b'%s\r' % cmd[1])
                 for i in xrange(10000):
                     collect_screenshot("%04d.png" % i, ser)
-                ser.write('\r\n')
+                ser.write(b'\r\n')
         else:
             self.texlog(r"\underline{\textbf{%s}}" % cmd)
             self.texlog('\n')
@@ -300,7 +302,7 @@ class TetheredTarget:
 
         if autocomplete:
             words = sorted((self.command_response('words')).split())
-            print 'Loaded', len(words), 'words'
+            print('Loaded', len(words), 'words')
             def completer(text, state):
                 text = text.lower()
                 candidates = [w for w in words if w.startswith(text)]
@@ -322,7 +324,7 @@ class TetheredTarget:
                     prompt = '>'
                 else:
                     prompt = '+'
-                cmd = raw_input(prompt).strip()
+                cmd = input(prompt).strip()
                 self.shellcmd(cmd)
             except KeyboardInterrupt:
                 print

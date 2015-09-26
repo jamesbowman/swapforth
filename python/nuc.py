@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import division
+
 import sys
 import getopt
 import struct
@@ -7,6 +10,9 @@ import array
 import copy
 import time
 import re
+
+if sys.version_info[0] < 3:
+    input = raw_input
 
 sys.path.append("../shell")
 import swapforth
@@ -19,7 +25,10 @@ def setimmediate(func):
     return func
 
 def ba(x):
-    return array.array('B', x)
+    if type(x) == str:
+        return array.array('B', [ord(c) for c in x])
+    else:
+        return array.array('B', x)
 
 class ForthException(Exception):
     def __init__(self, value):
@@ -111,7 +120,7 @@ class SwapForth:
     def pops(self):
         n = self.d.pop()
         a = self.d.pop()
-        return self.ram[a:a+n].tostring()
+        return self.ram[a:a+n].tostring().decode("utf-8")
 
     # Start of Forth words
     #
@@ -371,7 +380,7 @@ class SwapForth:
         u1 = self.u32(self.d.pop())
         ud = self.dpop() & (65536**self.CELL - 1)
         self.lit(self.w32(ud % u1))
-        self.lit(self.w32(ud / u1))
+        self.lit(self.w32(ud // u1))
 
     def MS(self):
         time.sleep(0.001 * self.d.pop())
@@ -400,7 +409,8 @@ class SwapForth:
 
     def SFIND(self):
         (a, n) = self.d[-2:]
-        s = self.ram[a:a+n].tostring().upper()
+        s = self.ram[a:a+n].tostring().decode("utf-8").upper()
+        # print('HERE', s.decode("utf-8"), self.dict)
         if s in self.dict:
             x = self.dict[s]
             self.d[-2] = self.xt(x)
@@ -457,7 +467,7 @@ class SwapForth:
         def endcolon():
             self.lastword = partial(self.inner, self.code)
             if self.defining in self.dict:
-                print 'warning: refining %s' % self.defining
+                print('warning: refining %s' % self.defining)
             self.dict[self.defining] = self.lastword
         self.dosemi = endcolon
 
@@ -521,7 +531,7 @@ class SwapForth:
 
     def ACCEPT(self):
         (a, n) = self.popn(2)
-        s = raw_input()[:n]
+        s = input()[:n]
         ns = len(s)
         self.ram[a:a + ns] = s
         self.lit(ns)
@@ -667,7 +677,7 @@ class SwapForth:
         self.loopC = self.r.pop()
 
     def QUIT(self):
-        print 'QUIT'
+        print('QUIT')
         raise swapforth.Bye
 
     @setimmediate
@@ -788,7 +798,10 @@ class SwapForth:
         self.q('0 >IN !')
 
 import threading
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 class AsyncSwapForth(SwapForth):
 
@@ -832,7 +845,7 @@ class Tethered(swapforth.TetheredTarget):
         self.interpreting = False
 
         self.ready = threading.Event()
-        self.cmdq = Queue.Queue()
+        self.cmdq = queue.Queue()
         self.t = threading.Thread(target = AsyncSwapForth, args = (self.cmdq, self.ready) + options)
         self.t.setDaemon(True)
         self.t.start()
@@ -865,9 +878,9 @@ if __name__ == '__main__':
         if '-b' in optdict:
             endian = '>'
     except getopt.GetoptError:
-        print "usage:"
-        print " -c N    cell size, one of 2,4 or 8"
-        print " -b      big-endian. Default is little-endian"
+        print("usage:")
+        print(" -c N    cell size, one of 2,4 or 8")
+        print(" -b      big-endian. Default is little-endian")
         sys.exit(1)
 
     dpans = {}
@@ -886,6 +899,6 @@ if __name__ == '__main__':
         words = set(t.command_response('words').split())
         missing = dpans['CORE'] - words
         print(len(missing), "MISSING CORE", " ".join(sorted(missing)))
-        print words - allw
+        print(words - allw)
 
     t.shell()
