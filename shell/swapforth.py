@@ -301,20 +301,20 @@ class TetheredTarget:
             import atexit
             atexit.register(readline.write_history_file, histfile)
         except ImportError:
-            autocomplete = False
             print('[readline library not found - continuing anyway]')
+            autocomplete = False
 
         if autocomplete:
             words = sorted((self.command_response('words')).split())
             print('Loaded', len(words), 'words')
             def completer(text, state):
                 text = text.lower()
-                candidates = [w for w in words if w.startswith(text)]
+                candidates = [w for w in words if w.lower().startswith(text)]
                 if state < len(candidates):
                     return candidates[state]
                 else:
                     return None
-            if 'libedit' in readline.__doc__:
+            if readline.__doc__ and ('libedit' in readline.__doc__):
                 readline.parse_and_bind("bind ^I rl_complete")
             else:
                 readline.parse_and_bind("tab: complete")
