@@ -72,8 +72,6 @@ module uart(
 
   wire ser_clk;
 
-  wire starting = uart_wr_i & ~uart_busy;
-
   baudgen _baudgen(
     .clk(clk),
     .ser_clk(ser_clk));
@@ -85,12 +83,10 @@ module uart(
       bitcount <= 0;
       shifter <= 0;
     end else begin
-      if (starting) begin
-        shifter <= { uart_dat_i[7:0], 1'b0 };
+      if (uart_wr_i) begin
+        { shifter, uart_tx } <= { uart_dat_i[7:0], 1'b0, 1'b1 };
         bitcount <= 1 + 8 + 1;    // 1 start, 8 data, 1 stop
-      end
-
-      if (sending & ser_clk) begin
+      end else if (ser_clk & sending) begin
         { shifter, uart_tx } <= { 1'b1, shifter };
         bitcount <= bitcount - 4'd1;
       end
@@ -109,9 +105,15 @@ module rxuart(
   reg [4:0] bitcount;
   reg [7:0] shifter;
 
+  // bitcount == 11111: idle
+  //             0-17:  sampling incoming bits
+  //             18:    character received
+
   // On starting edge, wait 3 half-bits then sample, and sample every 2 bits thereafter
 
   wire idle = &bitcount;
+  assign valid = (bitcount == 18);
+
   wire sample;
   reg [2:0] hh = 3'b111;
   wire [2:0] hhN = {hh[1:0], uart_rx};
@@ -125,7 +127,6 @@ module rxuart(
     .restart(startbit),
     .ser_clk(ser_clk));
 
-  assign valid = (bitcount == 18);
   reg [4:0] bitcountN;
   always @*
     if (startbit)
@@ -138,7 +139,7 @@ module rxuart(
       bitcountN = bitcount;
 
   // 3,5,7,9,11,13,15,17
-  assign sample = (bitcount > 2) & bitcount[0] & !valid & ser_clk;
+  assign sample = (|bitcount[4:1]) & bitcount[0] & ser_clk;
   assign data = shifter;
 
   always @(negedge resetq or posedge clk)
