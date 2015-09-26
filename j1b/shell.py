@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import sys
 import time
@@ -7,7 +8,7 @@ import array
 try:
     import serial
 except:
-    print "This tool needs PySerial, but it was not found"
+    print("This tool needs PySerial, but it was not found")
     sys.exit(1)
 
 sys.path.append("../shell")
@@ -25,23 +26,23 @@ class TetheredJ1b(swapforth.TetheredTarget):
         time.sleep(0.01)
 
         for c in ' 1 tth !':
-            ser.write(c)
+            ser.write(c.encode('utf-8'))
             ser.flush()
             time.sleep(0.001)
             ser.flushInput()
-            # print repr(ser.read(ser.inWaiting()))
-        ser.write('\r')
+            # print(repr(ser.read(ser.inWaiting())))
+        ser.write(b'\r')
 
         while 1:
             c = ser.read(1)
             # print repr(c)
-            if c == chr(30):
+            if c == b'\x1e':
                 break
 
     def boot(self, bootfile = None):
         sys.stdout.write('Contacting... ')
         self.reset()
-        print 'established'
+        print('established')
 
     def interrupt(self):
         self.reset()
