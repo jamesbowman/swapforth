@@ -102,6 +102,17 @@ module outpin(
         .D_IN_0(rd));
 endmodule
 
+module inpin(
+  input clk,
+  input pin,
+  output rd);
+
+  SB_IO #(.PIN_TYPE(6'b0000_00)) _io (
+        .PACKAGE_PIN(pin),
+        .INPUT_CLK(clk),
+        .D_IN_0(rd));
+endmodule
+
 module top(input pclk, output D1, output D2, output D3, output D4, output D5,
 
            output TXD,        // UART TX
@@ -254,11 +265,12 @@ module top(input pclk, output D1, output D2, output D3, output D4, output D5,
   wire [7:0] uart0_data;
   wire uart0_wr = io_wr_ & io_addr_[12];
   wire uart0_rd = io_rd_ & io_addr_[12];
-  wire UART0_RX;
+  wire uart_RXD;
+  inpin _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
   buart _uart0 (
      .clk(clk),
      .resetq(1'b1),
-     .rx(RXD),
+     .rx(uart_RXD),
      .tx(TXD),
      .rd(uart0_rd),
      .wr(uart0_wr),

@@ -20,7 +20,7 @@ fi
 # python prep.py icestorm/j1a.bin blocks j1a-blocks.bin
 # iceprog j1a-blocks.bin
 
-iceprog icestorm/j1a.bin
+# iceprog icestorm/j1a.bin
 python shell.py -h $PORT gd2.fs # spi.fs
 
 exit

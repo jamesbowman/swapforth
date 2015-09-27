@@ -22,3 +22,4 @@ Simulated hosts include:
 
  * Both Python 2.x and 3.x are supported
  * The shell now runs on Windows, with and without [pyreadline](https://pypi.python.org/pypi/pyreadline)
+ * The iCEstick port is now running at 48 MHz

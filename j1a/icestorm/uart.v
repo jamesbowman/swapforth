@@ -1,6 +1,7 @@
 `default_nettype none
 
 `define CLKFREQ   12000000    // frequency of incoming signal 'clk'
+`define BAUD      115200
 
 // Simple baud generator for transmitter
 // ser_clk pulses at 115200 Hz
@@ -9,7 +10,7 @@ module baudgen(
   input wire clk,
   output wire ser_clk);
 
-  localparam lim = (`CLKFREQ / 115200) - 1; 
+  localparam lim = (`CLKFREQ / `BAUD) - 1; 
   localparam w = $clog2(lim);
   wire [w-1:0] limit = lim;
   reg [w-1:0] counter;
@@ -30,7 +31,7 @@ module baudgen2(
   input wire restart,
   output wire ser_clk);
 
-  localparam lim = (`CLKFREQ / (2 * 115200)) - 1; 
+  localparam lim = (`CLKFREQ / (2 * `BAUD)) - 1; 
   localparam w = $clog2(lim);
   wire [w-1:0] limit = lim;
   reg [w-1:0] counter;
