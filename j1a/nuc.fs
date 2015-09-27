@@ -983,7 +983,7 @@ header chars    :noname     noop ;
 header abort
 : abort
     [char] ? emit
-    d# 0 execute
+    d# 2 execute
 ;
 
 : isvoid ( caddr u -- ) \ any char remains, abort

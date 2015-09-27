@@ -296,7 +296,7 @@ warnings on
     resolve
 ;
 
-2 org
+4 org
 : .trim ( a-addr u ) \ shorten string until it ends with '.'
     begin
         2dup + 1- c@ [char] . <>
@@ -349,7 +349,7 @@ next-arg 2dup .trim >str constant prefix.
 
 target included                         \ include the program.fs
 
-[ tdp @ 0 org ] main [ org ]
+[ tdp @ 0 org ] main quit [ org ]
 meta
 
 decimal
