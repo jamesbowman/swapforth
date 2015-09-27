@@ -1,13 +1,29 @@
-set -e
+set -ex
+PORT=`icestorm/findserial`
 
 if true
 then
+  rm build/nuc.hex
+  make bootstrap
   make -C icestorm
   iceprog icestorm/j1a.bin
-  PORT=`icestorm/findserial`
-  python shell.py -h $PORT -p ../common -p ../demos # us.fs # swapforth.fs spi2.fs
+fi
+
+if false
+then
+  make -C icestorm
+  # iceprog icestorm/j1a.bin
+  # python shell.py -h $PORT -p ../common -p ../anstests swapforth.fs # gd2.fs
   exit
 fi
+
+# python prep.py icestorm/j1a.bin blocks j1a-blocks.bin
+# iceprog j1a-blocks.bin
+
+iceprog icestorm/j1a.bin
+python shell.py -h $PORT gd2.fs # spi.fs
+
+exit
 
 make
 cd verilator

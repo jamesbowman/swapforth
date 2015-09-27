@@ -98,7 +98,7 @@ include core-ext.fs
         2@ forth 2! \ restore FORTH and DP
 ;
 
-: ms 0 do 1490 0 do loop loop ;
+: ms 0 do 5986 0 do loop loop ;
 : leds  4 io! ;
 
 ( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)

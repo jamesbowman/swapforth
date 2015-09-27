@@ -5,7 +5,7 @@ set_io D4 96
 set_io D5 95
 set_io TXD 8
 set_io RXD 9
-set_io clk 21
+set_io pclk 21
 set_io resetq 3
 set_io PIOS_00 70
 set_io PIOS_01 68

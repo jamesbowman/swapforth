@@ -102,8 +102,7 @@ module outpin(
         .D_IN_0(rd));
 endmodule
 
-
-module top(input clk, output D1, output D2, output D3, output D4, output D5,
+module top(input pclk, output D1, output D2, output D3, output D4, output D5,
 
            output TXD,        // UART TX
            input RXD,         // UART RX
@@ -147,6 +146,22 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
            input resetq,
 );
   localparam MHZ = 12;
+
+  wire clk;
+  SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
+                  .PLLOUT_SELECT("GENCLK"),
+                  .DIVR(4'b0000),
+                  .DIVF(7'd3),
+                  .DIVQ(3'b000),
+                  .FILTER_RANGE(3'b001),
+                 ) uut (
+                         .REFERENCECLK(pclk),
+                         .PLLOUTCORE(clk),
+                         //.PLLOUTGLOBAL(clk),
+                         // .LOCK(D5),
+                         .RESETB(1'b1),
+                         .BYPASS(1'b0)
+                        );
 
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
@@ -283,7 +298,7 @@ module top(input clk, output D1, output D2, output D3, output D4, output D5,
           .I2(1'b0),
           .I3(1'b0)
   );
-  wire random = buffers_out[0];
+  wire random = ~buffers_out[1];
 
   // ######   IO PORTS   ######################################
 

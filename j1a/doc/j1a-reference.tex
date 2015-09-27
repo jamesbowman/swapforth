@@ -278,13 +278,13 @@ Some are traditional Forth words, others are specific to the J1a SwapForth imple
 \section{Raw UART access}
 
 At boot, SwapForth listens for a command on the UART. \index{UART}
-Connection parameters are 115200 8N1, and any terminal program should be able to connect.
+Connection parameters are 460800 8N1, and any terminal program should be able to connect.
 \index{DTR} \index{reset}
 Note that the hardware board uses DTR as a reset signal, so you should make sure that it is set OFF by the terminal program:
 
 \begin{verbatim}
-$ miniterm.py --dtr=0 /dev/ttyUSB5 115200
---- Miniterm on /dev/ttyUSB5: 115200,8,N,1 ---
+$ miniterm.py --dtr=0 /dev/ttyUSB5 460800
+--- Miniterm on /dev/ttyUSB5: 460800,8,N,1 ---
 --- Quit: Ctrl+]  |  Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
 --- forcing DTR inactive
 
