@@ -1,4 +1,4 @@
-# swapforth
+![swapforth](/doc/swapforth1.png)
 
 [![Build Status](https://travis-ci.org/jamesbowman/swapforth.svg?branch=master)](https://travis-ci.org/jamesbowman/swapforth)
 [![Issue Stats](http://issuestats.com/github/jamesbowman/swapforth/badge/issue?style=flat-square)](http://issuestats.com/github/jamesbowman/swapforth)
