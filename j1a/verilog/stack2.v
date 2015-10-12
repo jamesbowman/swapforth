@@ -28,5 +28,16 @@ module stack2(
   end
 
   assign rd = head;
+
+`ifdef VERILATOR
+  int depth /* verilator public_flat */;
+  always @(posedge clk) begin
+    if (delta == 2'b11)
+      depth <= depth - 1;
+    if (delta == 2'b01)
+      depth <= depth + 1;
+  end
+`endif
+
 endmodule
 

@@ -30,6 +30,7 @@ typedef struct {
     PyObject_HEAD
     /* Type-specific fields go here. */
     Vj1a* dut;
+    int ddepth[4096], rdepth[4096];
 #if VCD
     VerilatedVcdC* tfp;
 #endif
@@ -61,6 +62,8 @@ Vj1a_init(v3 *self, PyObject *args, PyObject *kwds)
     }
     self->dut->v__DOT__ram_prog[i] = v;
   }
+  memset(self->rdepth, 0, sizeof(self->rdepth));
+  memset(self->ddepth, 0, sizeof(self->ddepth));
 
   return 0;
 }
@@ -104,7 +107,33 @@ PyObject *v3_inWaiting(PyObject *self, PyObject *args)
 #endif
 }
 
-#define CYCLE() (dut->clk = 0, dut->eval(), dut->clk = 1, dut->eval())
+PyObject *v3_profile(PyObject *self, PyObject *args)
+{
+  v3* v = (v3*)self;
+  int i;
+
+  PyObject *r = PyList_New(4096);
+  for (i = 0; i < 4096; i++)
+    PyList_SET_ITEM(r, i, PyLong_FromLong(v->ddepth[i]));
+  return r;
+}
+
+static void cycle(v3* v)
+{
+  Vj1a* dut = v->dut;
+  dut->clk = 0;
+  dut->eval();
+  dut->clk = 1;
+  dut->eval();
+
+  int pc = dut->v__DOT___j1__DOT__pc;
+  if (pc < 4096) {
+    if (dut->v__DOT___j1__DOT__dstack__DOT__depth > v->ddepth[pc])
+      v->ddepth[pc] = dut->v__DOT___j1__DOT__dstack__DOT__depth;
+    if (dut->v__DOT___j1__DOT__rstack__DOT__depth > v->rdepth[pc])
+      v->rdepth[pc] = dut->v__DOT___j1__DOT__rstack__DOT__depth;
+  }
+}
 
 PyObject *v3_read(PyObject *_, PyObject *args)
 {
@@ -120,7 +149,7 @@ PyObject *v3_read(PyObject *_, PyObject *args)
     do {
       if (PyErr_CheckSignals())
         return NULL;
-      CYCLE();
+      cycle((v3*)_);
     } while (dut->uart0_wr == 0);
     buf[i] = dut->uart_w;
   }
@@ -146,12 +175,12 @@ PyObject *v3_write(PyObject *_, PyObject *args)
     do {
       if (PyErr_CheckSignals())
         return NULL;
-      CYCLE();
+      cycle((v3*)_);
     } while (dut->uart0_rd == 0);
     do {
       if (PyErr_CheckSignals())
         return NULL;
-      CYCLE();
+      cycle((v3*)_);
     } while (dut->uart0_rd == 1);
   }
 
@@ -164,6 +193,7 @@ static PyMethodDef Vj1a_methods[] = {
     {"read", v3_read, METH_VARARGS},
     {"write", v3_write, METH_VARARGS},
     {"inWaiting", v3_inWaiting, METH_NOARGS},
+    {"profile", v3_profile, METH_NOARGS},
     {NULL}  /* Sentinel */
 };
 

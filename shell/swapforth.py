@@ -240,6 +240,11 @@ class TetheredTarget:
                     ref = allwords[w]
                     part = ref[:ref.index('.')]
                     print('\href{http://forth.sourceforge.net/std/dpans/dpans%s.htm#%s}{\wordidx{%s}}' % (part, ref, w.lower()))
+        elif cmd.startswith('#profile'):
+            p = self.ser.profile()
+            for m in (max(p), max(p) - 1, max(p) - 2):
+                print("max depth", m, "at:")
+                print("    " + " ".join(["%04x" % (2 * i) for i,v in enumerate(p) if (v == m)]))
         elif cmd.startswith('#time '):
             t0 = time.time()
             self.shellcmd(cmd[6:])

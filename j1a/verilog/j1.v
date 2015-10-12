@@ -20,7 +20,7 @@ module j1(
   reg [`WIDTH-1:0] st0, st0N;   // top of data stack
   reg dstkW;                    // data stack write
 
-  reg [12:0] pc, pcN;           // program counter
+  reg [12:0] pc /* verilator public_flat */, pcN;           // program counter
   wire [12:0] pc_plus_1 = pc + 13'd1;
   reg rstkW;                    // return stack write
   wire [`WIDTH-1:0] rstkD;      // return stack write value
