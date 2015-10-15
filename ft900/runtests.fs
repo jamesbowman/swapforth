@@ -25,4 +25,4 @@ REPORT-ERRORS
 CR CR .( Forth tests completed ) CR CR
 
 
-
+include ../localtests/div.fs
