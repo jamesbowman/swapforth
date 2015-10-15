@@ -148,7 +148,9 @@ variable nact 0 nact !
 
 : <inline-word>  ( f -- f )
     <any-word>
-    %word caninline and
+    dup if
+        %word caninline and
+    then
 ;
 
 : <exit>  ( f -- f )
