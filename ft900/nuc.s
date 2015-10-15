@@ -12,6 +12,10 @@
 # r30           cc
 # r31           RSP
 
+        .if     SIMULATOR
+        .equ    __RAMSIZE,65536
+        .endif
+
         .equ    PM_UNLOCK,      0x1fc80
         .equ    PM_ADDR,        0x1fc84
         .equ    PM_DATA,        0x1fc88
@@ -21,8 +25,11 @@
         .equ    DSTACK_TOP,     0xfcfc
 .global _start
 _start:
-
-        jmp     __PMSIZE-4
+        .if     SIMULATOR
+                jmp     codestart
+        .else
+                jmp     __PMSIZE-4
+        .endif
         jmp     0 /* ft900_watchdog */
         jmp     interrupt_0
         jmp     interrupt_1
@@ -629,7 +636,11 @@ header  "accept",accept
 
 accept_1:
         call    key
-        cmp     $r0,'\r'
+        .if SIMULATOR == 1
+                cmp     $r0,'\n'
+        .else
+                cmp     $r0,'\r'
+        .endif
         jmpc    z,accept_2
 
         cmp     $r0,8
@@ -1789,19 +1800,32 @@ uart.start:
         jmp     c_store
 
 header  "uart-emit",uart_emit
-        lda.b   $r1,0x10325
-        tst.b   $r1,(1<<5)
-        jmpc    z,uart_emit
-        sta.b   0x10320,$r0
+        .if SIMULATOR == 1
+                sta.b   0x10000,$r0
+        .else
+                lda.b   $r1,0x10325
+                tst.b   $r1,(1<<5)
+                jmpc    z,uart_emit
+                sta.b   0x10320,$r0
+        .endif
         jmp     drop
 
 header  "uart-key",uart_key
         _dup
+        .if SIMULATOR == 1
+                lda.b   $r0,0x10000
+                cmp.b   $r0,255
+                jmpc    nz,1f
+                ldk     $r0,0
+                sta     0x1fffc,$r0
+1:
+        .else
 key_1:
-        lda.b   $r1,0x10325
-        tst.b   $r1,(1<<0)
-        jmpc    z,key_1
-        lda.b   $r0,0x10320
+                lda.b   $r1,0x10325
+                tst.b   $r1,(1<<0)
+                jmpc    z,key_1
+                lda.b   $r0,0x10320
+        .endif
         return
 
 #######   CHARACTER I/O   ############################################
@@ -2345,7 +2369,7 @@ header  "report",report        /* ( u -- 0 ) describe error u */
 # QUIT implementation based on ANS A.9
 
 header  "quit",quit
-        ldk     $sp,0xfffc
+        ldk     $sp,0xfffc              # XXX
 
         sta     _source_id,$r25
 
@@ -2928,18 +2952,6 @@ h80000000:      .long   0x80000000
 
 codestart:
         ldk     $sp,__RAMSIZE-4
-
-        ldk     $r1,0x80
-        sta.b   sys_regmsc0cfg_b3,$r1
-
-       /* Enable the RTC as soon as possible */
-       /* Write 1 to RTC_EN in RTC_CCR */
-        ldk     $r1,(1 << 2)
-        sta     0x1028c,$r1
-
-       /* lpm     $r1,h80000000 */
-       /* sta     0x10018,$r1 */
-
         ldk     $r26,FSTACK_TOP
         ldk     $r27,DSTACK_TOP
 
@@ -2948,22 +2960,37 @@ codestart:
         ldk     $r22,0
         ldk     $r25,0                 /* constant 0 */
 
-        lpm     $r1,saved_pmdp
-        sta     cp,$r1
-        lpm     $r2,saved_dp
-        sta     dp,$r2
+        .if SIMULATOR==0
+                ldk     $r1,0x80
+                sta.b   sys_regmsc0cfg_b3,$r1
 
-       /* copy all of RAM from pm[cp to cp+dp] */
-        ldk     $r0,0                  /* dest */
-ramloader:
-        lpmi    $r3,$r1,0
-        sti     $r0,0,$r3
-        add     $r0,$r0,4
-        add     $r1,$r1,4
-        cmp     $r0,$r2
-        jmpc    be,ramloader
+               /* Enable the RTC as soon as possible */
+               /* Write 1 to RTC_EN in RTC_CCR */
+                ldk     $r1,(1 << 2)
+                sta     0x1028c,$r1
 
-        call    uart.start
+               /* lpm     $r1,h80000000 */
+               /* sta     0x10018,$r1 */
+        .endif
+
+                lpm     $r1,saved_pmdp
+                sta     cp,$r1
+                lpm     $r2,saved_dp
+                sta     dp,$r2
+
+               /* copy all of RAM from pm[cp to cp+dp] */
+                ldk     $r0,0                  /* dest */
+        ramloader:
+                lpmi    $r3,$r1,0
+                sti     $r0,0,$r3
+                add     $r0,$r0,4
+                add     $r1,$r1,4
+                cmp     $r0,$r2
+                jmpc    be,ramloader
+
+        .if SIMULATOR==0
+                call    uart.start
+        .endif
 
         sta     _tethered,$r25
         call    decimal
@@ -2980,7 +3007,6 @@ ramloader:
 banner:
         lit     '-'
         call    emit
-
         add     $r0,$r0,-1
         cmp     $r0,0
         jmpc    nz,banner
