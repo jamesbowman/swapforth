@@ -14,12 +14,12 @@ header >        : >         swap < ;
 header 0<       : 0<        d# 0 < ; 
 header 0>       : 0>        d# 0 > ;
 header u>       : u>        swap u< ; 
+header !        : _!        ! ;
+header io!      : _io!      io! ;
 
 : off   ( a -- ) \ store 0 to a
     d# 0 swap
-;fallthru
-: _!    ( x a -- ) \ subroutine version of store
-    !
+    _!
 ;
 
 header lshift
@@ -56,7 +56,6 @@ header key
     begin
         key?
     until
-;fallthru
 : key>
     h# 1000 io@
 ;
@@ -66,7 +65,7 @@ header emit
     begin
         d# 1 uart-stat 
     until
-    h# 1000 io!
+    h# 1000 _io!
 ;
 
 header space
@@ -78,7 +77,6 @@ header cr
 : cr
     d# 10
     d# 13
-;fallthru
 : 2emit
     emit emit
 ;
@@ -91,7 +89,6 @@ header bl
 : hex4
     dup d# 8 rshift
     DOUBLE
-;fallthru
 : hex2
     dup d# 4 rshift
     DOUBLE
@@ -162,7 +159,7 @@ header c!
 
 header count
 : count
-    dup 1+ swap c@
+    d# 1 over+ swap c@
 ;
 
 header bounds
@@ -240,7 +237,7 @@ header words : words
 \     drop cr
 \ ;
 
-header -        : -         negate + ; 
+header -        : -         negate + ;
 header abs      : abs       dup 0< if negate then ; 
 header here     : here      dp @i ;
 
@@ -551,7 +548,6 @@ header parse-name
     source >in @i /string
     ['] isspace? xt-skip over >r
     ['] isnotspace?
-;fallthru
 : _parse
     xt-skip ( end-word restlen r: start-word )
     2dup d# 1 min + source drop - >in _!
@@ -675,7 +671,6 @@ header ]
 : t]
     fineforoptimisation off  \  : --> No opcodes written yet - never recognize header bytes as opcodes !
     d# 3                      \ ] --> Something strange might just went on. Careful !
-;fallthru
 : state!
     state _!
 ;
@@ -946,36 +941,33 @@ header-imm unloop
 header decimal
 : decimal
     d# 10
-;fallthru
 : setbase
     base _!
 ;
 
-header 2*       :noname     2*       ;
-header 2/       :noname     2/       ;
-header !        :noname     !        ;
-header +        :noname     +        ;
-header xor      :noname     xor      ;
-header and      :noname     and      ;
-header or       :noname     or       ;
-header invert   :noname     invert   ;
-header =        :noname     =        ;
-header <        :noname     <        ;
-header u<       :noname     u<       ;
-header swap     :noname     swap     ;
-header dup      :noname     dup      ;
-header drop     :noname     drop     ;
-header over     :noname     over     ;
-header nip      :noname     nip      ;
-header io!      :noname     io!      ;
-header io@      :noname     io@      ;
-header depth    :noname     depth    ;
-header-imm >r   :noname     inline: >r ;
-header-imm r>   :noname     inline: r> ;
-header-imm r@   :noname     inline: r@ ;
-header cells    :noname     2*       ;
-header char+    :noname     1+ ;
-header chars    :noname     noop ;
+header 2*       :noname     2*          ;
+header 2/       :noname     2/          ;
+header +        :noname     +           ;
+header xor      :noname     xor         ;
+header and      :noname     and         ;
+header or       :noname     or          ;
+header invert   :noname     invert      ;
+header =        :noname     =           ;
+header <        :noname     <           ;
+header u<       :noname     u<          ;
+header swap     :noname     swap        ;
+header dup      :noname     dup         ;
+header drop     :noname     drop        ;
+header over     :noname     over        ;
+header nip      :noname     nip         ;
+header io@      :noname     io@         ;
+header depth    :noname     depth       ;
+header-imm >r   :noname     inline: >r  ;
+header-imm r>   :noname     inline: r>  ;
+header-imm r@   :noname     inline: r@  ;
+header cells    :noname     2*          ;
+header char+    :noname     1+          ;
+header chars    :noname     noop        ;
 
 : jumptable ( u -- ) \ add u to the return address
     r> + >r ;
@@ -1012,7 +1004,6 @@ header abort
                             \ single number
     isvoid drop
     r> if negate then
-;fallthru
 : return1
     d# 1
 ;
@@ -1117,7 +1108,7 @@ header-imm \
 ;
 
 : dispatch
-    jumptable ;fallthru
+    jumptable
     jmp execute                 \      -1      0       non-immediate
     jmp doubleAlso              \      0       0       number
     jmp execute                 \      1       0       immediate
@@ -1141,13 +1132,13 @@ header-imm \
 \ Unicode-friendly ACCEPT contibuted by Matthias Koch
 
 : delchar ( addr len -- addr len )
-    dup if d# 8 emit d# 32 emit d# 8 emit then
+    dup if d# 8 emit space d# 8 emit then
 
     begin
         dup 0= if exit then
         1- 2dup + c@
         h# C0 and h# 80 <>
-      until
+    until
 ;
 
 header accept
@@ -1185,7 +1176,6 @@ header refill
     tib dup d# 128 accept
     source!
     true
-;fallthru
 : 0>in
     >in off
 ;
