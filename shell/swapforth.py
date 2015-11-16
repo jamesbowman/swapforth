@@ -7,6 +7,7 @@ import time
 import array
 import struct
 import os
+import codecs
 
 import dpansf
 
@@ -130,7 +131,7 @@ class TetheredTarget:
 
         for p in self.searchpath:
             try:
-                incf = open(p + "/" + filename, "rt")
+                incf = codecs.open(p + "/" + filename, "rt", encoding = 'utf-8')
             except IOError:
                 continue
             for l in incf:
