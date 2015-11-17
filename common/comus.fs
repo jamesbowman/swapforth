@@ -33,3 +33,5 @@ $7a92764b seed !
 : randrange  ( u0 -- u1 ) \ u1 is a random number less than u0
     random um* nip
 ;
+
+: not  0= ;
