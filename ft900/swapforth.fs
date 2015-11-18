@@ -181,6 +181,12 @@ include comus.fs
 include mini-oof.fs
 
 include ft900/uart.fs
+include ft900/spi.fs
+include ft900/i2c.fs
+include ft900/sdhost.fs
+
+include fat32.fs
+include file.fs
 
 : new
     s" | marker |" evaluate
