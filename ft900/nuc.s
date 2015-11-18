@@ -1867,6 +1867,8 @@ header  "digitalwrite",digitalWrite    /* ( val pin -- ) */
 
         tst     $r0,0x20
         jmpc    nz,1f
+        tst     $r0,0x40
+        jmpc    nz,2f
 
         or      $r0,$r0,1<<5           /* $r0 is the bitfield spec for bins */
 
@@ -1880,6 +1882,14 @@ header  "digitalwrite",digitalWrite    /* ( val pin -- ) */
         ldl     $r1,$r1,$r0
         bins    $r21,$r21,$r1
         sta     0x10088,$r21
+        _2drop
+        return
+
+2:      /* For GPIO64+, flip r0 bits 5+6 */
+        xor     $r0,$r0,3<<5           /* $r0 is the bitfield spec for bins */
+        ldl     $r1,$r1,$r0
+        bins    $r22,$r22,$r1
+        sta     0x1008c,$r22
         _2drop
         return
 
