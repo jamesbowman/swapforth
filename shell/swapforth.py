@@ -43,7 +43,7 @@ def collect_screenshot(dest, ser):
                 
         imd = ""
         for y in range(h):
-            # print 'line', y
+            print('line', y)
             prev = 4 * chr(0)
             d = ""
             while len(d) < 4 * w:
@@ -59,7 +59,8 @@ def collect_screenshot(dest, ser):
     im.convert("RGB").save(dest)
     took = time.time() - t0
     print('took %.1fs. Wrote RGB image to %s' % (took, dest))
-    ser.write(b'k')
+    # ser.write(b'k')
+    # ser.flush()
 
 class TetheredTarget:
     verbose = True
@@ -131,7 +132,7 @@ class TetheredTarget:
 
         for p in self.searchpath:
             try:
-                incf = codecs.open(p + "/" + filename, "rt", encoding = 'utf-8')
+                incf = codecs.open(p + "/" + filename, "r", encoding = 'utf-8')
             except IOError:
                 continue
             for l in incf:

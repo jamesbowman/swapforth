@@ -27,8 +27,10 @@ def setimmediate(func):
 def ba(x):
     if type(x) == str:
         return array.array('B', [ord(c) for c in x])
-    else:
+    elif type(x) == bytes:
         return array.array('B', x)
+    else:
+        return array.array('B', str(x))
 
 class ForthException(Exception):
     def __init__(self, value):
