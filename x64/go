@@ -1,4 +1,6 @@
 set -e
 
-gcc -Wall -std=c99 main.c nuc.S 
+nasm -f macho64 -l lst nuc.asm
+gcc -Wall -std=c99 main.c nuc.o 
+# gobjdump -D a.out | less
 ./a.out
