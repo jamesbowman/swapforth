@@ -1,0 +1,4 @@
+set -e
+
+gcc -Wall -std=c99 main.c nuc.S 
+./a.out
