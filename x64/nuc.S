@@ -26,6 +26,19 @@ emit:
         add     $8,%rdi
         ret
 
+dotx:
+        push    %rdi
+        mov     %rsp,%rbp
+        or      $8,%rsp
+        sub     $8,%rsp
+        mov     %rax,%rdi
+        call    __dotx
+        mov     %rbp,%rsp
+        pop     %rdi
+        mov     (%rdi),%rax
+        add     $8,%rdi
+        ret
+
 # From here, register usage is SwapForth's convention:
 #
 # rax   Top-of-stack
@@ -49,6 +62,24 @@ emit:
         mov     \v,%rax
         .endm
 
+        .data
+        .set    link,.
+        .long   0
+        .text
+
+        # .macro  fheader  fname,immediate=0
+        # .text
+        # # .long   forth_link + \immediate
+        # .set    forth_link,.-4
+        # .string "\fname"
+        # .p2align 4
+        # .endm
+
+        .data
+plus:
+        .long   link-.
+        .set    link,.-4
+
 demo:
         lit     $'D'
         lit     $'C'
@@ -58,4 +89,6 @@ demo:
         call    emit
         call    emit
         call    emit
+        lit     $7
+        call    dotx
         ret
