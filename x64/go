@@ -3,4 +3,5 @@ set -e
 nasm -f macho64 -l lst nuc.asm
 gcc -Wall -std=c99 main.c nuc.o 
 # gobjdump -D a.out | less
-./a.out
+# echo "false false parse-name 66x >number .x .x .x .x" | ./a.out
+echo "16 base ! abcdef12345678abcdef. 10000 um/mod .x .x" | ./a.out
