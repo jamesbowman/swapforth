@@ -1,4 +1,3 @@
-; SwapForth x86-64
 ;
 ; For C code, the caller-preserved registers are: rbp, rbx, r12, r13, r14, r15
 ;
@@ -19,31 +18,40 @@ _swapforth:
 
 section .text
 
+%define ao 0
+%macro object   2
+%1      equ     ao
+%%n     equ     ao+(8*%2)
+        %define ao %%n
+%endmacro
+
+        object  _base,1
+        object  _forth,1
+        object  _dp,1
+        object  _in,1
+        object  _jumptab,6
+        object  _lastword,1
+        object  _thisxt,1
+        object  _sourceC,2
+        object  _state,1
+        object  _leaves,1
+        object  _tethered,1
+        object  _scratch,4
+        object  _emit,1
+        object  _dotx,1
+        object  _key,1
+        object  _tib,32
+
 %define link $
 
-%define _base     0x0
-%define _forth    0x8
-%define _dp       0x10
-%define _lastword 0x18
-%define _thisxt   0x20
-%define _in       0x28
-%define _sourceC  0x30
-%define _state    0x40
-%define _leaves   0x48
-%define _tethered 0x50
-%define _scratch  0x58
-%define _jumptab  0x78
-%define _emit     0xa8
-%define _dotx     0x90
-%define _key      0x98
-%define _tib      0x100
+%define IMMEDIATE       1
 
-%macro  header  2
+%macro  header  2-3     0
         align   32
         %strlen %%count %1
         db %%count,%1
         align   32
-%%link  dd   $-link
+%%link  dd   $-link + %3
         %define link %%link
 %2:
 %endmacro
@@ -160,12 +168,22 @@ source_store:
         lea     rax,[r12 + _sourceC]
         jmp     two_store
 
+header "2*",two_times
+        sal     rax,1
+        ret
+
+header "2/",two_slash
+        sar     rax,1
+        ret
+
 header "1+",one_plus
         inc     rax
         ret
+
 header "1-",one_minus
         dec     rax
         ret
+
 header "0=",zero_equals
         cmp     rax,0
         cond    e
@@ -243,10 +261,24 @@ header  "d+",d_plus
         adc     [rdi+8],rax
         jmp     two_drop
 
+header  "dnegate",d_negate
+        not     rax
+        not     qword [rdi]
+        lit     1
+        jmp     m_plus
+        
 header  "-",minus
         poprbx
         sub     rbx,rax
         mov     rax,rbx
+        ret
+
+header  "negate",negate
+        neg     rax
+        ret
+
+header  "invert",invert
+        not     rax
         ret
 
 header  "and",and
@@ -454,7 +486,9 @@ header "type",type
         jmp     .0
 .2:     jmp     two_drop
 
-header  "sfind",sfind
+; ( caddr u -- caddr u )
+; write a word into the scratch area with appropriate padding etc
+w2scratch:
         mov     rbx,0x9090909090909090
         mov     [r12+_scratch],rbx
         mov     byte [r12+_scratch],al
@@ -464,22 +498,23 @@ header  "sfind",sfind
         mov     rcx,rax
         rep movsb
         pop     rdi
+        ret
+
+header  "sfind",sfind
+        call    w2scratch
 
         mov     rdx,[r12+_scratch]
         ; Search for a word starting with rdx
 
         _dup
-        lea     rax,[rel dummy - 4]
+        mov     rax,[r12 + _forth]
 .0:
         cmp     rdx,[rax-32]
         je      .match
 
-        mov     ebx,dword [rax]
-        cmp     ebx,0
-        je      .2
-        sub     rax,rbx
-        jmp     .0
-.2:
+        call    nextword
+        jne     .0
+
         xor     rax,rax
         ret
 
@@ -487,12 +522,26 @@ header  "sfind",sfind
         call    nip
         call    nip
         add     rax,4
-        lit     -1              ; non-immediate
+        _dup
+        mov     eax,[rax-4]
+        and     eax,1   ;               0  or  1
+        sal     rax,1   ;               0  or  2
+        add     rax,-1  ;              -1 or  +1
+        ret
+
+; current word in rax
+; on return: eax is next word in dictionary, Z set if no more words
+nextword:
+        mov     ebx,dword [rax]
+        and     ebx,~1
+        cmp     ebx,0
+        cmove   rbx,rax
+        sub     rax,rbx
         ret
 
 header  "words",words
         _dup
-        lea     rax,[rel dummy - 4]
+        mov     rax,[r12 + _forth]
 .0:
         _dup
         sub     rax,32
@@ -500,12 +549,9 @@ header  "words",words
         call    type
         call    space
 
-        mov     ebx,dword [rax]
-        cmp     ebx,0
-        je      .2
-        sub     rax,rbx
-        jmp     .0
-.2:
+        call    nextword
+        jne     .0
+
         jmp     drop
 
 header "accept",accept ; ( c-addr +n1 -- +n2 )
@@ -527,10 +573,13 @@ header "accept",accept ; ( c-addr +n1 -- +n2 )
 
 header  "refill",refill
         _dup
-        lea     rax,[rdi + _tib]
+        lea     rax,[r12 + _tib]
         _dup
         lit     128
         call    accept
+  call two_dup
+  call type
+  call cr
         call    source_store
         mov     qword [r12 + _in],0
         jmp     true
@@ -711,6 +760,11 @@ header  "abort",abort
         call    cr
 .1:     jmp     .1
 
+header  "throw",throw
+        _tos0
+        jne     abort
+        ret
+
 ; : isvoid ( caddr u -- ) \ any char remains, abort
 isvoid:
         call    nip
@@ -745,24 +799,42 @@ doubleAlso2:
         lit     0
         _dup
         call    two_swap
+        lit     '-'
+        call    consume1
+        _to_r
         call    to_number
         lit     '.'
         call    consume1
         _tos0
         je      .1
         call    isvoid
+        _r_from
+        _tos0
+        je      .2pos
+        call    d_negate
+.2pos:
         lit     2
         ret
 
 .1:
         call    isvoid
         call    drop
+        _r_from
+        _tos0
+        je      .1pos
+        call    negate
+.1pos:
         lit     1
         ret
 
 doubleAlso:
         call    doubleAlso2
         jmp     drop
+
+doubleAlso_comma:
+        call    doubleAlso2
+        _drop
+        jmp     literal
 
 header  "interpret",interpret
 .0:
@@ -771,6 +843,8 @@ header  "interpret",interpret
         je      .1
         call    sfind
 
+        add     rax,[r12 + _state]
+
         call    one_plus
         mov     rbx,rax
         _drop
@@ -778,39 +852,136 @@ header  "interpret",interpret
         jmp     .0
 .1:     call    two_drop
         ret
-header  "dummy",dummy
 
-demo:
-        lit     0x3333333333333333
-        lit     0x1111111111111111
-        call    min
-        call    dotx
-
-        call    words
-        call    cr
-
+quit:
         call    refill
-        call    drop
+        _tos0
+        je      .1
         call    interpret
+        jmp     quit
 
-        ; _dup
-        ; lea     rax,[r12 + _tib]
-        ; lit     256
-        ; call    accept
+.1:
+        ret
 
-        ; call    cr
-        ; call    cr
-        ; call    dotx
-        ; _dup
-        ; mov     rax,[r12 + _tib]
-        ; call    dotx
+        header  "[",left_bracket
+        mov     qword [r12 + _state],0
+        ret
 
-        ; _dup
-        ; lea     rax,[r12 + _tib]
-        ; lit     5
-        ; call    type
+        header  "]",right_bracket
+        mov     qword [r12 + _state],3
+        ret
+
+        header  "here",here
+        _dup
+        mov     rax,[r12 + _dp]
+        ret
+
+        header  ",",comma
+        mov     rbx,[r12 + _dp]
+        mov     [rbx],rax
+        add     rbx,8
+        mov     [r12 + _dp],rbx
+        jmp     drop
+
+        header  "c,",c_comma
+        mov     rbx,[r12 + _dp]
+        mov     [rbx],al
+        add     rbx,1
+        mov     [r12 + _dp],rbx
+        jmp     drop
+
+        header  "s,",s_comma
+        push    rdi
+        mov     rsi,[rdi]
+        mov     rdi,[r12 + _dp]
+        mov     rcx,rax
+        rep movsb
+        mov     [r12 + _dp],rdi
+        pop     rdi
+        jmp     two_drop
+
+;   align
+;   here lastword _!
+;   forth @i w,
+;   parse-name
+;   s,
+;   dp @i thisxt _!
+
+mkheader:
+        call    parse_name
+        call    w2scratch
+        call    two_drop
+        mov     rdx,[r12 + _scratch]             ; is the word itself
+
+        mov     rbx,[r12 + _dp]
+        add     rbx,31
+        and     rbx,~31
+        mov     [rbx],rdx
+        add     rbx,32
+
+        mov     [r12 + _lastword],rbx
+        mov     rdx,rbx
+        sub     rdx,[r12 + _forth]
+        mov     [rbx],edx
+        add     rbx,4
+        mov     [r12 + _thisxt],ebx
+        mov     [r12 + _dp],ebx
 
         ret
+
+attach:
+        mov     rbx,[r12 + _lastword]
+        mov     [r12 + _forth],rbx
+        ret
+
+        header  ":",colon
+        call    mkheader
+        jmp     right_bracket
+
+        header  ";",semi_colon,IMMEDIATE
+        lit     0xc3
+        call    c_comma
+        call    attach
+        jmp     left_bracket
+
+        header  "immediate",immediate
+        mov     rbx,[r12 + _lastword]
+        or      dword [rbx],1
+        ret
+
+frag_lit64:
+        _dup
+        mov     rax,0x1234567812345678
+len_lit64 equ ($ - 8) - frag_lit64
+
+        header  "literal",literal
+        _dup
+        lea     rax,[rel frag_lit64]
+        lit     len_lit64
+        call    s_comma
+        jmp     comma
+
+        header  "compile,",compile_comma
+        call    here
+        add     rax,5
+        call    minus
+
+        lit     0xe8
+        call    c_comma
+
+l_comma:
+        _dup
+        call    c_comma
+        sar     rax,8
+        _dup
+        call    c_comma
+        sar     rax,8
+        _dup
+        call    c_comma
+        sar     rax,8
+        jmp     c_comma
+
+header  "dummy",dummy
 
 init:
         push    rbp
@@ -818,9 +989,17 @@ init:
         push    r12
         mov     r12,rdi
 
+        call    left_bracket
+
         mov     [r12 + _emit],rsi
         mov     [r12 + _dotx],rdx
         mov     [r12 + _key],rcx
+
+        lea     rax,[rel dummy - 4]
+        mov     [r12 + _forth],rax
+
+        lea     rax,[rel mem]
+        mov     [r12 + _dp],rax
 
         mov     qword [r12 + _base],10
 
@@ -833,10 +1012,22 @@ init:
         lea     rax,[rel execute]
         mov     [r12 + _jumptab + 16],rax
 
-        call    demo
+        lea     rax,[rel compile_comma]
+        mov     [r12 + _jumptab + 24],rax
+
+        lea     rax,[rel doubleAlso_comma]
+        mov     [r12 + _jumptab + 32],rax
+
+        lea     rax,[rel execute]
+        mov     [r12 + _jumptab + 40],rax
+
+        call    quit
 
         mov     rax,rdi
         pop     r12
         pop     rbx
         pop     rbp
         ret
+
+        align 32
+mem:

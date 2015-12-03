@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 
 void _dotx(uint64_t x)
@@ -15,7 +16,10 @@ void _emit(char c)
 
 char _key()
 {
-  return getchar();
+  int r = getchar();
+  if (r == -1)
+    exit(0);
+  return r;
 }
 
 int main()
