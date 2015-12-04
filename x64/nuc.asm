@@ -760,6 +760,70 @@ header  "abort",abort
         call    cr
 .1:     jmp     .1
 
+        header  "postpone",postpone,IMMEDIATE
+        call    parse_name
+        call    sfind
+        call    dupe
+        call    zero_equals
+        and     rax,-13
+        call    throw
+        call    less_than_zero
+        _tos0
+        je      .1
+        call    literal
+        _dup
+        lea     rax,[rel compile_comma]
+.1:
+        jmp     compile_comma
+
+isnotdelim:
+        _dup
+        mov     rax,[r12 + _scratch]
+        jmp     not_equal
+
+;;      : parse ( "ccc<char" -- c-addr u )
+;;          delim !
+;;          source >in @ /string
+;;          over >r
+;;          ['] isnotdelim xt-skip
+;;          2dup d# 1 min + source drop - >in !
+;;          drop r> tuck -
+;;      ;
+
+        header  "parse",parse
+
+        mov     [r12 + _scratch],rax
+        _drop
+
+        call    source
+        call    to_in
+        call    fetch
+        call    slash_string
+
+        call    over
+        _to_r
+
+        _dup
+        lea     rax,[rel isnotdelim]
+        call    xt_skip
+
+        call    two_dup
+        lit     1
+        call    min
+        call    plus
+        call    source
+        call    drop
+        call    minus
+        call    to_in
+        call    store
+
+        call    drop
+        _r_from
+        call    tuck
+        call    minus
+
+        ret
+
 header  "throw",throw
         _tos0
         jne     abort
@@ -954,7 +1018,7 @@ frag_lit64:
         mov     rax,0x1234567812345678
 len_lit64 equ ($ - 8) - frag_lit64
 
-        header  "literal",literal
+        header  "literal",literal,IMMEDIATE
         _dup
         lea     rax,[rel frag_lit64]
         lit     len_lit64
@@ -980,6 +1044,14 @@ l_comma:
         call    c_comma
         sar     rax,8
         jmp     c_comma
+
+;; ================ conditionals ================ 
+
+        header  "ahead",ahead
+        lit     0xe9
+        call    c_comma
+        add     qword [r12 + _dp],4
+        ret
 
 header  "dummy",dummy
 
