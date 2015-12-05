@@ -12,26 +12,25 @@
 
 \ #######   CORE AND DOUBLE   #################################
 include core0.fs
-#bye
 
 : align     here aligned dp ! ;
+: +!        tuck @ + swap ! ; 
+: allot     dp +! ;
+: dabs      dup 0< if dnegate then ;
+: d0=       or 0= ;
 
-: 2>r   r> -rot swap >r >r >r ;
-: 2r>
-    postpone r>
-    postpone r>
-    postpone swap
-; immediate
-: 2r@   r> 2r> 2dup 2>r rot >r ;
+\ : x [ here ] 1 ; 4 allot align here swap - .x
 
 : create
     :
-    align here postpone literal
+    here 28 + postpone literal
     postpone ;
+    4 allot
+    align
 ;
 
 : >body
-    uw@ 32767 and
+     9 + @
 ;
 
 include double.fs
@@ -43,34 +42,33 @@ include core.fs
 
 \ #######   CORE EXT   ########################################
 
-: c"
-    here postpone literal
-    [char] " parse
-    s,
-; immediate
+\ : c"
+\     here postpone literal
+\     [char] " parse
+\     s,
+\ ; immediate
+
+: (sliteral)
+    r> count
+    2dup + >r
+;
 
 : sliteral
-    here postpone literal
-    postpone count
+    postpone (sliteral)
+    dup c,
     s,
 ; immediate
-
-: (.")
-    count type
-;
 
 : ."
     [char] " parse
     state @ if
-        here postpone literal
-        s,
-        postpone (.")
+        postpone sliteral
+        postpone type
     else
         type
     then
 ; immediate
 
-: unused $4000 cp @ - $8000 here - + ;
 : pad here aligned ;
 
 include core-ext0.fs

@@ -215,6 +215,12 @@ header ">",greater
         add     rdi,8
         ret
 
+header "<",less
+        cmp     [rdi],rax
+        cond    l
+        add     rdi,8
+        ret
+
 header "0<",less_than_zero
         sar     rax,63
         ret
@@ -261,6 +267,14 @@ header  "d+",d_plus
         adc     [rdi+8],rax
         jmp     two_drop
 
+header  "d<",d_less
+        mov     rbx,[rdi]
+        sub     [rdi+16],rbx
+        sbb     [rdi+8],rax
+        cond    c
+        add     rdi,24
+        ret
+
 header  "dnegate",d_negate
         not     rax
         not     qword [rdi]
@@ -284,6 +298,21 @@ header  "invert",invert
 header  "and",and
         and     rax,[rdi]
         add     rdi,8
+        ret
+
+header  "or",or
+        or      rax,[rdi]
+        add     rdi,8
+        ret
+
+header  "xor",xor
+        xor     rax,[rdi]
+        add     rdi,8
+        ret
+
+header  "abs",_abs
+        cmp     rax,0
+        jl      negate
         ret
 
 header  "um*",u_m_multiply
@@ -420,8 +449,12 @@ header "2swap",two_swap    ; : 2swap rot >r rot r> ;
         mov     [rdi],rbx
         ret
 
-; header "2over",two_over    ; : 2over >r >r 2dup r> r> 2swap ;
-        ; ret
+ header "2over",two_over
+        _dup
+        mov     rax,[rdi+16]
+        _dup
+        mov     rax,[rdi+16]
+        ret
 
 header "min",min      ; : min   2dup< if drop else nip then ;
         poprbx
@@ -927,7 +960,7 @@ quit:
 .1:
         ret
 
-        header  "[",left_bracket
+        header  "[",left_bracket,IMMEDIATE
         mov     qword [r12 + _state],0
         ret
 
@@ -938,6 +971,24 @@ quit:
         header  "here",here
         _dup
         mov     rax,[r12 + _dp]
+        ret
+
+        header  "dp",dp
+        _dup
+        lea     rax,[r12 + _dp]
+        ret
+
+        header  "state",state
+        _dup
+        lea     rax,[r12 + _state]
+        ret
+
+        header  "unused",unused
+        jmp    false
+
+        header  "aligned",aligned
+        add     rax,7
+        and     rax,~7
         ret
 
         header  ",",comma
@@ -1013,6 +1064,56 @@ attach:
         or      dword [rbx],1
         ret
 
+        header  "does>",does
+        pop     rcx                             ; return address will be branch target
+        mov     rbx,[r12 + _lastword]           ; points to link and LITERAL
+        mov     byte [rbx + (4 + 17)],0xe9      ; patch to a JMP
+        sub     rcx,rbx                         ;
+        sub     rcx,(4 + 17 + 1 + 4)
+        mov     [rbx + (4 + 17 + 1)],ecx        ; JMP destination
+        ret
+
+;; ================ program structure ================ 
+
+frag_to_r:
+        _to_r
+len_to_r equ $ - frag_to_r
+
+        header  ">r",to_r,IMMEDIATE
+        _dup
+        lea     rax,[rel frag_to_r]
+        lit     len_to_r
+        jmp     s_comma
+
+        header  "2>r",two_to_r,IMMEDIATE
+        call    to_r
+        jmp     to_r
+
+frag_r_from:
+        _r_from
+len_r_from equ $ - frag_r_from
+
+        header  "r>",r_from,IMMEDIATE
+        _dup
+        lea     rax,[rel frag_r_from]
+        lit     len_r_from
+        jmp     s_comma
+
+        header  "2r>",two_r_from,IMMEDIATE
+        call    r_from
+        jmp     r_from
+
+frag_r_at:
+        _dup
+        mov     rax,[esp]
+len_r_at equ $ - frag_r_at
+
+        header  "r@",r_at,IMMEDIATE
+        _dup
+        lea     rax,[rel frag_r_at]
+        lit     len_r_at
+        jmp     s_comma
+
 frag_lit64:
         _dup
         mov     rax,0x1234567812345678
@@ -1045,13 +1146,103 @@ l_comma:
         sar     rax,8
         jmp     c_comma
 
-;; ================ conditionals ================ 
+;; ================ block copy        ================ 
 
-        header  "ahead",ahead
+        header  "cmove",cmove
+        push    rdi
+        mov     rsi,[rdi+8]
+        mov     rdi,[rdi]
+        mov     rcx,rax
+        rep movsb
+        pop     rdi
+        _drop3
+        ret
+
+        header  "cmove>",cmove_up
+        push    rdi
+        mov     rsi,[rdi+8]
+        mov     rdi,[rdi]
+        lea     rsi,[rsi + rcx - 1]
+        lea     rdi,[rdi + rcx - 1]
+        mov     rcx,rax
+        sed                     ; XXX check this
+        rep movsb
+        cld
+        pop     rdi
+        _drop3
+        ret
+
+        header  "fill",fill
+        push    rdi
+        mov     rdi,[rdi+8]
+        mov     rcx,[rdi]
+        rep stosb
+        pop     rdi
+        _drop3
+        ret
+
+;; ================ program structure ================ 
+
+        header  "begin",begin,IMMEDIATE
+        _dup
+        mov     rax,[r12 + _dp]
+        ret
+
+        header  "ahead",ahead,IMMEDIATE
         lit     0xe9
         call    c_comma
+        call    begin
         add     qword [r12 + _dp],4
         ret
+
+frag_tos0:
+        _tos0
+len_tos0 equ $ - frag_tos0
+
+        header  "if",if,IMMEDIATE
+        lit     frag_tos0
+        lit     len_tos0
+        call    s_comma
+        lit     $0f
+        call    c_comma
+        lit     $84
+        call    c_comma
+        call    begin
+        add     qword [r12 + _dp],4
+        ret
+
+        header  "then",then,IMMEDIATE
+        mov     rbx,[r12 + _dp]
+        sub     rbx,rax
+        sub     rbx,4
+        mov     [rax],ebx
+        jmp     drop
+
+        header  "again",again,IMMEDIATE
+        lit     0xe9
+        call    c_comma
+resolve:
+        mov     rbx,[r12 + _dp]
+        sub     rax,rbx
+        sub     rax,4
+        mov     [rbx],eax
+        add     qword [r12 + _dp],4
+        jmp     drop
+
+        header  "until",until,IMMEDIATE
+        lit     frag_tos0
+        lit     len_tos0
+        call    s_comma
+        lit     $0f
+        call    c_comma
+        lit     $84
+        call    c_comma
+        jmp     resolve
+
+        header  "recurse",recurse,IMMEDIATE
+        _dup
+        mov     rax,[r12 + _thisxt]
+        jmp     compile_comma
 
 header  "dummy",dummy
 
