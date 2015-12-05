@@ -36,6 +36,8 @@ include core0.fs
 include double.fs
 include core.fs
 
+\ : bench 1 . cr  100000000 begin 1- dup 0= until . ; bench
+
 : /mod      >r s>d r> sm/rem ;
 : /         /mod nip ;
 : mod       /mod drop ;
@@ -223,10 +225,6 @@ include structures.fs
 
 include comus.fs
 include mini-oof.fs
-
-include drivers/gpio.fs
-include drivers/spi.fs
-include drivers/time.fs
 
 : new
     s" | marker |" evaluate

@@ -1,7 +1,14 @@
 set -e
 
-nasm -f macho64 -l lst nuc.asm
-gcc -Wall -std=c99 main.c nuc.o 
+if [ `uname` = "Darwin" ]
+then
+  nasm -f macho64 -l lst nuc.asm
+else
+  nasm -f elf64 -l lst nuc.asm
+fi
+
+gcc -g -Wall -std=gnu99 main.c nuc.o 
+
 # gobjdump -D a.out | less
 # echo "false false parse-name 66x >number .x .x .x .x" | ./a.out
 # echo "parse-name HELLO_WORLD type space 16 base ! abcdef12345678abcdef. 10000 um/mod .x .x cr words" | ./a.out

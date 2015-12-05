@@ -6,7 +6,7 @@
 
 void _dotx(uint64_t x)
 {
-  printf("%016llx ", x);
+  printf("%016lx ", x);
 }
 
 void _emit(char c)
@@ -40,18 +40,19 @@ int main()
   extern unsigned char swapforth[];
 
   // allocate executable memory via sys call
-  void* mem = mmap(NULL, 65536, PROT_WRITE | PROT_EXEC,
-                   MAP_ANON | MAP_PRIVATE, -1, 0);
+  void* mem = mmap(NULL, 65536, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   // copy runtime code into allocated memory
-  memcpy(mem, swapforth, 0x2630);
+  memcpy(mem, swapforth, 65536);
+  printf("[] = %x\n", swapforth[0]);
+  printf("[] = %x\n", ((uint32_t*)mem)[0]);
 
   // typecast allocated memory to a function pointer
   int64_t (*func) () = mem;
 
   int64_t stack[512 + 500];
   int64_t r = func(stack + 512, &_emit, &_dotx, &_key);
-  printf("r = %llx\n", r);
+  printf("r = %lx\n", r);
   printf("\ndepth = %lx\n", (stack + 512) - (int64_t*)r);
   // call function pointer
   // printf("%d * %d = %d\n", 5, 11, func(5, 11));

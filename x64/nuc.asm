@@ -12,11 +12,13 @@
 ; r13   loop counter
 ;
 
+section .text
+
+global swapforth
+swapforth:
 global _swapforth
 _swapforth:
         jmp     init
-
-section .text
 
 %define ao 0
 %macro object   2
@@ -1165,7 +1167,7 @@ l_comma:
         lea     rsi,[rsi + rcx - 1]
         lea     rdi,[rdi + rcx - 1]
         mov     rcx,rax
-        sed                     ; XXX check this
+        std
         rep movsb
         cld
         pop     rdi
@@ -1294,3 +1296,4 @@ init:
 
         align 32
 mem:
+        align   65536
