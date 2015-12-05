@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 
 void _dotx(uint64_t x)
 {
-  printf("%016lx ", x);
+  printf("%016" PRIu64 "x ", x);
 }
 
 void _emit(char c)
@@ -40,30 +41,21 @@ int main()
   extern unsigned char swapforth[];
 
   // allocate executable memory via sys call
-  void* mem = mmap(NULL, 65536, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  void* mem = mmap(NULL, 65536, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0);
 
   // copy runtime code into allocated memory
   memcpy(mem, swapforth, 65536);
-  printf("[] = %x\n", swapforth[0]);
-  printf("[] = %x\n", ((uint32_t*)mem)[0]);
 
   // typecast allocated memory to a function pointer
   int64_t (*func) () = mem;
 
   int64_t stack[512 + 500];
   int64_t r = func(stack + 512, &_emit, &_dotx, &_key);
-  printf("r = %lx\n", r);
-  printf("\ndepth = %lx\n", (stack + 512) - (int64_t*)r);
-  // call function pointer
-  // printf("%d * %d = %d\n", 5, 11, func(5, 11));
+  printf("r = %" PRIu64 "x\n", r);
+  printf("\ndepth = %d\n", (int)((stack + 512) - (int64_t*)r));
 
   // Free up allocated memory
   munmap(mem, sizeof(code));
 
-  // extern int64_t swapforth(int64_t *stack);
-  // int64_t stack[512 + 500];
-  // int64_t r = swapforth(stack + 512);
-  // printf("\ndepth = %ld\n", (stack + 512) - (int64_t*)r);
-  // // printf("%p %p\n",(stack + 512), (int64_t*)r);
   return 0;
 }
