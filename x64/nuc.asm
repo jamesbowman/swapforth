@@ -10,6 +10,7 @@
 ; rsp   return stack pointer
 ; r12   context pointer
 ; r13   loop counter
+; r14   loop offset
 ;
 
 section .text
@@ -148,6 +149,14 @@ _swapforth:
         call    [r12 + _key]
         mov     rsp,rbp
         pop     rdi
+        ret
+
+header  "depth",depth
+        mov     rbx,r12
+        sub     rbx,rdi
+        _dup
+        mov     rax,rbx
+        sar     rax,3
         ret
 
 header  "base",base
@@ -312,6 +321,20 @@ header  "xor",xor
         add     rdi,8
         ret
 
+header  "lshift",lshift
+        mov     rcx,rax
+        mov     rax,[rdi]
+        shl     rax,cl
+        add     rdi,8
+        ret
+
+header  "rshift",rshift
+        mov     rcx,rax
+        mov     rax,[rdi]
+        shr     rax,cl
+        add     rdi,8
+        ret
+
 header  "abs",_abs
         cmp     rax,0
         jl      negate
@@ -414,6 +437,10 @@ header "false",false    ; : false d# 0 ;
 
 header "true",true     ; : true  d# -1 ; 
         lit     -1
+        ret
+
+header "bl",_bl
+        lit     32
         ret
 
 header "rot",rot      ; : rot   >r swap r> swap ; 
@@ -980,6 +1007,11 @@ quit:
         lea     rax,[r12 + _dp]
         ret
 
+        header  "forth",forth
+        _dup
+        lea     rax,[r12 + _forth]
+        ret
+
         header  "state",state
         _dup
         lea     rax,[r12 + _state]
@@ -1056,10 +1088,13 @@ attach:
         jmp     right_bracket
 
         header  ";",semi_colon,IMMEDIATE
-        lit     0xc3
-        call    c_comma
+        call    exit
         call    attach
         jmp     left_bracket
+
+        header  "exit",exit
+        lit     0xc3
+        jmp     c_comma
 
         header  "immediate",immediate
         mov     rbx,[r12 + _lastword]
@@ -1107,7 +1142,7 @@ len_r_from equ $ - frag_r_from
 
 frag_r_at:
         _dup
-        mov     rax,[esp]
+        mov     rax,[rsp]
 len_r_at equ $ - frag_r_at
 
         header  "r@",r_at,IMMEDIATE
@@ -1115,6 +1150,13 @@ len_r_at equ $ - frag_r_at
         lea     rax,[rel frag_r_at]
         lit     len_r_at
         jmp     s_comma
+
+        header  "2r@",two_r_at
+        _dup
+        mov     rax,[rsp + 8]
+        _dup
+        mov     rax,[rsp + 16]
+        ret
 
 frag_lit64:
         _dup
@@ -1223,7 +1265,7 @@ len_tos0 equ $ - frag_tos0
         header  "again",again,IMMEDIATE
         lit     0xe9
         call    c_comma
-resolve:
+backjmp: ;; ( dst -- ) make a backwards jump from here to dst
         mov     rbx,[r12 + _dp]
         sub     rax,rbx
         sub     rax,4
@@ -1239,12 +1281,125 @@ resolve:
         call    c_comma
         lit     $84
         call    c_comma
-        jmp     resolve
+        jmp     backjmp
 
         header  "recurse",recurse,IMMEDIATE
         _dup
         mov     rax,[r12 + _thisxt]
         jmp     compile_comma
+
+;; 
+;; How DO...LOOP is implemented
+;; 
+;; Uses two registers:
+;;    r13 is the counter; it starts negative and counts up. When it reaches 0, loop exits
+;;    r14 is the offset. It is set up at loop start so that I can be computed from (r13+r14)
+;; 
+;; So when DO we have ( limit start ) on the stack so need to compute:
+;;      r13 = start - limit
+;;      r14 = limit
+;; 
+;; E.g. for "13 3 DO"
+;;      r13 = -10
+;;      r14 = 13
+;; 
+;; So the loop runs:
+;;      r13     -10 -9 -8 -7 -6 -5 -4 -3 -2 -1
+;;      I         3  4  5  6  7  8  9 10 11 12
+;; 
+;; 
+
+frag_do:
+        push    r13
+        push    r14
+        mov     r13,rax                 ; start
+        mov     r14,[rdi]               ; limit
+        _drop2
+        sub     r13,r14
+len_do equ $ - frag_do
+
+        header  "do",do,IMMEDIATE
+        _dup
+        mov     rax,[r12 + _leaves]
+        mov     qword [r12 + _leaves],0
+        lit     frag_do
+        lit     len_do
+        call    s_comma
+        jmp     begin
+
+        header  "?do",question_do,IMMEDIATE
+        _dup
+        mov     rax,[r12 + _leaves]
+        mov     qword [r12 + _leaves],0
+        lit     frag_do
+        lit     len_do
+        call    s_comma
+
+        lit     0x0f
+        call    c_comma
+        lit     0x84
+        call    c_comma
+        call    begin
+        mov     [r12 + _leaves],rax
+        _drop
+        lit     0
+        call    l_comma
+
+        jmp     begin
+
+resolveleaves:
+        _dup
+        mov     rax,[r12 + _leaves]
+        or      rax,rax
+        je      .2
+        _dup
+        call    then
+.2:
+        _drop
+        mov     [r12 + _leaves],rax
+        jmp     drop
+
+frag_loop:
+        inc     r13
+len_loop equ $ - frag_loop
+
+        header  "loop",loop,IMMEDIATE
+        lit     frag_loop
+        lit     len_loop
+        call    s_comma
+        lit     0x0f
+        call    c_comma
+        lit     0x85
+        call    c_comma
+        call    backjmp
+        call    resolveleaves
+        jmp     unloop
+
+frag_unloop:
+        pop     r14
+        pop     r13
+len_unloop equ $ - frag_unloop
+
+        header  "unloop",unloop,IMMEDIATE
+        lit     frag_unloop
+        lit     len_unloop
+        jmp     s_comma
+
+frag_i:
+        _dup
+        mov     rax,r13
+        add     rax,r14
+len_i equ $ - frag_i
+
+        header  "i",i,IMMEDIATE
+        lit     frag_i
+        lit     len_i
+        jmp     s_comma
+
+
+header  "decimal",decimal
+        mov     qword [r12 + _base],10
+        ret
 
 header  "dummy",dummy
 
@@ -1266,7 +1421,7 @@ init:
         lea     rax,[rel mem]
         mov     [r12 + _dp],rax
 
-        mov     qword [r12 + _base],10
+        call    decimal
 
         lea     rax,[rel execute]
         mov     [r12 + _jumptab + 0],rax

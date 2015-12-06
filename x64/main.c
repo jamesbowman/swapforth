@@ -7,7 +7,7 @@
 
 void _dotx(uint64_t x)
 {
-  printf("%016" PRIu64 "x ", x);
+  printf("%016" PRIx64 " ", x);
 }
 
 void _emit(char c)

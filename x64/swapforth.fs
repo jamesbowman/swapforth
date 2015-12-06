@@ -36,7 +36,7 @@ include core0.fs
 include double.fs
 include core.fs
 
-\ : bench 1 . cr  100000000 begin 1- dup 0= until . ; bench
+\ decimal : bench 1 . cr  100000000 begin 1- dup 0= until . ; bench
 
 : /mod      >r s>d r> sm/rem ;
 : /         /mod nip ;
@@ -44,11 +44,13 @@ include core.fs
 
 \ #######   CORE EXT   ########################################
 
-\ : c"
-\     here postpone literal
-\     [char] " parse
-\     s,
-\ ; immediate
+: (c") r> dup count + >r ;
+
+: c"
+    postpone (c")
+    [char] " parse
+    dup c, s,
+; immediate
 
 : (sliteral)
     r> count
@@ -77,125 +79,12 @@ include core-ext0.fs
 include core-ext.fs
 
 : marker
-    forth @ dp @ cp @
+    forth @ dp @
     create
-        , , ,
+        , ,
     does>
-        dup @ cp !
-        cell+ dup @ dp !
+        dup @ dp !
         cell+ @ forth !
-;
-
-: .xt  ( xt -- ) \ print xt's name
-    >r
-    forth @
-    begin
-        dup 0= if
-            r> 2drop exit
-        then
-        dup
-        2 +
-        count + caligned
-        uw@ r@ <>
-    while
-        uw@ -2 and
-    repeat
-    r> drop
-    2 + count type
-;
-
-create op4          \ 4-bit field names, bits [11:8]
-    s" T"           s,
-    s" N"           s,
-    s" T+N"         s,
-    s" T&N"         s,
-    s" T|N"         s,
-    s" T^N"         s,
-    s" ~T"          s,
-    s" N==T"        s,
-    s" N<T"         s,
-    s" N>>T"        s,
-    s" N<<T"        s,
-    s" rT"          s,
-    s" [T]"         s,
-    s" io[T]"       s,
-    s" status"      s,
-    s" Nu<T"        s,
-
-create op3          \ 3-bit operation, bits [6:4]
-    s" "            s,
-    s" T->N"        s,
-    s" T->R"        s,
-    s" N->[T]"      s,
-    s" N->io[T]"    s,
-    s" _IORD_"      s,
-
-create opr          \ 2-bit R stack delta, bits [3:2]
-    s" "            s,
-    s" r+1"         s,
-    s" "            s,
-    s" r-1"         s,
-
-create opd          \ 2-bit D stack delta, bits [1:0]
-    s" "            s,
-    s" d+1"         s,
-    s" "            s,
-    s" d-1"         s,
-
-: skip." ( addr u -- ) \ skip u strings, then print
-    0 ?do
-        count +
-    loop (.")
-    space
-;
-
-: .alu
-    ." ALU "
-
-    op4 over 8 rshift skip."
-
-    op3 over 4 rshift 7 and skip."
-
-    opr over 2 rshift 3 and skip."
-
-    opd over 3 and skip."
-
-    space
-    $80 and if ." ;" then
-;
-
-\ Construct a 4-entry jump table J1op
-\ for the four J1 opcodes
-
-( 3:ALU     ) :noname 2/ .alu ;
-( 2:CALL    ) ' .xt    \ print xt's name
-( 1:0BRANCH ) :noname [char] Z emit space . ;
-( 0:JUMP    ) :noname [char] J emit space . ;
-create J1op , , , ,
-
-: see
-    base @ hex
-    '
-    64 bounds
-    begin
-        cr dup .
-        dup uw@
-        dup 4 .r space
-        dup 15 rshift if
-            32767 and
-            [char] $ emit dup .
-            decimal
-            [char] # emit .
-            hex
-        else
-            dup 8191 and 2* swap
-            13 rshift cells J1op + @ execute
-        then
-        2 +
-        2dup =
-    until
-    2drop
-    base !
 ;
 
 : environment?
