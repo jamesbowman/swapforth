@@ -4,6 +4,18 @@
     @ .
 ;
 
+: (.s)
+    depth if
+        >r recurse r>
+        dup .
+    then
+;
+
+: .s
+    [char] < emit depth 0 .r [char] > emit space
+    (.s)
+;
+
 : hex2. ( u -- )
     base @ swap
     hex
@@ -17,7 +29,7 @@
         base @ >r hex
         1- 4 rshift 1+
         0 do
-            cr dup dup 8 u.r space space
+            cr dup dup [ 2 cells ] literal u.r space space
             16 0 do
                 dup c@ hex2. 1+
             loop
@@ -33,18 +45,6 @@
         r> base !
     then
     drop
-;
-
-: (.s)
-    depth if
-        >r recurse r>
-        dup .
-    then
-;
-
-: .s
-    [char] < emit depth 0 .r [char] > emit space
-    (.s)
 ;
 
 \ #######   TOOLS EXT   #######################################
