@@ -35,6 +35,7 @@ _swapforth:
         object  _jumptab,6
         object  _lastword,1
         object  _thisxt,1
+        object  _sourceid,1
         object  _sourceC,2
         object  _state,1
         object  _leaves,1
@@ -448,6 +449,9 @@ header "rot",rot      ; : rot   >r swap r> swap ;
         xchg    rax,[rdi+8]
         ret
 
+header "noop",noop
+        ret
+
 header "-rot",minus_rot     ; : -rot  swap >r swap r> ; 
         xchg    rax,[rdi+8]
         xchg    rax,[rdi]
@@ -553,6 +557,7 @@ header "type",type
 w2scratch:
         mov     rbx,0x9090909090909090
         mov     [r12+_scratch],rbx
+        mov     [r12+_scratch + 8],rbx
         mov     byte [r12+_scratch],al
         push    rdi
         mov     rsi,[rdi]
@@ -562,16 +567,42 @@ w2scratch:
         pop     rdi
         ret
 
+        align   32
+aaaa:   times 16 db ('A'-1)
+zzzz:   times 16 db 'Z'
+case:   times 16 db 0x20
+
+        %macro  lower   1
+        movaps  xmm5,[rel aaaa]
+        movaps  xmm6,[rel zzzz]
+        movaps  xmm7,[rel case]
+        vpcmpgtb xmm3,%1,xmm5
+        vpcmpgtb xmm4,%1,xmm6
+        vpandn  xmm3,xmm4,xmm3
+        vpand   xmm3,xmm3,xmm7
+        vpaddb  %1,%1,xmm3
+        %endmacro
+
 header  "sfind",sfind
         call    w2scratch
 
         mov     rdx,[r12+_scratch]
         ; Search for a word starting with rdx
+        vmovdqu xmm0,[r12+_scratch]
+        lower   xmm0
 
         _dup
         mov     rax,[r12 + _forth]
 .0:
-        cmp     rdx,[rax-32]
+        vmovdqu xmm1,[rax-32]
+        lower   xmm1
+
+        vpcmpeqb xmm2,xmm1,xmm0
+        vpmovmskb rcx,xmm2
+
+        cmp     rcx,0xffff
+
+        ; cmp     rdx,[rax-32]
         je      .match
 
         call    nextword
@@ -953,16 +984,46 @@ doubleAlso2:
         lit     1
         ret
 
+doubleAlso1:
+        mov     rbx,[rdi]
+        cmp     eax,3                   ;; Handle 'c' case
+        jne     .1
+        cmp     byte [rbx],"'"
+        jne     .1
+        cmp     byte [rbx+2],"'"
+        jne     .1
+        _drop2
+        _dup
+        mov     al,[rbx+1]
+        lit     1
+        ret
+.1:
+        lit     "$"
+        call    consume1
+        _tos0
+        je      .2
+        mov     rbx,16
+.base:
+        push    qword [r12 + _base]
+        mov     [r12 + _base],rbx
+        call    doubleAlso1
+        pop     qword [r12 + _base]
+        ret
+.2:
+        jmp     doubleAlso2
+
 doubleAlso:
-        call    doubleAlso2
+        call    doubleAlso1
         jmp     drop
 
 doubleAlso_comma:
-        call    doubleAlso2
-        _drop
-        jmp     literal
+        call    doubleAlso1
+        call    one_minus
+        _tos0
+        je      literal
+        jmp     two_literal
 
-header  "interpret",interpret
+interpret:
 .0:
         call    parse_name
         or      rax,rax
@@ -977,6 +1038,29 @@ header  "interpret",interpret
         call    [r12 + _jumptab + 8 * rbx]
         jmp     .0
 .1:     call    two_drop
+        ret
+
+;   source >r >r >in @ >r
+;   source-id >r d# -1 sourceid !
+;   source! d# 0 >in !
+;   interpret
+;   r> sourceid !
+;   r> >in ! r> r> source!
+
+header  "evaluate",evaluate
+        push    qword [r12 + _sourceC]
+        push    qword [r12 + _sourceC + 8]
+        push    qword [r12 + _in]
+        push    qword [r12 + _sourceid]
+        mov     qword [r12 + _sourceid],-1
+
+        call    source_store
+        mov     qword [r12 + _in],0
+        call    interpret
+        pop     qword [r12 + _sourceid]
+        pop     qword [r12 + _in]
+        pop     qword [r12 + _sourceC + 8]
+        pop     qword [r12 + _sourceC]
         ret
 
 quit:
@@ -1060,12 +1144,18 @@ mkheader:
         call    parse_name
         call    w2scratch
         call    two_drop
-        mov     rdx,[r12 + _scratch]             ; is the word itself
 
         mov     rbx,[r12 + _dp]
         add     rbx,31
         and     rbx,~31
+        mov     rdx,[r12 + _scratch]             ; is the word itself
         mov     [rbx],rdx
+        mov     rdx,[r12 + _scratch + 8]
+        mov     [rbx + 8],rdx
+        mov     rdx,[r12 + _scratch + 16]
+        mov     [rbx + 16],rdx
+        mov     rdx,[r12 + _scratch + 24]
+        mov     [rbx + 24],rdx
         add     rbx,32
 
         mov     [r12 + _lastword],rbx
@@ -1092,7 +1182,7 @@ attach:
         call    attach
         jmp     left_bracket
 
-        header  "exit",exit
+        header  "exit",exit,IMMEDIATE
         lit     0xc3
         jmp     c_comma
 
@@ -1189,6 +1279,11 @@ l_comma:
         call    c_comma
         sar     rax,8
         jmp     c_comma
+
+        header  "2literal",two_literal,IMMEDIATE
+        call    swap
+        call    literal
+        jmp     literal
 
 ;; ================ block copy        ================ 
 
@@ -1375,6 +1470,22 @@ len_loop equ $ - frag_loop
         call    resolveleaves
         jmp     unloop
 
+frag_plus_loop:
+        mov     rbx,rax
+        _drop
+        add     r13,rbx
+        jnc     swapforth
+len_plus_loop equ ($ - 4) - frag_plus_loop
+
+        header  "+loop",plus_loop,IMMEDIATE
+        lit     frag_plus_loop
+        lit     len_plus_loop
+        call    s_comma
+        call    backjmp
+        call    resolveleaves
+        jmp     unloop
+
+
 frag_unloop:
         pop     r14
         pop     r13
@@ -1442,6 +1553,11 @@ init:
         mov     [r12 + _jumptab + 40],rax
 
         call    quit
+        ; vmovdqu xmm0,[rel dummy-40]
+        ; vmovdqu xmm1,[rel dummy-40]
+        ; vpcmpeqb xmm1,xmm1,xmm0
+        ; VPMOVMSKB rax,xmm1
+        ; call    dotx
 
         mov     rax,rdi
         pop     r12
