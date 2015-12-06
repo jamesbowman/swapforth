@@ -14,4 +14,4 @@ gcc -g -Wall -std=gnu99 main.c nuc.o
 # echo "parse-name HELLO_WORLD type space 16 base ! abcdef12345678abcdef. 10000 um/mod .x .x cr words" | ./a.out
 # echo "16 base ! : foo2 41 emit 21 emit ; foo2 foo2 foo2 " | ./a.out
 # echo WordS | ./a.out
-python expand.py swapforth.fs | time ./a.out
+python expand.py swapforth.fs runtests.fs | time ./a.out

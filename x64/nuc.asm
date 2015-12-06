@@ -484,9 +484,9 @@ header "2swap",two_swap    ; : 2swap rot >r rot r> ;
 
  header "2over",two_over
         _dup
-        mov     rax,[rdi+16]
+        mov     rax,[rdi+24]
         _dup
-        mov     rax,[rdi+16]
+        mov     rax,[rdi+24]
         ret
 
 header "min",min      ; : min   2dup< if drop else nip then ;
@@ -772,6 +772,12 @@ header  "parse-name",parse_name
 ;    dup base @i u<
 ; ;
 isdigit:
+        cmp     rax,'A'
+        jl      .1
+        cmp     rax,'Z'
+        jg      .1
+        add     rax,0x20
+.1:
         call    dupe
         lit     0x39
         call    greater
@@ -1410,6 +1416,8 @@ frag_do:
         mov     r13,rax                 ; start
         mov     r14,[rdi]               ; limit
         _drop2
+        mov     rbx,$8000000000000000
+        xor     r14,rbx
         sub     r13,r14
 len_do equ $ - frag_do
 
@@ -1464,7 +1472,7 @@ len_loop equ $ - frag_loop
         call    s_comma
         lit     0x0f
         call    c_comma
-        lit     0x85
+        lit     0x81
         call    c_comma
         call    backjmp
         call    resolveleaves
@@ -1474,7 +1482,7 @@ frag_plus_loop:
         mov     rbx,rax
         _drop
         add     r13,rbx
-        jnc     swapforth
+        jno     swapforth
 len_plus_loop equ ($ - 4) - frag_plus_loop
 
         header  "+loop",plus_loop,IMMEDIATE
@@ -1484,7 +1492,6 @@ len_plus_loop equ ($ - 4) - frag_plus_loop
         call    backjmp
         call    resolveleaves
         jmp     unloop
-
 
 frag_unloop:
         pop     r14
@@ -1506,6 +1513,12 @@ len_i equ $ - frag_i
         lit     frag_i
         lit     len_i
         jmp     s_comma
+
+        header  "j",j
+        _dup
+        mov     rax,[rsp+16]
+        add     rax,[rsp+8]
+        ret
 
 
 header  "decimal",decimal
