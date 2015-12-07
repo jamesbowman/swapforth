@@ -41,7 +41,7 @@ int main()
   extern unsigned char swapforth[];
 
   // allocate executable memory via sys call
-  void* mem = mmap(NULL, 65536, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0);
+  void* mem = mmap(NULL, 1024 * 1024, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANON, -1, 0);
 
   // copy runtime code into allocated memory
   memcpy(mem, swapforth, 65536);

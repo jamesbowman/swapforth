@@ -238,8 +238,8 @@ header "0<",less_than_zero
         ret
 
 header "0>",greater_than_zero
-        neg     rax
-        sar     rax,63
+        cmp     rax,0
+        cond    g
         ret
 
 header "0<>",not_equal_zero
@@ -1000,23 +1000,33 @@ doubleAlso1:
         jne     .1
         _drop2
         _dup
-        mov     al,[rbx+1]
+        movzx   rax,byte [rbx+1]
         lit     1
         ret
 .1:
         lit     "$"
         call    consume1
         _tos0
-        je      .2
         mov     rbx,16
+        jne     .base
+        lit     "#"
+        call    consume1
+        _tos0
+        mov     rbx,10
+        jne      .base
+        lit     "%"
+        call    consume1
+        _tos0
+        mov     rbx,2
+        jne      .base
+        jmp     doubleAlso2
+
 .base:
         push    qword [r12 + _base]
         mov     [r12 + _base],rbx
         call    doubleAlso1
         pop     qword [r12 + _base]
         ret
-.2:
-        jmp     doubleAlso2
 
 doubleAlso:
         call    doubleAlso1
@@ -1108,7 +1118,8 @@ quit:
         ret
 
         header  "unused",unused
-        jmp    false
+        call    here
+        jmp     negate
 
         header  "aligned",aligned
         add     rax,7
@@ -1179,6 +1190,10 @@ attach:
         mov     [r12 + _forth],rbx
         ret
 
+        header  ":noname",colon_noname
+        call    here
+        jmp     right_bracket
+
         header  ":",colon
         call    mkheader
         jmp     right_bracket
@@ -1219,6 +1234,9 @@ len_to_r equ $ - frag_to_r
         jmp     s_comma
 
         header  "2>r",two_to_r,IMMEDIATE
+        _dup
+        lea     rax,[rel swap]
+        call    compile_comma
         call    to_r
         jmp     to_r
 
@@ -1234,7 +1252,10 @@ len_r_from equ $ - frag_r_from
 
         header  "2r>",two_r_from,IMMEDIATE
         call    r_from
-        jmp     r_from
+        call    r_from
+        _dup
+        lea     rax,[rel swap]
+        jmp     compile_comma
 
 frag_r_at:
         _dup
@@ -1249,9 +1270,9 @@ len_r_at equ $ - frag_r_at
 
         header  "2r@",two_r_at
         _dup
-        mov     rax,[rsp + 8]
-        _dup
         mov     rax,[rsp + 16]
+        _dup
+        mov     rax,[rsp + 8]
         ret
 
 frag_lit64:
@@ -1307,9 +1328,9 @@ l_comma:
         push    rdi
         mov     rsi,[rdi+8]
         mov     rdi,[rdi]
+        mov     rcx,rax
         lea     rsi,[rsi + rcx - 1]
         lea     rdi,[rdi + rcx - 1]
-        mov     rcx,rax
         std
         rep movsb
         cld
@@ -1319,8 +1340,8 @@ l_comma:
 
         header  "fill",fill
         push    rdi
-        mov     rdi,[rdi+8]
         mov     rcx,[rdi]
+        mov     rdi,[rdi+8]
         rep stosb
         pop     rdi
         _drop3
@@ -1337,8 +1358,8 @@ l_comma:
         lit     0xe9
         call    c_comma
         call    begin
-        add     qword [r12 + _dp],4
-        ret
+        lit     0
+        jmp     l_comma
 
 frag_tos0:
         _tos0
@@ -1430,25 +1451,43 @@ len_do equ $ - frag_do
         call    s_comma
         jmp     begin
 
+frag_qdo:
+        push    r13
+        push    r14
+        mov     r13,rax                 ; start
+        mov     r14,[rdi]               ; limit
+        mov     rbx,$8000000000000000
+        xor     r14,rbx
+        sub     r13,r14
+        cmp     rax,[rdi]
+        mov     rax,[rdi+8]
+        lea     rdi,[rdi + 16]
+len_qdo equ $ - frag_qdo
+
         header  "?do",question_do,IMMEDIATE
         _dup
         mov     rax,[r12 + _leaves]
         mov     qword [r12 + _leaves],0
-        lit     frag_do
-        lit     len_do
+        lit     frag_qdo
+        lit     len_qdo
         call    s_comma
 
         lit     0x0f
         call    c_comma
         lit     0x84
         call    c_comma
-        call    begin
-        mov     [r12 + _leaves],rax
-        _drop
+        mov     rbx,[r12 + _dp]
+        mov     [r12 + _leaves],rbx
         lit     0
         call    l_comma
 
         jmp     begin
+
+        header  "leave",leave,IMMEDIATE
+        call    ahead
+        mov     [r12 + _leaves],rax
+        _drop
+        ret
 
 resolveleaves:
         _dup
