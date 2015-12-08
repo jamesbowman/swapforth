@@ -175,6 +175,11 @@ header  "source",source
         lea     rax,[r12 + _sourceC]
         jmp     two_fetch
 
+header  "source-id",source_id
+        _dup
+        mov     rax,[r12 + _sourceid]
+        ret
+
 source_store:
         _dup
         lea     rax,[r12 + _sourceC]
@@ -269,6 +274,9 @@ header  "s>d",s_to_d
         sar     rax,63
         ret
 
+header  "d>s",d_to_s
+        jmp     drop
+
 header  "m+",m_plus
         call    s_to_d
         jmp     d_plus
@@ -279,20 +287,65 @@ header  "d+",d_plus
         adc     [rdi+8],rax
         jmp     two_drop
 
-header  "d<",d_less
-        mov     rbx,[rdi]
-        sub     [rdi+16],rbx
-        sbb     [rdi+8],rax
-        cond    c
+header  "d=",d_equal
+        cmp     [rdi+8],rax
+        jne     .1
+        mov     rbx,[rdi+16]
+        cmp     rbx,[rdi]
+.1:
+        cond    e
         add     rdi,24
         ret
+
+header  "du<",d_u_less
+        cmp     [rdi+8],rax
+        jne     .1
+        mov     rbx,[rdi+16]
+        cmp     rbx,[rdi]
+.1:
+        cond    b
+        add     rdi,24
+        ret
+
+header  "d<",d_less
+        cmp     [rdi+8],rax
+        jne     .1
+        mov     rbx,[rdi+16]
+        cmp     rbx,[rdi]
+        cond    b
+        add     rdi,24
+        ret
+.1:
+        cond    l
+        add     rdi,24
+        ret
+
+header  "d0<",d_less_than_zero
+        call    nip
+        jmp     less_than_zero
 
 header  "dnegate",d_negate
         not     rax
         not     qword [rdi]
         lit     1
         jmp     m_plus
-        
+
+header  "d-",d_minus
+        mov     rbx,[rdi]
+        sub     [rdi+16],rbx
+        sbb     [rdi+8],rax
+        jmp     two_drop
+
+header  "d2*",d_two_times
+        shl     qword [rdi],1
+        adc     rax,rax
+        ret
+
+header  "d2/",d_two_slash
+        sar     rax,1
+        rcr     qword [rdi],1
+        ret
+
 header  "-",minus
         poprbx
         sub     rbx,rax
@@ -666,6 +719,12 @@ header "accept",accept ; ( c-addr +n1 -- +n2 )
 
 header  "refill",refill
         _dup
+        mov     rax,[r12 + _sourceid]
+        call    zero_equals
+        or      rax,rax
+        je      .1
+
+        _dup
         lea     rax,[r12 + _tib]
         _dup
         lit     128
@@ -675,7 +734,8 @@ header  "refill",refill
   call cr
         call    source_store
         mov     qword [r12 + _in],0
-        jmp     true
+.1:
+        ret
 
 ; \ From Forth200x - public domain
 ; 
@@ -1080,6 +1140,7 @@ header  "evaluate",evaluate
         ret
 
 quit:
+        mov     qword [r12 + _sourceid],0
         call    refill
         _tos0
         je      .1
@@ -1192,6 +1253,7 @@ attach:
 
         header  ":noname",colon_noname
         call    here
+        mov     [r12 + _thisxt],rax
         jmp     right_bracket
 
         header  ":",colon
@@ -1485,6 +1547,14 @@ len_qdo equ $ - frag_qdo
 
         header  "leave",leave,IMMEDIATE
         call    ahead
+        cmp     qword [r12 + _leaves],0
+        je      .1
+        ;; Write [rax - _leaves] into [rax]
+        ;; the leave chain is a chain of 32-bit relative links
+        mov     rbx,rax
+        sub     rbx,[r12 + _leaves]
+        mov     dword [rax],ebx
+.1:
         mov     [r12 + _leaves],rax
         _drop
         ret
@@ -1494,8 +1564,16 @@ resolveleaves:
         mov     rax,[r12 + _leaves]
         or      rax,rax
         je      .2
+
+.1:
+        mov     ecx,dword [rax]
         _dup
         call    then
+        
+        or      ecx,ecx
+        je      .2
+        sub     rax,rcx
+        jmp     .1
 .2:
         _drop
         mov     [r12 + _leaves],rax

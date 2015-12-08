@@ -18,6 +18,7 @@ include core0.fs
 : allot     dp +! ;
 : dabs      dup 0< if dnegate then ;
 : d0=       or 0= ;
+: 2rot      >r >r 2swap r> r> 2swap ;
 
 \ : x [ here ] 1 ; 4 allot align here swap - .x
 
@@ -115,7 +116,7 @@ include structures.fs
 include comus.fs
 include mini-oof.fs
 
-
+: bye ;
 : new
     s" | marker |" evaluate
 ;

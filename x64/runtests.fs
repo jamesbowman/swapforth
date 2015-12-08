@@ -13,7 +13,6 @@ include coreplustest.fth
 include errorreport.fth
 include coreexttest.fth
 include doubletest.fth
-#bye
 \ include exceptiontest.fth
 include facilitytest.fth
 \ \ include filetest.fth
@@ -25,6 +24,3 @@ include stringtest.fth
 REPORT-ERRORS
 
 CR CR .( Forth tests completed ) CR CR
-
-
-
