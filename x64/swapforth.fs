@@ -23,11 +23,10 @@ include core0.fs
 \ : x [ here ] 1 ; 4 allot align here swap - .x
 
 : create
-    :
-    here 28 + postpone literal
-    postpone ;
-    4 allot
     align
+    :
+    here postpone literal
+    postpone ;
 ;
 
 : >body
@@ -45,22 +44,15 @@ include core.fs
 
 \ #######   CORE EXT   ########################################
 
-: (c") r> dup count + >r ;
-
 : c"
-    postpone (c")
     [char] " parse
+    here postpone literal
     dup c, s,
 ; immediate
 
-: (sliteral)
-    r> count
-    2dup + >r
-;
-
-: sliteral
-    postpone (sliteral)
-    dup c,
+: sliteral ( caddr u -- )
+    here postpone literal
+    dup postpone literal
     s,
 ; immediate
 

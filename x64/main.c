@@ -12,6 +12,8 @@ void _dotx(uint64_t x)
 
 void _emit(char c)
 {
+  if (c == 26)
+    exit(0);
   putchar(c);
 }
 

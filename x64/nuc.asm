@@ -31,6 +31,7 @@ _swapforth:
         object  _base,1
         object  _forth,1
         object  _dp,1
+        object  _cp,1
         object  _in,1
         object  _jumptab,6
         object  _lastword,1
@@ -910,13 +911,13 @@ header  ">number",to_number
 header  "abort",abort
         lit     'a'
         call    emit
-        call    cr
+        lit     'a'
+        call    emit
         lit     'a'
         call    emit
         call    cr
-        lit     'a'
+        lit     26
         call    emit
-        call    cr
 .1:     jmp     .1
 
         header  "postpone",postpone,IMMEDIATE
@@ -1168,6 +1169,16 @@ quit:
         lea     rax,[r12 + _dp]
         ret
 
+        header  "chere",chere
+        _dup
+        mov     rax,[r12 + _cp]
+        ret
+
+        header  "cp",cp
+        _dup
+        lea     rax,[r12 + _cp]
+        ret
+
         header  "forth",forth
         _dup
         lea     rax,[r12 + _forth]
@@ -1211,6 +1222,31 @@ quit:
         pop     rdi
         jmp     two_drop
 
+        header  "code.,",code_comma
+        mov     rbx,[r12 + _cp]
+        mov     [rbx],rax
+        add     rbx,8
+        mov     [r12 + _cp],rbx
+        jmp     drop
+
+        header  "code.c,",code_c_comma
+        mov     rbx,[r12 + _cp]
+        mov     [rbx],al
+        add     rbx,1
+        mov     [r12 + _cp],rbx
+        jmp     drop
+
+        header  "code.s,",code_s_comma
+        push    rdi
+        mov     rsi,[rdi]
+        mov     rdi,[r12 + _cp]
+        mov     rcx,rax
+        rep movsb
+        mov     [r12 + _cp],rdi
+        pop     rdi
+        jmp     two_drop
+
+
 ;   align
 ;   here lastword _!
 ;   forth @i w,
@@ -1223,7 +1259,7 @@ mkheader:
         call    w2scratch
         call    two_drop
 
-        mov     rbx,[r12 + _dp]
+        mov     rbx,[r12 + _cp]
         add     rbx,31
         and     rbx,~31
         mov     rdx,[r12 + _scratch]             ; is the word itself
@@ -1242,7 +1278,7 @@ mkheader:
         mov     [rbx],edx
         add     rbx,4
         mov     [r12 + _thisxt],ebx
-        mov     [r12 + _dp],ebx
+        mov     [r12 + _cp],ebx
 
         ret
 
@@ -1252,7 +1288,7 @@ attach:
         ret
 
         header  ":noname",colon_noname
-        call    here
+        call    chere
         mov     [r12 + _thisxt],rax
         jmp     right_bracket
 
@@ -1267,7 +1303,7 @@ attach:
 
         header  "exit",exit,IMMEDIATE
         lit     0xc3
-        jmp     c_comma
+        jmp     code_c_comma
 
         header  "immediate",immediate
         mov     rbx,[r12 + _lastword]
@@ -1293,7 +1329,7 @@ len_to_r equ $ - frag_to_r
         _dup
         lea     rax,[rel frag_to_r]
         lit     len_to_r
-        jmp     s_comma
+        jmp     code_s_comma
 
         header  "2>r",two_to_r,IMMEDIATE
         _dup
@@ -1310,7 +1346,7 @@ len_r_from equ $ - frag_r_from
         _dup
         lea     rax,[rel frag_r_from]
         lit     len_r_from
-        jmp     s_comma
+        jmp     code_s_comma
 
         header  "2r>",two_r_from,IMMEDIATE
         call    r_from
@@ -1328,7 +1364,7 @@ len_r_at equ $ - frag_r_at
         _dup
         lea     rax,[rel frag_r_at]
         lit     len_r_at
-        jmp     s_comma
+        jmp     code_s_comma
 
         header  "2r@",two_r_at
         _dup
@@ -1346,28 +1382,28 @@ len_lit64 equ ($ - 8) - frag_lit64
         _dup
         lea     rax,[rel frag_lit64]
         lit     len_lit64
-        call    s_comma
-        jmp     comma
+        call    code_s_comma
+        jmp     code_comma
 
         header  "compile,",compile_comma
-        call    here
+        call    chere
         add     rax,5
         call    minus
 
         lit     0xe8
-        call    c_comma
+        call    code_c_comma
 
 l_comma:
         _dup
-        call    c_comma
+        call    code_c_comma
         sar     rax,8
         _dup
-        call    c_comma
+        call    code_c_comma
         sar     rax,8
         _dup
-        call    c_comma
+        call    code_c_comma
         sar     rax,8
-        jmp     c_comma
+        jmp     code_c_comma
 
         header  "2literal",two_literal,IMMEDIATE
         call    swap
@@ -1413,12 +1449,12 @@ l_comma:
 
         header  "begin",begin,IMMEDIATE
         _dup
-        mov     rax,[r12 + _dp]
+        mov     rax,[r12 + _cp]
         ret
 
         header  "ahead",ahead,IMMEDIATE
         lit     0xe9
-        call    c_comma
+        call    code_c_comma
         call    begin
         lit     0
         jmp     l_comma
@@ -1430,17 +1466,17 @@ len_tos0 equ $ - frag_tos0
         header  "if",if,IMMEDIATE
         lit     frag_tos0
         lit     len_tos0
-        call    s_comma
+        call    code_s_comma
         lit     $0f
-        call    c_comma
+        call    code_c_comma
         lit     $84
-        call    c_comma
+        call    code_c_comma
         call    begin
-        add     qword [r12 + _dp],4
+        add     qword [r12 + _cp],4
         ret
 
         header  "then",then,IMMEDIATE
-        mov     rbx,[r12 + _dp]
+        mov     rbx,[r12 + _cp]
         sub     rbx,rax
         sub     rbx,4
         mov     [rax],ebx
@@ -1448,23 +1484,23 @@ len_tos0 equ $ - frag_tos0
 
         header  "again",again,IMMEDIATE
         lit     0xe9
-        call    c_comma
+        call    code_c_comma
 backjmp: ;; ( dst -- ) make a backwards jump from here to dst
-        mov     rbx,[r12 + _dp]
+        mov     rbx,[r12 + _cp]
         sub     rax,rbx
         sub     rax,4
         mov     [rbx],eax
-        add     qword [r12 + _dp],4
+        add     qword [r12 + _cp],4
         jmp     drop
 
         header  "until",until,IMMEDIATE
         lit     frag_tos0
         lit     len_tos0
-        call    s_comma
+        call    code_s_comma
         lit     $0f
-        call    c_comma
+        call    code_c_comma
         lit     $84
-        call    c_comma
+        call    code_c_comma
         jmp     backjmp
 
         header  "recurse",recurse,IMMEDIATE
@@ -1510,7 +1546,7 @@ len_do equ $ - frag_do
         mov     qword [r12 + _leaves],0
         lit     frag_do
         lit     len_do
-        call    s_comma
+        call    code_s_comma
         jmp     begin
 
 frag_qdo:
@@ -1532,13 +1568,13 @@ len_qdo equ $ - frag_qdo
         mov     qword [r12 + _leaves],0
         lit     frag_qdo
         lit     len_qdo
-        call    s_comma
+        call    code_s_comma
 
         lit     0x0f
-        call    c_comma
+        call    code_c_comma
         lit     0x84
-        call    c_comma
-        mov     rbx,[r12 + _dp]
+        call    code_c_comma
+        mov     rbx,[r12 + _cp]
         mov     [r12 + _leaves],rbx
         lit     0
         call    l_comma
@@ -1586,11 +1622,11 @@ len_loop equ $ - frag_loop
         header  "loop",loop,IMMEDIATE
         lit     frag_loop
         lit     len_loop
-        call    s_comma
+        call    code_s_comma
         lit     0x0f
-        call    c_comma
+        call    code_c_comma
         lit     0x81
-        call    c_comma
+        call    code_c_comma
         call    backjmp
         call    resolveleaves
         jmp     unloop
@@ -1605,7 +1641,7 @@ len_plus_loop equ ($ - 4) - frag_plus_loop
         header  "+loop",plus_loop,IMMEDIATE
         lit     frag_plus_loop
         lit     len_plus_loop
-        call    s_comma
+        call    code_s_comma
         call    backjmp
         call    resolveleaves
         jmp     unloop
@@ -1618,7 +1654,7 @@ len_unloop equ $ - frag_unloop
         header  "unloop",unloop,IMMEDIATE
         lit     frag_unloop
         lit     len_unloop
-        jmp     s_comma
+        jmp     code_s_comma
 
 frag_i:
         _dup
@@ -1629,7 +1665,7 @@ len_i equ $ - frag_i
         header  "i",i,IMMEDIATE
         lit     frag_i
         lit     len_i
-        jmp     s_comma
+        jmp     code_s_comma
 
         header  "j",j
         _dup
@@ -1660,6 +1696,8 @@ init:
         mov     [r12 + _forth],rax
 
         lea     rax,[rel mem]
+        mov     [r12 + _cp],rax
+        add     rax,512*1024
         mov     [r12 + _dp],rax
 
         call    decimal
