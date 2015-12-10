@@ -34,6 +34,7 @@ _swapforth:
         object  _cp,1
         object  _in,1
         object  _jumptab,6
+        object  _prevcall,1
         object  _lastword,1
         object  _thisxt,1
         object  _sourceid,1
@@ -439,7 +440,8 @@ header  "c@",c_fetch
 header  "c!",c_store
         mov     bl,byte [rdi]
         mov     [rax],bl
-        jmp     two_drop
+        _drop2
+        ret
 
 header  "@",fetch
         mov     rax,[rax]
@@ -448,7 +450,8 @@ header  "@",fetch
 header  "!",store
         mov     rbx,[rdi]
         mov     [rax],rbx
-        jmp     two_drop
+        _drop2
+        ret
 
 header  "2@",two_fetch
         mov     rbx,[rax+8]
@@ -473,12 +476,9 @@ header  "/string",slash_string
         ret
 
 header  "swap",swap
-        xchg    rax,[rdi]
-        ret
-        ; xxx - or is this faster?
-        ; mov     rbx,[rdi]
-        ; mov     [rdi],rax
-        ; mov     rax,rbx
+        mov     rbx,[rdi]
+        mov     [rdi],rax
+        mov     rax,rbx
         ret
 
 header  "over",over
@@ -486,11 +486,12 @@ header  "over",over
         mov     rax,[rdi+8]
         ret
 
-header "false",false    ; : false d# 0 ;
-        lit     0
+header "false",false
+        _dup
+        xor     rax,rax
         ret
 
-header "true",true     ; : true  d# -1 ; 
+header "true",true
         lit     -1
         ret
 
@@ -498,7 +499,7 @@ header "bl",_bl
         lit     32
         ret
 
-header "rot",rot      ; : rot   >r swap r> swap ; 
+header "rot",rot
         xchg    rax,[rdi]
         xchg    rax,[rdi+8]
         ret
@@ -506,7 +507,7 @@ header "rot",rot      ; : rot   >r swap r> swap ;
 header "noop",noop
         ret
 
-header "-rot",minus_rot     ; : -rot  swap >r swap r> ; 
+header "-rot",minus_rot
         xchg    rax,[rdi+8]
         xchg    rax,[rdi]
         ret
@@ -525,9 +526,10 @@ header "2dup",two_dup     ; : 2dup  over over ;
         jmp     over
 
 header "+!",plus_store       ; : +!    tuck @ + swap ! ; 
-        poprbx
+        mov     rbx,[rdi]
         add     [rax],rbx
-        jmp     drop
+        _drop2
+        ret
 
 header "2swap",two_swap    ; : 2swap rot >r rot r> ;
         mov     rbx,[rdi]
@@ -582,8 +584,7 @@ header  "nip",nip
         ret
 
 header "2drop",two_drop
-        _drop
-        _drop
+        _drop2
         ret
 
 header "execute",execute
@@ -1288,6 +1289,8 @@ attach:
         ret
 
         header  ":noname",colon_noname
+        add     qword [r12 + _cp],15
+        and     qword [r12 + _cp],~15
         call    chere
         mov     [r12 + _thisxt],rax
         jmp     right_bracket
@@ -1302,6 +1305,12 @@ attach:
         jmp     left_bracket
 
         header  "exit",exit,IMMEDIATE
+        mov     rbx,[r12 + _cp]
+        sub     rbx,5
+        cmp     rbx,[r12 + _prevcall]
+        jne     .1
+        mov     byte [rbx],0xe9
+.1:
         lit     0xc3
         jmp     code_c_comma
 
@@ -1321,15 +1330,20 @@ attach:
 
 ;; ================ program structure ================ 
 
+        %macro  frag    1
+        _dup
+        lea     rax,[rel frag_%1]
+        lit     len_%1
+        call    code_s_comma
+        %endmacro
+
 frag_to_r:
         _to_r
 len_to_r equ $ - frag_to_r
 
         header  ">r",to_r,IMMEDIATE
-        _dup
-        lea     rax,[rel frag_to_r]
-        lit     len_to_r
-        jmp     code_s_comma
+        frag    to_r
+        ret
 
         header  "2>r",two_to_r,IMMEDIATE
         _dup
@@ -1343,10 +1357,8 @@ frag_r_from:
 len_r_from equ $ - frag_r_from
 
         header  "r>",r_from,IMMEDIATE
-        _dup
-        lea     rax,[rel frag_r_from]
-        lit     len_r_from
-        jmp     code_s_comma
+        frag    r_from
+        ret
 
         header  "2r>",two_r_from,IMMEDIATE
         call    r_from
@@ -1361,10 +1373,8 @@ frag_r_at:
 len_r_at equ $ - frag_r_at
 
         header  "r@",r_at,IMMEDIATE
-        _dup
-        lea     rax,[rel frag_r_at]
-        lit     len_r_at
-        jmp     code_s_comma
+        frag    r_at
+        ret
 
         header  "2r@",two_r_at
         _dup
@@ -1379,14 +1389,14 @@ frag_lit64:
 len_lit64 equ ($ - 8) - frag_lit64
 
         header  "literal",literal,IMMEDIATE
-        _dup
-        lea     rax,[rel frag_lit64]
-        lit     len_lit64
-        call    code_s_comma
+        mov     rbx,0x100000000
+        cmp     rax,rbx
+        frag    lit64
         jmp     code_comma
 
         header  "compile,",compile_comma
         call    chere
+        mov     [r12 + _prevcall],rax
         add     rax,5
         call    minus
 
@@ -1464,9 +1474,7 @@ frag_tos0:
 len_tos0 equ $ - frag_tos0
 
         header  "if",if,IMMEDIATE
-        lit     frag_tos0
-        lit     len_tos0
-        call    code_s_comma
+        frag    tos0
         lit     $0f
         call    code_c_comma
         lit     $84
@@ -1494,9 +1502,7 @@ backjmp: ;; ( dst -- ) make a backwards jump from here to dst
         jmp     drop
 
         header  "until",until,IMMEDIATE
-        lit     frag_tos0
-        lit     len_tos0
-        call    code_s_comma
+        frag    tos0
         lit     $0f
         call    code_c_comma
         lit     $84
@@ -1544,9 +1550,7 @@ len_do equ $ - frag_do
         _dup
         mov     rax,[r12 + _leaves]
         mov     qword [r12 + _leaves],0
-        lit     frag_do
-        lit     len_do
-        call    code_s_comma
+        frag    do
         jmp     begin
 
 frag_qdo:
@@ -1566,9 +1570,7 @@ len_qdo equ $ - frag_qdo
         _dup
         mov     rax,[r12 + _leaves]
         mov     qword [r12 + _leaves],0
-        lit     frag_qdo
-        lit     len_qdo
-        call    code_s_comma
+        frag    qdo
 
         lit     0x0f
         call    code_c_comma
@@ -1620,9 +1622,7 @@ frag_loop:
 len_loop equ $ - frag_loop
 
         header  "loop",loop,IMMEDIATE
-        lit     frag_loop
-        lit     len_loop
-        call    code_s_comma
+        frag    loop
         lit     0x0f
         call    code_c_comma
         lit     0x81
@@ -1639,9 +1639,7 @@ frag_plus_loop:
 len_plus_loop equ ($ - 4) - frag_plus_loop
 
         header  "+loop",plus_loop,IMMEDIATE
-        lit     frag_plus_loop
-        lit     len_plus_loop
-        call    code_s_comma
+        frag    plus_loop
         call    backjmp
         call    resolveleaves
         jmp     unloop
@@ -1652,9 +1650,8 @@ frag_unloop:
 len_unloop equ $ - frag_unloop
 
         header  "unloop",unloop,IMMEDIATE
-        lit     frag_unloop
-        lit     len_unloop
-        jmp     code_s_comma
+        frag    unloop
+        ret
 
 frag_i:
         _dup
@@ -1663,9 +1660,8 @@ frag_i:
 len_i equ $ - frag_i
 
         header  "i",i,IMMEDIATE
-        lit     frag_i
-        lit     len_i
-        jmp     code_s_comma
+        frag    i
+        ret
 
         header  "j",j
         _dup
