@@ -27,8 +27,14 @@ class TetheredJ1a(swapforth.TetheredTarget):
             ser.setRTS(1)
             ser.setRTS(0)
         ser.setDTR(0)
-        if fullreset:
-            time.sleep(0.1)
+        
+        def waitcr():
+            while ser.read(1) != chr(10):
+                pass
+
+        waitcr()
+        ser.write(b'\r')
+        waitcr()
 
         for c in ' 1 tth !':
             ser.write(c.encode('utf-8'))
