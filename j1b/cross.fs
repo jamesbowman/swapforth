@@ -352,7 +352,8 @@ target included                         \ include the program.fs
 
 [ tcp @ 0 org ]
 \ bootloader 
-main
+main        \ address 0
+quit        \ address 2
 [ org ]
 meta
 
