@@ -1210,12 +1210,15 @@ header .s
     then
 ;
 
+create init meta t' quit 2* target ,
+header init :noname init ;
+
 : main
     cr
     decimal
     tethered off
     key> drop
-    quit
+    init @i execute
 ;
 
 meta
