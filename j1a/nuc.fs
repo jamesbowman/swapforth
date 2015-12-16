@@ -1205,6 +1205,7 @@ header init :noname var:
 create init meta t' quit 2* target ,
 
 : main
+    $8000 io@ if begin $4000 io@ dup if execute then again then
     cr
     decimal
     tethered off
