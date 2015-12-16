@@ -114,7 +114,7 @@ PyObject *v3_profile(PyObject *self, PyObject *args)
 
   PyObject *r = PyList_New(4096);
   for (i = 0; i < 4096; i++)
-    PyList_SET_ITEM(r, i, PyLong_FromLong(v->ddepth[i]));
+    PyList_SET_ITEM(r, i, PyLong_FromLong(v->rdepth[i]));
   return r;
 }
 

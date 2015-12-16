@@ -178,31 +178,22 @@ header type
     2drop
 ;
 
-create base     $a ,
-create forth    0 ,
+: var: r> ;
+
+header base  :noname var: create base     $a ,
+header state :noname var: create state    0 ,
+header >in   :noname var: create >in      0 ,
+header tth   :noname var: create tethered 0 , \ tethered mode flag
+header forth :noname var: create forth    0 ,
 create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
 \ create syncpt   0 ,
 create sourceC  0 , 0 ,
-create >in      0 ,
-create state    0 ,
 create rO       0 ,
 create leaves   0 ,
-create tethered 0 ,
 create fineforoptimisation 0 ,
 create tib      #128 allot
-
-header state :noname state ;
-header base  :noname base ;
-header >in   :noname >in  ;
-header forth :noname forth ;
-
-\ tethered mode flag
-header tth
-: tth
-    tethered
-;
 
 : nextword
     @ d# -2 and
@@ -1210,12 +1201,15 @@ header .s
     then
 ;
 
+header init :noname var:
+create init meta t' quit 2* target ,
+
 : main
     cr
     decimal
     tethered off
     key> drop
-    quit
+    init @i execute
 ;
 
 meta

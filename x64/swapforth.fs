@@ -14,7 +14,6 @@
 include core0.fs
 
 : align     here aligned dp ! ;
-: +!        tuck @ + swap ! ; 
 : allot     dp +! ;
 : dabs      dup 0< if dnegate then ;
 : d0=       or 0= ;

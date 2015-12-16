@@ -48,11 +48,11 @@ CREATE ACTUAL-RESULTS 20 CELLS ALLOT
       DEPTH ?DUP IF                     \ IF THERE IS SOMETHING ON THE STACK
          0  DO                          \ FOR EACH STACK ITEM
                 ACTUAL-RESULTS I CELLS + @      \ COMPARE ACTUAL WITH EXPECTED
-                <> IF S" bad: " ERROR BEGIN AGAIN THEN
+                <> IF S" values " ERROR THEN
          LOOP
       THEN
    ELSE                                 \ DEPTH MISMATCH
-      S" WRONG NUMBER OF RESULTS: " ERROR
+      S" RESULTS" ERROR
    THEN ;
 
 : TESTING       \ ( -- ) TALKING COMMENT.
