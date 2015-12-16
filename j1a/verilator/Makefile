@@ -20,3 +20,18 @@ clean:
 	rm -f newmem.dat
 
 .PHONY: all
+
+j4a: obj_dir/Vj4a ../build/nuc.hex build/lib/python/vsimj4a.so
+
+VERILOGS4=j4a.v ../verilog/*.v
+
+obj_dir/Vj4a obj_dir/Vj4a__ALL.a: $(VERILOGS4) sim_main.cpp Makefile
+	verilator -Wall --cc -DVERILATOR=1 $(VERILOGS4) --top-module j4a --exe sim_main.cpp
+	$(MAKE) -C obj_dir CXXFLAGS="-fPIC" OPT_FAST="-O2" -f Vj4a.mk Vj4a
+
+../build/nuc.hex:
+	$(MAKE) -C ..
+
+build/lib/python/vsimj4a.so: setup.py obj_dir/Vj4a__ALL.a vsim.cpp
+	sudo python setup.py install --home build
+
