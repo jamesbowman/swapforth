@@ -167,11 +167,12 @@ module top(input pclk,
   localparam MHZ = 12;
 
   wire clk;
+  
   SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
                   .PLLOUT_SELECT("GENCLK"),
-                  .DIVR(4'b0000),
+                  .DIVR(4'd0),
                   .DIVF(7'd3),
-                  .DIVQ(3'b000),
+                  .DIVQ(3'd0),
                   .FILTER_RANGE(3'b001),
                  ) uut (
                          .REFERENCECLK(pclk),
@@ -180,7 +181,8 @@ module top(input pclk,
                          // .LOCK(D5),
                          .RESETB(1'b1),
                          .BYPASS(1'b0)
-                        );
+                        ); // 48 MHz, fout = [ fin * (DIVF+1) ] / [ 2^DIVQ*(DIVR+1) ]
+
 
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
@@ -288,11 +290,19 @@ module top(input pclk,
      .rx_data(uart0_data));
 
   wire [7:0] LEDS;
-  wire w4 = io_wr_ & io_addr_[2];
+ 
+  
+   // ######   LEDS   ##########################################
 
   
-  
-  
+
+  ioport _leds (.clk(clk),
+               .pins({D8, D7, D6, D5, D4, D3, D2, D1}),
+               .we(io_wr_ & io_addr_[2]),
+               .wd(dout_),
+               .rd(LEDS),
+               .dir(8'hff)); 
+  /*
   outpin led0 (.clk(clk), .we(w4), .pin(D1), .wd(dout_[0]), .rd(LEDS[0]));
   outpin led1 (.clk(clk), .we(w4), .pin(D2), .wd(dout_[1]), .rd(LEDS[1]));
   outpin led2 (.clk(clk), .we(w4), .pin(D3), .wd(dout_[2]), .rd(LEDS[2]));
@@ -301,7 +311,7 @@ module top(input pclk,
   outpin led5 (.clk(clk), .we(w4), .pin(D6), .wd(dout_[5]), .rd(LEDS[5]));
   outpin led6 (.clk(clk), .we(w4), .pin(D7), .wd(dout_[6]), .rd(LEDS[6]));
   outpin led7 (.clk(clk), .we(w4), .pin(D8), .wd(dout_[7]), .rd(LEDS[7]));
-
+*/
 
   wire [2:0] PIOS;
   wire w8 = io_wr_ & io_addr_[3];

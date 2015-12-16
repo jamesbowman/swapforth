@@ -8,6 +8,9 @@ bootstrap: build/nuc.hex mkrom.py verilator/bootstrap
 	make -C verilator
 	(cd ./verilator/; ./bootstrap)
 	python mkrom.py
+	
+connect: /dev/ttyUSB1
+	sudo python shell.py -h /dev/ttyUSB1 -p ../common/
 
 clean:
 	rm -f build/nuc.hex
