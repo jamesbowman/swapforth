@@ -1,5 +1,7 @@
 set -e
 
+# tput clear ; python fill.py ; exit
+# python draw.py ; exit
 if [ `uname` = "Darwin" ]
 then
   nasm -f macho64 -l lst nuc.asm
@@ -15,6 +17,5 @@ gcc -g -Wall -std=gnu99 main.c nuc.o
 # echo "16 base ! : foo2 41 emit 21 emit ; foo2 foo2 foo2 " | ./a.out
 # echo WordS | ./a.out
 python expand.py swapforth.fs runtests.fs | time ./a.out
-python expand.py swapforth.fs 8080.fs > 1
-/usr/bin/time ./a.out < 1
+# ./bench
 # /usr/bin/time gforth-fast 8080.fs -e bye

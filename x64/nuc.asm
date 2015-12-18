@@ -1148,14 +1148,6 @@ quit:
 .1:
         ret
 
-        header  "[",left_bracket,IMMEDIATE
-        mov     qword [r12 + _state],0
-        ret
-
-        header  "]",right_bracket
-        mov     qword [r12 + _state],3
-        ret
-
         header  "here",here
         _dup
         mov     rax,[r12 + _dp]
@@ -1219,6 +1211,63 @@ quit:
         pop     rdi
         jmp     two_drop
 
+;; ================ R stack           ================ 
+
+        %macro  frag    1
+        _dup
+        lea     rax,[rel frag_%1]
+        lit     len_%1
+        call    code_s_comma
+        %endmacro
+
+frag_to_r:
+        _to_r
+len_to_r equ $ - frag_to_r
+
+        header  ">r",to_r,IMMEDIATE
+        frag    to_r
+        ret
+
+        header  "2>r",two_to_r,IMMEDIATE
+        _dup
+        lea     rax,[rel swap]
+        call    compile_comma
+        call    to_r
+        jmp     to_r
+
+frag_r_from:
+        _r_from
+len_r_from equ $ - frag_r_from
+
+        header  "r>",r_from,IMMEDIATE
+        frag    r_from
+        ret
+
+        header  "2r>",two_r_from,IMMEDIATE
+        call    r_from
+        call    r_from
+        _dup
+        lea     rax,[rel swap]
+        jmp     compile_comma
+
+frag_r_at:
+        _dup
+        mov     rax,[rsp]
+len_r_at equ $ - frag_r_at
+
+        header  "r@",r_at,IMMEDIATE
+        frag    r_at
+        ret
+
+        header  "2r@",two_r_at
+        _dup
+        mov     rax,[rsp + 16]
+        _dup
+        mov     rax,[rsp + 8]
+        ret
+
+;; ================ Compiling         ================ 
+
         header  "code.,",code_comma
         mov     rbx,[r12 + _cp]
         mov     [rbx],rax
@@ -1242,7 +1291,6 @@ quit:
         mov     [r12 + _cp],rdi
         pop     rdi
         jmp     two_drop
-
 
 ;   align
 ;   here lastword _!
@@ -1324,59 +1372,12 @@ attach:
         mov     [rbx + (4 + 17 + 1)],ecx        ; JMP destination
         ret
 
-;; ================ program structure ================ 
-
-        %macro  frag    1
-        _dup
-        lea     rax,[rel frag_%1]
-        lit     len_%1
-        call    code_s_comma
-        %endmacro
-
-frag_to_r:
-        _to_r
-len_to_r equ $ - frag_to_r
-
-        header  ">r",to_r,IMMEDIATE
-        frag    to_r
+        header  "[",left_bracket,IMMEDIATE
+        mov     qword [r12 + _state],0
         ret
 
-        header  "2>r",two_to_r,IMMEDIATE
-        _dup
-        lea     rax,[rel swap]
-        call    compile_comma
-        call    to_r
-        jmp     to_r
-
-frag_r_from:
-        _r_from
-len_r_from equ $ - frag_r_from
-
-        header  "r>",r_from,IMMEDIATE
-        frag    r_from
-        ret
-
-        header  "2r>",two_r_from,IMMEDIATE
-        call    r_from
-        call    r_from
-        _dup
-        lea     rax,[rel swap]
-        jmp     compile_comma
-
-frag_r_at:
-        _dup
-        mov     rax,[rsp]
-len_r_at equ $ - frag_r_at
-
-        header  "r@",r_at,IMMEDIATE
-        frag    r_at
-        ret
-
-        header  "2r@",two_r_at
-        _dup
-        mov     rax,[rsp + 16]
-        _dup
-        mov     rax,[rsp + 8]
+        header  "]",right_bracket
+        mov     qword [r12 + _state],3
         ret
 
 frag_lit64:
@@ -1683,6 +1684,7 @@ init:
         mov     [r12 + _cfuncs],rsi
 
         lea     rax,[rel dummy - 4]
+        call    nextword
         mov     [r12 + _forth],rax
 
         lea     rax,[rel mem]
