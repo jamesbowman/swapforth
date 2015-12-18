@@ -107,7 +107,6 @@ include structures.fs
 include comus.fs
 include mini-oof.fs
 
-: bye ;
 : new
     s" | marker |" evaluate
 ;

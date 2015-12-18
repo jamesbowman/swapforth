@@ -13,6 +13,11 @@
 ; r14   loop offset
 ;
 
+CFUNC_DOTX      equ     0       ;; This table matches CFUNCS in main.c
+CFUNC_BYE       equ     8
+CFUNC_EMIT      equ     16
+CFUNC_KEY       equ     24
+
 section .text
 
 global swapforth
@@ -43,9 +48,7 @@ _swapforth:
         object  _leaves,1
         object  _tethered,1
         object  _scratch,4
-        object  _emit,1
-        object  _dotx,1
-        object  _key,1
+        object  _cfuncs,1
         object  _tib,32
 
 %define link $
@@ -115,43 +118,36 @@ _swapforth:
 %endmacro
 
 
-        extern  __dotx
-        header  '.x',dotx
-        push    rdi
-        mov     rbp,rsp
-        or      rsp,8
+        ;; C interface macro, parameter is offset into CTABLE
+
+        %macro  c_pre   1
+        push    rdi     ;; Our data stack pointer, C clobbers
+        mov     rbp,rsp ;; Save the SP
+        or      rsp,8   ;; Now align SP, C needs this
         sub     rsp,8
-        mov     rdi,rax
-        call    [r12 + _dotx]
-        mov     rsp,rbp
-        pop     rdi
+        mov     rdi,rax ;; Always pass TOS as argument
+        mov     rax,[r12 + _cfuncs]
+        call    [rax + %1]
+        mov     rsp,rbp ;; restore our SP
+        pop     rdi     ;; restore our data stack pointer
+        %endmacro
+
+        header  '.x',dotx       ; ( x -- )
+        c_pre   CFUNC_DOTX
         mov     rax,[rdi]
         add     rdi,8
         ret
 
-        extern  __emit
-        header  'emit',emit
-        push    rdi
-        mov     rbp,rsp
-        or      rsp,8
-        sub     rsp,8
-        mov     rdi,rax
-        call    [r12 + _emit]
-        mov     rsp,rbp
-        pop     rdi
+        header  'bye',bye
+        c_pre   CFUNC_BYE       ;; never returns
+
+        header  'emit',emit     ; ( x -- )
+        c_pre   CFUNC_EMIT
         jmp     drop
 
-        extern  __key
-        header  'key',key
+        header  'key',key       ;; ( -- x )
         _dup
-        push    rdi
-        mov     rbp,rsp
-        or      rsp,8
-        sub     rsp,8
-        mov     rdi,rax
-        call    [r12 + _key]
-        mov     rsp,rbp
-        pop     rdi
+        c_pre   CFUNC_KEY
         ret
 
 header  "depth",depth
@@ -708,6 +704,8 @@ header "accept",accept ; ( c-addr +n1 -- +n2 )
 
 .0:
         call    key
+        cmp     eax,0           ;; key returns a 32-bit int, so -1 is FFFFFFFF
+        jl      bye
         cmp     al,10
         je      .1
         call    over
@@ -917,9 +915,7 @@ header  "abort",abort
         lit     'a'
         call    emit
         call    cr
-        lit     26
-        call    emit
-.1:     jmp     .1
+        jmp     bye
 
         header  "postpone",postpone,IMMEDIATE
         call    parse_name
@@ -1684,9 +1680,7 @@ init:
 
         call    left_bracket
 
-        mov     [r12 + _emit],rsi
-        mov     [r12 + _dotx],rdx
-        mov     [r12 + _key],rcx
+        mov     [r12 + _cfuncs],rsi
 
         lea     rax,[rel dummy - 4]
         mov     [r12 + _forth],rax
@@ -1717,11 +1711,6 @@ init:
         mov     [r12 + _jumptab + 40],rax
 
         call    quit
-        ; vmovdqu xmm0,[rel dummy-40]
-        ; vmovdqu xmm1,[rel dummy-40]
-        ; vpcmpeqb xmm1,xmm1,xmm0
-        ; VPMOVMSKB rax,xmm1
-        ; call    dotx
 
         mov     rax,rdi
         pop     r12
@@ -1731,4 +1720,7 @@ init:
 
         align 32
 mem:
-        align   65536
+global swapforth_ends
+swapforth_ends:
+global _swapforth_ends
+_swapforth_ends:
