@@ -1,7 +1,26 @@
+\ SwapForth nucleus for J1a
+\
+\ This is a 16-bit forth nucleus. It provides *just enough*
+\ of a Forth for the remainder of SwapForth to be compiled
+\ from the UART connection.
+\
+\ The code here is Forth-like J1a assembler code.
+\ It is compiled by cross.fs to produce nuc.hex, the boot
+\ image.
+\
+\ Some notes on idioms in this file:
+\   header xxx  creates a header entry
+\   h# xxx      hex literal
+\   d# xxx      decimal literal
+\
+\ Note that (like Colorforth) colon definitions can run
+\ into each other, so ": x : y" is legal.
+\ 
+\ The J1a has some instructions that are combined versions
+\ of traditional Forth words. For example 2dupxor has the
+\ same action as "2dup xor". See TYPE for an example.
+\ 
 
-\   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
-\               If the string is legal, give a single or double cell number
-\               and size of the number.
 header 1+       : 1+        d# 1 + ;
 header negate   : negate    invert 1+ ;
 header 1-       : 1-        d# -1 + ;
@@ -178,7 +197,7 @@ header type
     2drop
 ;
 
-: var: r> ;
+: var: r> ;                 \ variable defining word
 
 header base  :noname var: create base     $a ,
 header state :noname var: create state    0 ,
@@ -188,7 +207,6 @@ header forth :noname var: create forth    0 ,
 create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
-\ create syncpt   0 ,
 create sourceC  0 , 0 ,
 create rO       0 ,
 create leaves   0 ,
@@ -212,6 +230,8 @@ header words : words
     drop
 ;
 
+\ Not used: swapforth.fs has DUMP instead
+\
 \ header dump
 \ : dump ( addr u -- )
 \     cr over hex4
@@ -451,8 +471,7 @@ header >number
         over c@ digit?
         0= if drop ; then
         >r 2swap base @i
-        \ ud*
-        tuck * >r um* r> +
+        tuck * >r um* r> + \ inlined UD* above
         r> m+ 2swap
         1/string
     repeat
@@ -612,10 +631,6 @@ header compile,
     then
 ;
 
-\ : sync
-\     dp @i syncpt _!
-\ ;
-
 header s,
 : s,
     dup c,
@@ -689,32 +704,6 @@ header :noname
     drop
     r> r> rO _! >r
 ;
-
-\ : prev
-\     dp @ d# -2 +
-\ ;
-\ 
-\ : jumpable ( op -- f )
-\     dup h# e000 and h# 4000 =       \ is a call
-\     swap h# 1fff and 2* ['] (loopdone) <> and
-\ ;
-\ 
-\ header-imm exit
-\ : texit
-\     dp @ thisxt @ <> if
-\         prev @ jumpable if
-\             prev
-\             @
-\             h# 4000 xor
-\             prev !
-\             \ dp @ syncpt @ <> if
-\                 inline: exit
-\             \ then
-\             exit
-\         then
-\     then
-\     inline: exit
-\ ;
 
 : prev
     dp @i d# 2 -
