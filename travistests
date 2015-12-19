@@ -16,4 +16,5 @@ sh localtest
 cd ../../j1b/verilator
 sh localtest
 cd ../../j1a/doc
+rm -f j1a-reference.pdf
 make
