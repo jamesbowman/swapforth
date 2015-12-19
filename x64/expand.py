@@ -14,7 +14,7 @@ def expand(filename):
                 expand(line.split()[1])
             else:
                 sys.stdout.write(line)
-        print
+        sys.stdout.write('\n')
         return
     assert 0, filename + 'not found'
 
