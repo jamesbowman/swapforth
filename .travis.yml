@@ -1,6 +1,6 @@
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq verilator gforth nasm
+  - sudo apt-get install -qq verilator gforth nasm texlive-latex-base texlive-latex-extra
 language: python
 python:
   - "2.6"
