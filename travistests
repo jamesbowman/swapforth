@@ -15,3 +15,5 @@ cd ../j1a/verilator
 sh localtest
 cd ../../j1b/verilator
 sh localtest
+cd ../../j1a/doc
+make
