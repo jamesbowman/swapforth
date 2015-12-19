@@ -107,6 +107,43 @@ include structures.fs
 include comus.fs
 include mini-oof.fs
 
+: .b ( u -- )
+    base @ >r hex
+    s>d <# # # #> type space
+    r> base !
+;
+
+: .xt ( xt -- )
+    40 - count type
+;
+
+: see ( -- )
+    '
+    ." : " dup .xt cr
+    dup
+
+    dup 8 - @ 32 rshift
+    bounds ?do
+        i .x
+        i c@ case
+            $e8 of
+                ." call " i 1+ @ $ffffffff and $ffffffff00000000 or i 5 + + dup .x .xt
+                5
+                endof
+            dup .b 1 swap
+        endcase
+        cr
+    +loop
+
+    ." ; "
+    dup 8 - @
+    dup 1 and if ." immediate " then
+    2 and if ." inline" then
+    cr
+;
+
+: x cr cr ; see x
+' cr .x
 : new
     s" | marker |" evaluate
 ;
