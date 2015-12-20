@@ -6,8 +6,9 @@ set -e
 make -s
 make -s -C xilinx
 
-# $HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -d 'Papilio DUO' -f xilinx/j1-papilioduo.bit
+$HOME/Downloads/DesignLab-1.0.5/tools/Papilio_Loader/programmer/linux32/papilio-prog -v -d 'Papilio DUO' -f xilinx/j1-papilioduo.bit
 # python shell.py -h /dev/papilio -i build/nuc.hex -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ swapforth.fs ram.fs
-python shell.py -h /dev/papilio -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ -e new -e '#noverbose' bench.fs
+# python shell.py -h /dev/papilio -p ../common/ -p ../anstests/ -p $HOME/git/forth-ft800/ # bench.fs
+python shell.py -h /dev/papilio m6809.fs
 
 # swapforth.fs # ram.fs
