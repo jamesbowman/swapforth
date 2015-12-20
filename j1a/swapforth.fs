@@ -49,12 +49,6 @@
     @ 32767 and
 ;
 
-: m*
-    2dup xor >r
-    abs swap abs um*
-    r> 0< if dnegate then
-;
-
 include core.fs
 
 : /mod      >r s>d r> sm/rem ;
@@ -100,8 +94,6 @@ include core-ext.fs
 
 : ms 0 do 5986 0 do loop loop ;
 : leds  4 io! ;
-
-( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
 
 : new
     s" | marker |" evaluate
