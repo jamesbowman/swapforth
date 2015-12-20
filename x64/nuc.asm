@@ -465,14 +465,22 @@ header  "!",store,INLINE
         _drop2
         ret
 
-header  "2@",two_fetch
+header  "ul@",u_l_fetch,INLINE
+        mov     eax,dword [rax]
+        ret
+
+header  "sl@",s_l_fetch,INLINE
+        movsx   rax,dword [rax]
+        ret
+
+header  "2@",two_fetch,INLINE
         mov     rbx,[rax+8]
         mov     rax,[rax]
         sub     rdi,8
         mov     [rdi],rbx
         ret
 
-header  "2!",two_store
+header  "2!",two_store,INLINE
         mov     rbx,[rdi]
         mov     [rax],rbx
         mov     rbx,[rdi+8]
@@ -508,11 +516,11 @@ header "true",true,INLINE
         lea     rax,[r15-1]
         ret
 
-header "bl",_bl
+header "bl",_bl,INLINE
         lit     32
         ret
 
-header "rot",rot
+header "rot",rot,INLINE
         xchg    rax,[rdi]
         xchg    rax,[rdi+8]
         ret
@@ -520,7 +528,7 @@ header "rot",rot
 header "noop",noop
         ret
 
-header "-rot",minus_rot
+header "-rot",minus_rot,INLINE
         xchg    rax,[rdi+8]
         xchg    rax,[rdi]
         ret
@@ -534,9 +542,12 @@ header "?dup",question_dupe     ; : ?dup  dup if dup then ;
         jne     dupe
         ret
 
-header "2dup",two_dup     ; : 2dup  over over ; 
-        call    over
-        jmp     over
+header "2dup",two_dup,INLINE     ; : 2dup  over over ; 
+        _dup
+        mov     rax,[rdi+8]
+        _dup
+        mov     rax,[rdi+8]
+        ret
 
 header "+!",plus_store,INLINE       ; : +!    tuck @ + swap ! ; 
         mov     rbx,[rdi]
@@ -544,27 +555,27 @@ header "+!",plus_store,INLINE       ; : +!    tuck @ + swap ! ;
         _drop2
         ret
 
-header "2swap",two_swap    ; : 2swap rot >r rot r> ;
+header "2swap",two_swap,INLINE    ; : 2swap rot >r rot r> ;
         mov     rbx,[rdi]
         xchg    rax,[rdi+8]
         xchg    rbx,[rdi+16]
         mov     [rdi],rbx
         ret
 
- header "2over",two_over
+ header "2over",two_over,INLINE
         _dup
         mov     rax,[rdi+24]
         _dup
         mov     rax,[rdi+24]
         ret
 
-header "min",min      ; : min   2dup< if drop else nip then ;
+header "min",min,INLINE      ; : min   2dup< if drop else nip then ;
         poprbx
         cmp     rax,rbx
         cmovg   rax,rbx
         ret
 
-header "max",max      ; : max   2dup< if nip else drop then ;
+header "max",max,INLINE      ; : max   2dup< if nip else drop then ;
         poprbx
         cmp     rax,rbx
         cmovl   rax,rbx
@@ -592,11 +603,11 @@ header "drop",drop,INLINE
         _drop
         ret
 
-header  "nip",nip
+header  "nip",nip,INLINE
         add     rdi,8
         ret
 
-header "2drop",two_drop
+header "2drop",two_drop,INLINE
         _drop2
         ret
 
@@ -605,9 +616,13 @@ header "execute",execute
         _drop
         jmp     rbx
 
-header "bounds",bounds ; ( a n -- a+n a )
-        add     rax,[rdi]
-        jmp     swap
+header "bounds",bounds,INLINE ; ( a n -- a+n a )
+        mov     rbx,[rdi]
+        add     rax,rbx
+        mov     [rdi],rax
+        mov     rax,rbx
+        ret
+
 header "type",type
         call    bounds
 .0:
@@ -1334,6 +1349,7 @@ mkheader:
         mov     [r12 + _lastword],rbx
         mov     rdx,rbx
         sub     rdx,[r12 + _forth]
+        or      rdx,INLINE                      ;; words are inline by default
         mov     [rbx],edx
         mov     dword [rbx+4],0                 ;; WORD_CBYTES
         add     rbx,WORD_CODE
@@ -1381,6 +1397,11 @@ attach:
         or      dword [rbx],1
         ret
 
+        header  "noinline",noinline
+        mov     rbx,[r12 + _lastword]
+        and     dword [rbx],~INLINE
+        ret
+
 ;; CREATE makes a word that pushes a literal, followed by
 ;; a return.
 ;; DOES> works by patching the return instruction to a jump.
@@ -1389,6 +1410,7 @@ attach:
 %define CREATERET       (WORD_CODE + 18)
 
         header  "does>",does
+        call    noinline
         pop     rcx                             ; return address will be branch target
         mov     rbx,[r12 + _lastword]           ; points to link and LITERAL
         mov     byte [rbx + CREATERET],0xe9     ; patch to a JMP
@@ -1418,13 +1440,16 @@ len_lit64 equ ($ - 8) - frag_lit64
 
         header  "compile,",compile_comma
         mov     ebx,dword [rax - WORD_CODE]
-        test    ebx,2
+        test    ebx,INLINE
         je      .1
         ;; inline it
+        mov     qword [r12 + _prevcall],0
         _dup
         mov     eax,dword [rax - WORD_CBYTES]
         jmp     code_s_comma
+
 .1:
+        call    noinline
         call    chere
         mov     [r12 + _prevcall],rax
         add     rax,5
@@ -1434,16 +1459,11 @@ len_lit64 equ ($ - 8) - frag_lit64
         call    code_c_comma
 
 l_comma:
-        _dup
-        call    code_c_comma
-        sar     rax,8
-        _dup
-        call    code_c_comma
-        sar     rax,8
-        _dup
-        call    code_c_comma
-        sar     rax,8
-        jmp     code_c_comma
+        mov     rbx,[r12 + _cp]
+        mov     [rbx],eax
+        add     rbx,4
+        mov     [r12 + _cp],rbx
+        jmp     drop
 
         header  "2literal",two_literal,IMMEDIATE
         call    swap
@@ -1540,6 +1560,7 @@ backjmp: ;; ( dst -- ) make a backwards jump from here to dst
         jmp     backjmp
 
         header  "recurse",recurse,IMMEDIATE
+        call    noinline
         _dup
         mov     rax,[r12 + _thisxt]
         jmp     compile_comma
