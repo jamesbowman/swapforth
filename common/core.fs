@@ -57,9 +57,12 @@
 \ "The size of the pictured numeric output string buffer shall
 \ be at least (2*n) + 2 characters, where n is the number of
 \ bits in a cell."
+\
+\ The size of the region identified by WORD shall be at least
+\ 33 characters.
 
 create BUF0
-16 cells 2 + 128 max
+16 cells 2 + 33 max
 allot here constant BUF
 
 variable hld
