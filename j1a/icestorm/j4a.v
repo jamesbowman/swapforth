@@ -162,29 +162,38 @@ module top(input pclk,
            inout PIO2_16,    // HDR2 7
            inout PIO2_17,    // HDR2 8
 
-           input resetq,
+           input reset,
 );
   localparam MHZ = 12;
 
-  wire clk;
-  /*
-  SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
-                  .PLLOUT_SELECT("GENCLK"),
-                  .DIVR(4'b0000),
-                  .DIVF(7'd3),
-                  .DIVQ(3'b001),
+  wire clk, pll_lock;
+  
+  wire pll_reset;
+  assign pll_reset = !reset;
+ 
+  SB_PLL40_CORE #(.FEEDBACK_PATH("PHASE_AND_DELAY"),
+                  .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
+                  .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
+                  .PLLOUT_SELECT("SHIFTREG_0deg"),
+                  .SHIFTREG_DIV_MODE(1'b0),
+                  .FDA_FEEDBACK(4'b0000),
+                  .FDA_RELATIVE(4'b0000),
+                  .DIVR(4'b1111),
+                  .DIVF(7'b0110001), 
+                  .DIVQ(3'b011), //  1..6
                   .FILTER_RANGE(3'b001),
                  ) uut (
                          .REFERENCECLK(pclk),
-                         .PLLOUTCORE(clk),
-                         //.PLLOUTGLOBAL(clk),
-                         // .LOCK(D5),
-                         .RESETB(1'b1),
+                         //.PLLOUTCORE(clk),
+                         .PLLOUTGLOBAL(clk),
+                         .LOCK(pll_lock),
+                         .RESETB(pll_reset),
                          .BYPASS(1'b0)
-                        ); // 48 MHz, fout = [ fin * (DIVF+1) ] / [ 2^DIVQ*(DIVR+1) ]
-  */
-  assign clk = pclk; // not sure why PLL isn't working - will go to 12 MHz for testing.
+                        ); // 37.5 MHz, fout = [ fin * (DIVF+1) ] / [ DIVR+1 ], fout must be 16 ..275MHz, fVCO from 533..1066 MHz (!! we're 600 here I think), and phase detector / input clock from 10 .. 133 MH (ok, we're 75 because DIVQ divides by 2^DIVQ, but doesn't affect output otherwise, and input is 12 MHz)
   
+  
+  wire resetq;
+  assign resetq = reset & !pll_lock;
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
@@ -441,8 +450,10 @@ module top(input pclk,
    
   always @(posedge clk) begin
     if (!resetq) begin
-      tasktime[1:3] <= 0;
-      taskexecn[1:3] <= 0;
+    
+        {tasktime[1],tasktime[2],tasktime[3]} <= 0;
+        {taskexecn[1],taskexecn[2],taskexecn[3]} <= 0;
+
     end else begin    
       
       case (io_thread) // io_thread is a grey code counter.
@@ -491,7 +502,8 @@ module top(input pclk,
       // send the data someplace better suited to heavy lifting. Sheer Data crunching performance isn't what this thing is for.
         
         
-    end
+    end // resetable registers done, following are inferred nonresetable registers
+    
     
     case ({io_wr_ , io_addr_[14], io_thread})
         4'b1100:   kill_slot_rq <= dout_[4:0];
@@ -500,6 +512,8 @@ module top(input pclk,
         4'b1110:   kill_slot_rq <= 4'b0100;
         default:  kill_slot_rq <= 4'b0000;
     endcase
+  
+  
   
     if (io_wr_ & io_addr_[1])
       pmod_dir <= dout_[7:0];
@@ -519,6 +533,6 @@ module top(input pclk,
     if (!resetq)
       unlocked <= 0; // ram write clock enable
     else
-      unlocked <= unlocked | io_wr_;
+      unlocked <= (unlocked | io_wr_) & pll_lock;
 
 endmodule // top

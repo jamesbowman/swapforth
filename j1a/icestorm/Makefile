@@ -1,6 +1,6 @@
 VERILOGS = j1a.v uart.v ../verilog/j1.v ../verilog/stack2.v
 VERILOGS8k = j1a8k.v uart.v ../verilog/j1.v ../verilog/stack2.v
-VERILOGS8k4 = j4a.v uart.v ../verilog/j4.v ../verilog/stack2.v ../verilog/decoder24.v ../verilog/greycount.v
+VERILOGS8k4 = j4a.v uart.v ../verilog/j4.v ../verilog/stack2pipe4.v ../verilog/decoder24.v ../verilog/greycount.v
 SUBDIRS = ..
 
 all: $(SUBDIRS) j1a.bin
@@ -21,7 +21,7 @@ j1a8k.bin: $(VERILOGS8k) j1a8k.pcf Makefile ../build/ram.v
 
 j4a.bin: $(VERILOGS8k4) j1a8k.pcf Makefile ../build/ram.v
 	yosys  -q -p "synth_ice40 -top top -abc2 -blif j4a.blif" $(VERILOGS8k4)
-	arachne-pnr -d 8k -p j1a8k.pcf j4a.blif -o j4a.txt
+	arachne-pnr -d 8k -p j4a.pcf j4a.blif -o j4a.txt
 	#skipped:# icebox_explain j4a.txt > j4a.ex
 	icepack j4a.txt j4a0.bin
 	icemulti -p0 j4a0.bin > j4a.bin

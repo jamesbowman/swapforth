@@ -162,17 +162,43 @@ module top(input pclk,
            inout PIO2_16,    // HDR2 7
            inout PIO2_17,    // HDR2 8
 
-           input resetq,
+           input reset,
 );
   localparam MHZ = 12;
 
-  wire clk;
+    wire clk, pll_lock;
   
+  wire pll_reset;
+  assign pll_reset = !reset;
+  wire resetq; // note port changed, .pcf needs update too.
+  assign resetq = !pll_lock;
+ 
+  SB_PLL40_CORE #(.FEEDBACK_PATH("PHASE_AND_DELAY"),
+                  .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
+                  .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
+                  .PLLOUT_SELECT("SHIFTREG_0deg"),
+                  .SHIFTREG_DIV_MODE(1'b0),
+                  .FDA_FEEDBACK(4'b0000),
+                  .FDA_RELATIVE(4'b0000),
+                  .DIVR(4'b1111),
+                  .DIVF(7'b0110001), 
+                  .DIVQ(3'b011), //  1..6
+                  .FILTER_RANGE(3'b001),
+                 ) uut (
+                         .REFERENCECLK(pclk),
+                         //.PLLOUTCORE(clk),
+                         .PLLOUTGLOBAL(clk),
+                         .LOCK(pll_lock),
+                         .RESETB(pll_reset),
+                         .BYPASS(1'b0)
+                        ); // runs about 37.5 MHz, just to prove it works.
+  /*
+  wire clk;
   SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
                   .PLLOUT_SELECT("GENCLK"),
-                  .DIVR(4'd0),
+                  .DIVR(4'b0000),
                   .DIVF(7'd3),
-                  .DIVQ(3'd0),
+                  .DIVQ(3'b000),
                   .FILTER_RANGE(3'b001),
                  ) uut (
                          .REFERENCECLK(pclk),
@@ -181,9 +207,8 @@ module top(input pclk,
                          // .LOCK(D5),
                          .RESETB(1'b1),
                          .BYPASS(1'b0)
-                        ); // 48 MHz, fout = [ fin * (DIVF+1) ] / [ 2^DIVQ*(DIVR+1) ]
-
-
+                        );
+*/
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
