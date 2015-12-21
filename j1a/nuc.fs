@@ -1,19 +1,38 @@
+\ SwapForth nucleus for J1a
+\
+\ This is a 16-bit forth nucleus. It provides *just enough*
+\ of a Forth for the remainder of SwapForth to be compiled
+\ from the UART connection.
+\
+\ The code here is Forth-like J1a assembler code.
+\ It is compiled by cross.fs to produce nuc.hex, the boot
+\ image.
+\
+\ Some notes on idioms in this file:
+\   header xxx  creates a header entry
+\   h# xxx      hex literal
+\   d# xxx      decimal literal
+\
+\ Note that (like Colorforth) colon definitions can run
+\ into each other, so ": x : y" is legal.
+\
+\ The J1a has some instructions that are combined versions
+\ of traditional Forth words. For example 2dupxor has the
+\ same action as "2dup xor". See TYPE for an example.
+\
 
-\   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
-\               If the string is legal, give a single or double cell number
-\               and size of the number.
 header 1+       : 1+        d# 1 + ;
 header negate   : negate    invert 1+ ;
 header 1-       : 1-        d# -1 + ;
 header 0=       : 0=        d# 0 = ;
 header cell+    : cell+     d# 2 + ;
 
-header <>       : <>        = invert ; 
+header <>       : <>        = invert ;
 header 0<>      : 0<>       d# 0 <> ;
-header >        : >         swap < ; 
-header 0<       : 0<        d# 0 < ; 
+header >        : >         swap < ;
+header 0<       : 0<        d# 0 < ;
 header 0>       : 0>        d# 0 > ;
-header u>       : u>        swap u< ; 
+header u>       : u>        swap u< ;
 header !        : _!        ! ;
 header io!      : _io!      io! ;
 
@@ -63,7 +82,7 @@ header key
 header emit
 : emit
     begin
-        d# 1 uart-stat 
+        d# 1 uart-stat
     until
     h# 1000 _io!
 ;
@@ -118,21 +137,22 @@ header @
     h# 2000 or execute
 ;
 
-header false    : false d# 0 ; 
-header true     : true  d# -1 ; 
-header rot      : rot   >r swap r> swap ; 
-header -rot     : -rot  swap >r swap r> ; 
-header tuck     : tuck  swap over ; 
-header 2drop    : 2drop drop drop ; 
+header false    : false d# 0 ;
+header true     : true  d# -1 ;
+header rot      : rot   >r swap r> swap ;
+header -rot     : -rot  swap >r swap r> ;
+header tuck     : tuck  swap over ;
+header 2drop    : 2drop drop drop ;
 header ?dup     : ?dup  dup if dup then ;
 
-header 2dup     : 2dup  over over ; 
-header +!       : +!    tuck @ + swap _! ; 
+header 2dup     : 2dup  over over ;
+header +!       : +!    tuck @ + swap _! ;
 header 2swap    : 2swap rot >r rot r> ;
 header 2over    : 2over >r >r 2dup r> r> 2swap ;
 
-header min      : min   2dup< if drop else nip then ;
-header max      : max   2dup< if nip else drop then ;
+header min      : min   2dup<
+: minmax                if drop else nip then ;
+header max      : max   2dup< invert minmax ;
 
 header c@
 : c@
@@ -178,7 +198,7 @@ header type
     2drop
 ;
 
-: var: r> ;
+: var: r> ;                 \ variable defining word
 
 header base  :noname var: create base     $a ,
 header state :noname var: create state    0 ,
@@ -188,8 +208,7 @@ header forth :noname var: create forth    0 ,
 create dp       0 ,         \ Data pointer, grows up
 create lastword 0 ,
 create thisxt   0 ,
-\ create syncpt   0 ,
-create sourceC  0 , 0 ,
+create sourceC  0 , create sourceA 0 ,
 create rO       0 ,
 create leaves   0 ,
 create fineforoptimisation 0 ,
@@ -212,6 +231,8 @@ header words : words
     drop
 ;
 
+\ Not used: swapforth.fs has DUMP instead
+\
 \ header dump
 \ : dump ( addr u -- )
 \     cr over hex4
@@ -229,13 +250,14 @@ header words : words
 \ ;
 
 header -        : -         negate + ;
-header abs      : abs       dup 0< if negate then ; 
+header abs      : abs       dup
+                : ?neg      0< if negate then ;
 header here     : here      dp @i ;
 
 header /string
 : /string
     dup >r - swap r> + swap
-; 
+;
 
 : 1/string
     d# 1
@@ -245,30 +267,29 @@ header /string
 header aligned
 : aligned
     1+ 2/ 2*
-; 
+;
 
 header d+
-: d+                              ( augend . addend . -- sum . ) 
-    rot + >r                      ( augend addend) 
-    over+                         ( augend sum) 
-    swap over swap                ( sum sum augend)
-    u< if                         ( sum) 
-        r> 1+ 
-    else 
-        r> 
-    then                          ( sum . ) 
-; 
+: d+                              ( augend . addend . -- sum . )
+    rot + >r                      ( augend addend)
+    over+                         ( augend sum)
+    tuck swap                     ( sum sum augend)
+    u< negate                     ( sum)
+    r> +                          ( sum . )
+;
 
 header dnegate
-: dnegate 
-    invert swap invert swap 
+: dnegate
+    invert swap invert swap
     d# 1. d+
-; 
+;
 
 header dabs
 : dabs ( d -- ud )
-    dup 0< if dnegate then
-; 
+    dup
+: ?dneg ( d n -- d2 ) \ negate d if n is negative
+    0< if dnegate then
+;
 
 header s>d
 : s>d dup 0< ;
@@ -306,30 +327,30 @@ header d2*
     DOUBLE DOUBLE
     >r
     d2*
-    r@ d# 0 < if 
-        scratch @i d# 0 d+ 
-    then 
+    r@ d# 0 < if
+        scratch @i d# 0 d+
+    then
     r> 2*
 ;
 
 header um*
-: um*  ( u1 u2 -- ud ) 
-    scratch _! 
+: um*  ( u1 u2 -- ud )
+    scratch _!
     d# 0. rot
     mulstep mulstep mulstep mulstep
-    drop 
-; 
+    drop
+;
 
 \ : mul32step ( u2 u1 -- u2 u1 )
 \     DOUBLE DOUBLE
 \     >r
 \     2*
-\     r@ d# 0 < if 
+\     r@ d# 0 < if
 \         scratch @i +
-\     then 
+\     then
 \     r> 2*
 \ ;
-\ 
+\
 \ header *
 \ : *
 \     scratch !
@@ -343,12 +364,19 @@ header *
     um* drop
 ;
 
+header m*
+: m*
+    2dupxor >r
+    abs swap abs um*
+    r> ?dneg
+;
+
 \ see Hacker's Delight (2nd ed) 9-4 "Unsigned Long Division"
 
 : divstep  \ ( y x z )
     DOUBLE DOUBLE
     >r
-    dup 0< >r
+    s>d >r
     d2*
     dup r> or r@ u< invert if
         r@ -
@@ -358,10 +386,10 @@ header *
 ;
 
 header um/mod
-: um/mod \ ( ud u1 -- u2 u3 ) ( 6.1.2370 ) 
+: um/mod \ ( ud u1 -- u2 u3 ) ( 6.1.2370 )
     divstep divstep divstep divstep
-    drop swap 
-; 
+    drop swap
+;
 
 : 3rd   >r over r> swap ;
 
@@ -397,7 +425,7 @@ header um/mod
     then
 ;
 
-: >xt
+: >xt ( dict -- xt )    \ find the xt for a dictionary entry
     cell+
     count +
     aligned
@@ -418,7 +446,7 @@ header sfind
         dup
     while
         sameword
-        if 
+        if
             nip nip
             dup >xt
             swap        ( xt wp )
@@ -451,23 +479,22 @@ header >number
         over c@ digit?
         0= if drop ; then
         >r 2swap base @i
-        \ ud*
-        tuck * >r um* r> +
+        tuck * >r um* r> + \ inlined UD* above
         r> m+ 2swap
         1/string
     repeat
 ;
 
 header fill
-: fill ( c-addr u char -- ) ( 6.1.1540 ) 
-  >r  bounds 
-  begin
-    2dupxor 
-  while
-    r@ over c! 1+ 
-  repeat
-  r> drop 2drop
-; 
+: fill ( c-addr u char -- ) ( 6.1.1540 )
+    >r  bounds
+    begin
+        2dupxor
+    while
+        r@ over c! 1+
+    repeat
+    rdrop 2drop
+;
 
 header cmove
 : cmove ( addr1 addr2 u -- )
@@ -515,6 +542,13 @@ header source
     sourceC 2!
 ;
 
+header-imm \
+:noname
+    sourceC @i
+: >in!
+    >in _!
+;
+
 \ From Forth200x - public domain
 
 : isspace? ( c -- f )
@@ -532,7 +566,7 @@ header source
     WHILE
         1/string
     REPEAT
-    r> drop ;
+    rdrop ;
 
 header parse-name
 : parse-name ( "name" -- c-addr u )
@@ -541,7 +575,7 @@ header parse-name
     ['] isnotspace?
 : _parse
     xt-skip ( end-word restlen r: start-word )
-    2dup d# 1 min + source drop - >in _!
+    2dup d# 1 min + sourceA @i - >in!
     drop r>
     tuck -
 ;
@@ -576,45 +610,11 @@ header c,
     d# 1 tallot
 ;
 
-\ : isreturn ( opcode -- f )
-\     h# e080 and
-\     h# 6080 =
-\ ;
-\ 
-\ : isliteral ( ptr -- f)
-\     dup @ h# 8000 and 0<>
-\     swap cell+ @ h# 608c = and
-\ ;
-\ 
-\ header compile,
-\ : compile,
-\     dup @ isreturn if
-\         @ h# ff73 and
-\         w,
-\     else
-\         dup isliteral if
-\             @ w,
-\         else
-\             2/ h# 4000 or
-\             w,
-\         then
-\     then
-\ ;
-
 header compile,
 : compile,
     2/ h# 4000 or w,
 ;
 
-: attach
-    lastword @i ?dup if
-        forth _!
-    then
-;
-
-\ : sync
-\     dp @i syncpt _!
-\ ;
 
 header s,
 : s,
@@ -649,7 +649,6 @@ header-imm sliteral
     parse-name
     s,
     dp @i thisxt _!
-    \ sync
 ;
 
 header immediate
@@ -681,7 +680,6 @@ header :noname
     align dp @i
     dup thisxt _!
     lastword off
-    \ sync
     t]
 ;
 
@@ -689,32 +687,6 @@ header :noname
     drop
     r> r> rO _! >r
 ;
-
-\ : prev
-\     dp @ d# -2 +
-\ ;
-\ 
-\ : jumpable ( op -- f )
-\     dup h# e000 and h# 4000 =       \ is a call
-\     swap h# 1fff and 2* ['] (loopdone) <> and
-\ ;
-\ 
-\ header-imm exit
-\ : texit
-\     dp @ thisxt @ <> if
-\         prev @ jumpable if
-\             prev
-\             @
-\             h# 4000 xor
-\             prev !
-\             \ dp @ syncpt @ <> if
-\                 inline: exit
-\             \ then
-\             exit
-\         then
-\     then
-\     inline: exit
-\ ;
 
 : prev
     dp @i d# 2 -
@@ -726,7 +698,7 @@ header-imm exit
 : texit
     fineforoptimisation @i
     if
-      prev @ h# 4000 xor             
+      prev @ h# 4000 xor
       dup h# e000 and
       if
         drop
@@ -735,15 +707,18 @@ header-imm exit
         exit
       then
     then
-    
+
     inline: exit
 ;
 
 header-imm ;
 :noname
-    attach
     texit
     t[
+: attach
+    lastword @i ?dup if
+        forth _!
+    then
 ;
 
 \ Represent forward branches in one word
@@ -753,34 +728,33 @@ header-imm ;
 
 header-imm ahead
 : tahead
-    here h# 0000 w,
+    here h# 0000 w,     \ forward unconditional branch
 ;
 
 header-imm if
 : tif
-    here h# 2000 w,
+    here h# 2000 w,     \ forward conditional branch
 ;
 
-header-imm then     ( addr -- )
-: tthen
-    here 2/
-    swap +!
-    \ sync
-;
-
-header-imm begin
+header-imm begin  ( -- insn )
 : tbegin
     dp @i 2/
 ;
 
+header-imm then     ( addr -- )
+: tthen
+    tbegin
+    swap +!
+;
+
 header-imm again
 : tagain
-    w,
+    w,                  \ backward unconditional
 ;
 
 header-imm until
 : tuntil
-    h# 2000 or w,
+    h# 2000 or w,       \ backward conditional 
 ;
 
 header does>
@@ -861,6 +835,15 @@ header-imm ?do
 \ resolve each LEAVE by walking the chain starting at 'leaves'
 \ compile a call to (loopdone)
 
+: (loopnext)
+    d# 1 + d# 0 over=
+;
+
+header-imm loop
+:noname
+    inline: r>
+    ['] (loopnext) compile,
+    tuntil
 : resolveleaves
     leaves @i
     begin
@@ -873,18 +856,6 @@ header-imm ?do
     drop
     leaves _!
     ['] (loopdone) compile,
-;
-
-: (loopnext)
-    d# 1 + d# 0 over=
-;
-
-header-imm loop
-:noname
-    inline: r>
-    ['] (loopnext) compile,
-    tuntil
-    resolveleaves
 ;
 
 : (+loopnext) ( inc R -- R finished )
@@ -911,7 +882,7 @@ header i
 : i
     r>
     r@ rO @i +
-    swap >r
+    swap execute
 ;
 
 header j
@@ -920,7 +891,7 @@ header j
     r> r> 2dup + -rot
     >r >r
     -rot
-    >r >r
+    >r execute
 ;
 
 header-imm unloop
@@ -970,7 +941,7 @@ header abort
 ;
 
 : isvoid ( caddr u -- ) \ any char remains, abort
-    nip 0<>
+    nip
 : ?abort
     if
         abort
@@ -989,12 +960,12 @@ header abort
     >number
     [char] . consume1 if
         isvoid              \ double number
-        r> if dnegate then
+        r> ?dneg
         d# 2 exit
     then
                             \ single number
     isvoid drop
-    r> if negate then
+    r> ?neg
 : return1
     d# 1
 ;
@@ -1041,7 +1012,7 @@ header abort
 
 header-imm literal
 : tliteral
-    dup 0< if
+    s>d if
         invert tliteral
         inline: invert
     else
@@ -1070,11 +1041,6 @@ header '
 header char
 :noname
     parse-name drop c@
-;
-
-header-imm \
-:noname
-    sourceC @i >in _!
 ;
 
 : doubleAlso,
@@ -1135,15 +1101,15 @@ header-imm \
 header accept
 : accept
     tethered @i if d# 30 emit then
-    
+
     >r d# 0  ( addr len R: maxlen )
 
     begin
         key    ( addr len key R: maxlen )
-        
+
         d# 9 over= if drop d# 32 then
         d# 127 over= if drop d# 8 then
-        
+
         dup d# 31 u>
         if
             over r@ u<
@@ -1152,12 +1118,12 @@ header accept
                 >r 2dup + r@ swap c! 1+ r>
             then
         then
-        
+
         d# 8 over= if >r delchar r> then
-          
+
         d# 10 over= swap d# 13 = or
     until
-    
+
     rdrop nip
     space
 ;
@@ -1176,7 +1142,7 @@ header evaluate
     source >r >r >in @i >r
     source! 0>in
     interpret
-    r> >in _! r> r> source!
+    r> >in! r> r> source!
 ;
 
 header quit
@@ -1184,12 +1150,11 @@ header quit
     begin
         refill drop
         interpret
-            space
-            [char] k
-            [char] o 2emit
-            cr
+        space
+        [char] k
+        [char] o 2emit
+        cr
     again
-;
 
 header .s
 : .s

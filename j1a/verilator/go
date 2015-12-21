@@ -1,4 +1,4 @@
-make clean
+# make clean
 make -C .. &&
 make &&
-python shell.py -p ../ -p ../../common -p ../../anstests swapforth.fs # ../runtests.fs
+python shell.py -p ../ -p ../../common -p ../../anstests swapforth.fs ../runtests.fs

@@ -57,9 +57,12 @@
 \ "The size of the pictured numeric output string buffer shall
 \ be at least (2*n) + 2 characters, where n is the number of
 \ bits in a cell."
+\
+\ The size of the region identified by WORD shall be at least
+\ 33 characters.
 
 create BUF0
-16 cells 2 + 128 max
+16 cells 2 + 33 max
 allot here constant BUF
 
 variable hld
@@ -69,7 +72,7 @@ variable hld
 ;
 
 : hold
-    hld @ 1- dup hld ! c!
+    -1 hld +! hld @ c!
 ;
 
 : sign
@@ -81,7 +84,7 @@ variable hld
 : #
     0 base @ um/mod >r base @ um/mod swap
     9 over < [ char A char 9 1 + - ] literal and +
-    [ char 0 ] literal + hold r>
+    [char] 0 + hold r>
 ;
 
 : #s
@@ -95,37 +98,29 @@ variable hld
     2drop hld @ BUF over -
 ;
 
-: (d.)
+: d.r  ( d n -- )
+    >r
     dup >r dabs <# #s r> sign #>
+    r> over - spaces type
 ;
 
-: d.
-    (d.) type space
+: d.  ( d -- )
+    0 d.r space
 ;
 
-: .
+: .  ( n -- )
     s>d d.
 ;
 
-: u.
+: u.  ( u -- )
     0 d.
 ;
 
-: rtype ( caddr u1 u2 -- ) \ display character string specified by caddr u1
-                           \ in a field u2 characters wide.
-    over - spaces type
-;
-
-: d.r
-    >r (d.)
-    r> rtype
-;
-
-: .r
+: .r  ( n1 n2 -- )
     >r s>d r> d.r
 ;
 
-: u.r
+: u.r  ( u n -- )
     0 swap d.r
 ;
 
@@ -141,8 +136,8 @@ variable hld
 
 : word
     begin
-        source drop >in @ + c@ over =
-        source nip >in @ <> and
+        source >r >in @ + c@ over =
+        r> >in @ xor and
     while
         1 >in +!
     repeat

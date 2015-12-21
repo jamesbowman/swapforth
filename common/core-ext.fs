@@ -11,12 +11,9 @@
 ; immediate
 
 : find
-    dup
     count sfind
     dup 0= if
-        nip nip
-    else
-        rot drop
+        2drop 1- 0
     then
 ;
 
@@ -43,12 +40,10 @@ create _ 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
 
 : of  ( #of -- orig #of+1 / x -- )
     1+    ( count ofs )
-    >r    ( move off the stack in case the control-flow )
-          ( stack is the data stack. )
     postpone over  postpone = ( copy and test case value)
     postpone if    ( add orig to control flow stack )
     postpone drop  ( discards case value if = )
-    r>             ( we can bring count back now )
+    swap           ( bring count back now )
 ; immediate
 
 : endof ( orig1 #of -- orig2 #of )
@@ -60,9 +55,11 @@ create _ 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
 
 : endcase  ( orig1..orign #of -- )
     postpone drop  ( discard case value )
-    0 ?do
-      postpone then
-    loop
+    begin
+        dup
+    while
+        swap postpone then 1-
+    repeat drop
 ; immediate
 
 : hex
@@ -79,4 +76,4 @@ create _ 80 allot  \ The "temporary buffer" in ANS: A.11.6.1.2165
 ;
 
 \ From ANS specification A.6.2.0970
-: convert   1+ 65535 >number drop ;
+: convert   1+ 511 >number drop ;

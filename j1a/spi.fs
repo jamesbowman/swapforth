@@ -10,21 +10,21 @@
 
 new
 
-: idle
-    1 8 io!
-;
-
-: spix
-    8 lshift
-    8 0 do
-        dup 0< 2 and            \ extract MS bit
-        dup 8 io!               \ lower SCK, update MOSI
-        4 + 8 io!               \ raise SCK
-        2*                      \ next bit
-        $2000 io@ 4 and +       \ read MISO, accumulate
-    loop
-    2/ 2/
-;
+\ : idle
+\     1 8 io!
+\ ;
+\ 
+\ : spix
+\     8 lshift
+\     8 0 do
+\         dup 0< 2 and            \ extract MS bit
+\         dup 8 io!               \ lower SCK, update MOSI
+\         4 + 8 io!               \ raise SCK
+\         2*                      \ next bit
+\         $2000 io@ 4 and +       \ read MISO, accumulate
+\     loop
+\     2/ 2/
+\ ;
 
 : >spi      spix drop ;
 : spi>      0 spix ;
