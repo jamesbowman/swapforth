@@ -11,7 +11,18 @@
 ; r12   context pointer
 ; r13   loop counter
 ; r14   loop offset
+; r15   constant 0
 ;
+
+CFUNC_DOTX      equ     0       ;; This table matches CFUNCS in main.c
+CFUNC_BYE       equ     8
+CFUNC_EMIT      equ     16
+CFUNC_KEY       equ     24
+
+%define WORD_NAME       -32     ;; word name as a counted string
+%define WORD_LINK       0       ;; relative link to prev word
+%define WORD_CBYTES     4       ;; code size in bytes, for inlining
+%define WORD_CODE       8       ;; start of native code
 
 section .text
 
@@ -43,22 +54,26 @@ _swapforth:
         object  _leaves,1
         object  _tethered,1
         object  _scratch,4
-        object  _emit,1
-        object  _dotx,1
-        object  _key,1
+        object  _cfuncs,1
         object  _tib,32
 
 %define link $
 
-%define IMMEDIATE       1
+%define IMMEDIATE       1       ;; IMMEDIATE words have this bit set in link
+%define INLINE          2       ;; 
+
+%assign wnum    0               ;; Word number, for computing CBYTES
 
 %macro  header  2-3     0
+L%[wnum]:
+        %assign wnum wnum+1
         align   32
         %strlen %%count %1
         db %%count,%1
         align   32
-%%link  dd   $-link + %3
+%%link  dd   $-link + %3                ;; relative link to prev word
         %define link %%link
+        dd      L%[wnum] - ($+5)        ;; CBYTES: code size in bytes
 %2:
 %endmacro
 
@@ -68,8 +83,8 @@ _swapforth:
 %endmacro
 
 %macro  _dup    0
+        mov     [rdi-8],rax
         sub     rdi,8
-        mov     [rdi],rax
 %endmacro
 
 %macro  _drop   0
@@ -99,8 +114,8 @@ _swapforth:
 %endmacro
 
 %macro  cond    1
-        mov     rax,0
-        mov     rbx,-1
+        mov     rax,r15
+        lea     rbx,[r15-1]
         cmov%1  rax,rbx
 %endmacro
 
@@ -115,43 +130,36 @@ _swapforth:
 %endmacro
 
 
-        extern  __dotx
-        header  '.x',dotx
-        push    rdi
-        mov     rbp,rsp
-        or      rsp,8
+        ;; C interface macro, parameter is offset into CTABLE
+
+        %macro  c_pre   1
+        push    rdi     ;; Our data stack pointer, C clobbers
+        mov     rbp,rsp ;; Save the SP
+        or      rsp,8   ;; Now align SP, C needs this
         sub     rsp,8
-        mov     rdi,rax
-        call    [r12 + _dotx]
-        mov     rsp,rbp
-        pop     rdi
+        mov     rdi,rax ;; Always pass TOS as argument
+        mov     rax,[r12 + _cfuncs]
+        call    [rax + %1]
+        mov     rsp,rbp ;; restore our SP
+        pop     rdi     ;; restore our data stack pointer
+        %endmacro
+
+        header  '.x',dotx       ; ( x -- )
+        c_pre   CFUNC_DOTX
         mov     rax,[rdi]
         add     rdi,8
         ret
 
-        extern  __emit
-        header  'emit',emit
-        push    rdi
-        mov     rbp,rsp
-        or      rsp,8
-        sub     rsp,8
-        mov     rdi,rax
-        call    [r12 + _emit]
-        mov     rsp,rbp
-        pop     rdi
+        header  'bye',bye
+        c_pre   CFUNC_BYE       ;; never returns
+
+        header  'emit',emit     ; ( x -- )
+        c_pre   CFUNC_EMIT
         jmp     drop
 
-        extern  __key
-        header  'key',key
+        header  'key',key       ;; ( -- x )
         _dup
-        push    rdi
-        mov     rbp,rsp
-        or      rsp,8
-        sub     rsp,8
-        mov     rdi,rax
-        call    [r12 + _key]
-        mov     rsp,rbp
-        pop     rdi
+        c_pre   CFUNC_KEY
         ret
 
 header  "depth",depth
@@ -187,97 +195,98 @@ source_store:
         lea     rax,[r12 + _sourceC]
         jmp     two_store
 
-header "2*",two_times
+header "2*",two_times,INLINE
         sal     rax,1
         ret
 
-header "2/",two_slash
+header "2/",two_slash,INLINE
         sar     rax,1
         ret
 
-header "1+",one_plus
+header "1+",one_plus,INLINE
         inc     rax
         ret
 
-header "1-",one_minus
+header "1-",one_minus,INLINE
         dec     rax
         ret
 
-header "0=",zero_equals
-        cmp     rax,0
+header "0=",zero_equals,INLINE
+        cmp     rax,r15
         cond    e
         ret
 
-header "cell+",cell_plus
+header "cell+",cell_plus,INLINE
         add     rax,8
         ret
 
-header "cells",cells
+header "cells",cells,INLINE
         shl     rax,3
         ret
 
-header "<>",not_equal
+header "<>",not_equal,INLINE
         cmp     [rdi],rax
         cond    ne
         add     rdi,8
         ret
 
-header "=",equal
+header "=",equal,INLINE
         cmp     [rdi],rax
         cond    e
         add     rdi,8
         ret
 
-header ">",greater
+header ">",greater,INLINE
         cmp     [rdi],rax
         cond    g
         add     rdi,8
         ret
 
-header "<",less
+header "<",less,INLINE
         cmp     [rdi],rax
         cond    l
         add     rdi,8
         ret
 
-header "0<",less_than_zero
+header "0<",less_than_zero,INLINE
         sar     rax,63
         ret
 
-header "0>",greater_than_zero
-        cmp     rax,0
+header "0>",greater_than_zero,INLINE
+        cmp     rax,r15
         cond    g
         ret
 
-header "0<>",not_equal_zero
+header "0<>",not_equal_zero,INLINE
         add     rax,-1
         sbb     rax,rax
         ret
 
-header "u<",unsigned_less
+header "u<",unsigned_less,INLINE
         cmp     [rdi],rax
         cond    b
         add     rdi,8
         ret
 
-header "u>",unsigned_greater
+header "u>",unsigned_greater,INLINE
         cmp     [rdi],rax
         cond    a
         add     rdi,8
         ret
 
-header  "+",plus
+header  "+",plus,INLINE
         add     rax,[rdi]
         add     rdi,8
         ret
 
-header  "s>d",s_to_d
+header  "s>d",s_to_d,INLINE
         _dup
         sar     rax,63
         ret
 
-header  "d>s",d_to_s
-        jmp     drop
+header  "d>s",d_to_s,INLINE
+        _drop
+        ret
 
 header  "m+",m_plus
         call    s_to_d
@@ -287,7 +296,8 @@ header  "d+",d_plus
         mov     rbx,[rdi]
         add     [rdi+16],rbx
         adc     [rdi+8],rax
-        jmp     two_drop
+        _drop2
+        ret
 
 header  "d=",d_equal
         cmp     [rdi+8],rax
@@ -338,71 +348,73 @@ header  "d-",d_minus
         sbb     [rdi+8],rax
         jmp     two_drop
 
-header  "d2*",d_two_times
+header  "d2*",d_two_times,INLINE
         shl     qword [rdi],1
         adc     rax,rax
         ret
 
-header  "d2/",d_two_slash
+header  "d2/",d_two_slash,INLINE
         sar     rax,1
         rcr     qword [rdi],1
         ret
 
-header  "-",minus
+header  "-",minus,INLINE
         poprbx
         sub     rbx,rax
         mov     rax,rbx
         ret
 
-header  "negate",negate
+header  "negate",negate,INLINE
         neg     rax
         ret
 
-header  "invert",invert
+header  "invert",invert,INLINE
         not     rax
         ret
 
-header  "and",and
+header  "and",and,INLINE
         and     rax,[rdi]
         add     rdi,8
         ret
 
-header  "or",or
+header  "or",or,INLINE
         or      rax,[rdi]
         add     rdi,8
         ret
 
-header  "xor",xor
+header  "xor",xor,INLINE
         xor     rax,[rdi]
         add     rdi,8
         ret
 
-header  "lshift",lshift
+header  "lshift",lshift,INLINE
         mov     rcx,rax
         mov     rax,[rdi]
         shl     rax,cl
         add     rdi,8
         ret
 
-header  "rshift",rshift
+header  "rshift",rshift,INLINE
         mov     rcx,rax
         mov     rax,[rdi]
         shr     rax,cl
         add     rdi,8
         ret
 
-header  "abs",_abs
-        cmp     rax,0
-        jl      negate
+header  "abs",_abs,INLINE
+        mov     rbx,rax
+        sar     rbx,63
+        xor     rax,rbx
+        sub     rax,rbx
         ret
 
-header  "um*",u_m_multiply
+header  "um*",u_m_multiply,INLINE
         mul     qword [rdi]
         mov     [rdi],rax
         mov     rax,rdx
         ret
 
-header  "*",multiply
+header  "*",multiply,INLINE
         imul    rax,[rdi]
         add     rdi,8
         ret
@@ -433,34 +445,42 @@ header  "um/mod",u_m_slash_mod
         call    nip
         ret
 
-header  "c@",c_fetch
+header  "c@",c_fetch,INLINE
         movzx   rax,byte [rax]
         ret
 
-header  "c!",c_store
+header  "c!",c_store,INLINE
         mov     bl,byte [rdi]
         mov     [rax],bl
         _drop2
         ret
 
-header  "@",fetch
+header  "@",fetch,INLINE
         mov     rax,[rax]
         ret
 
-header  "!",store
+header  "!",store,INLINE
         mov     rbx,[rdi]
         mov     [rax],rbx
         _drop2
         ret
 
-header  "2@",two_fetch
+header  "ul@",u_l_fetch,INLINE
+        mov     eax,dword [rax]
+        ret
+
+header  "sl@",s_l_fetch,INLINE
+        movsx   rax,dword [rax]
+        ret
+
+header  "2@",two_fetch,INLINE
         mov     rbx,[rax+8]
         mov     rax,[rax]
         sub     rdi,8
         mov     [rdi],rbx
         ret
 
-header  "2!",two_store
+header  "2!",two_store,INLINE
         mov     rbx,[rdi]
         mov     [rax],rbx
         mov     rbx,[rdi+8]
@@ -475,31 +495,32 @@ header  "/string",slash_string
         add     [rdi],rbx
         ret
 
-header  "swap",swap
+header  "swap",swap,INLINE
         mov     rbx,[rdi]
         mov     [rdi],rax
         mov     rax,rbx
         ret
 
-header  "over",over
+header  "over",over,INLINE
         _dup
         mov     rax,[rdi+8]
         ret
 
-header "false",false
+header "false",false,INLINE
         _dup
         xor     rax,rax
         ret
 
-header "true",true
-        lit     -1
+header "true",true,INLINE
+        _dup
+        lea     rax,[r15-1]
         ret
 
-header "bl",_bl
+header "bl",_bl,INLINE
         lit     32
         ret
 
-header "rot",rot
+header "rot",rot,INLINE
         xchg    rax,[rdi]
         xchg    rax,[rdi+8]
         ret
@@ -507,7 +528,7 @@ header "rot",rot
 header "noop",noop
         ret
 
-header "-rot",minus_rot
+header "-rot",minus_rot,INLINE
         xchg    rax,[rdi+8]
         xchg    rax,[rdi]
         ret
@@ -517,41 +538,44 @@ header "tuck",tuck     ; : tuck  swap over ;
         jmp     over
 
 header "?dup",question_dupe     ; : ?dup  dup if dup then ;
-        cmp     rax,0
+        cmp     rax,r15
         jne     dupe
         ret
 
-header "2dup",two_dup     ; : 2dup  over over ; 
-        call    over
-        jmp     over
+header "2dup",two_dup,INLINE     ; : 2dup  over over ; 
+        _dup
+        mov     rax,[rdi+8]
+        _dup
+        mov     rax,[rdi+8]
+        ret
 
-header "+!",plus_store       ; : +!    tuck @ + swap ! ; 
+header "+!",plus_store,INLINE       ; : +!    tuck @ + swap ! ; 
         mov     rbx,[rdi]
         add     [rax],rbx
         _drop2
         ret
 
-header "2swap",two_swap    ; : 2swap rot >r rot r> ;
+header "2swap",two_swap,INLINE    ; : 2swap rot >r rot r> ;
         mov     rbx,[rdi]
         xchg    rax,[rdi+8]
         xchg    rbx,[rdi+16]
         mov     [rdi],rbx
         ret
 
- header "2over",two_over
+ header "2over",two_over,INLINE
         _dup
         mov     rax,[rdi+24]
         _dup
         mov     rax,[rdi+24]
         ret
 
-header "min",min      ; : min   2dup< if drop else nip then ;
+header "min",min,INLINE      ; : min   2dup< if drop else nip then ;
         poprbx
         cmp     rax,rbx
         cmovg   rax,rbx
         ret
 
-header "max",max      ; : max   2dup< if nip else drop then ;
+header "max",max,INLINE      ; : max   2dup< if nip else drop then ;
         poprbx
         cmp     rax,rbx
         cmovl   rax,rbx
@@ -565,25 +589,25 @@ header  "cr",cr
         lit     10
         jmp     emit
 
-header "count",count
+header "count",count,INLINE
         inc     rax
         _dup
         movzx   rax,byte [rax-1]
         ret
 
-header "dup",dupe
+header "dup",dupe,INLINE
         _dup
         ret
 
-header "drop",drop
+header "drop",drop,INLINE
         _drop
         ret
 
-header  "nip",nip
+header  "nip",nip,INLINE
         add     rdi,8
         ret
 
-header "2drop",two_drop
+header "2drop",two_drop,INLINE
         _drop2
         ret
 
@@ -592,9 +616,13 @@ header "execute",execute
         _drop
         jmp     rbx
 
-header "bounds",bounds ; ( a n -- a+n a )
-        add     rax,[rdi]
-        jmp     swap
+header "bounds",bounds,INLINE ; ( a n -- a+n a )
+        mov     rbx,[rdi]
+        add     rax,rbx
+        mov     [rdi],rax
+        mov     rax,rbx
+        ret
+
 header "type",type
         call    bounds
 .0:
@@ -654,10 +682,7 @@ header  "sfind",sfind
 
         vpcmpeqb xmm2,xmm1,xmm0
         vpmovmskb rcx,xmm2
-
         cmp     rcx,0xffff
-
-        ; cmp     rdx,[rax-32]
         je      .match
 
         call    nextword
@@ -669,9 +694,9 @@ header  "sfind",sfind
 .match:
         call    nip
         call    nip
-        add     rax,4
+        add     rax,WORD_CODE
         _dup
-        mov     eax,[rax-4]
+        mov     eax,[rax-WORD_CODE]
         and     eax,1   ;               0  or  1
         sal     rax,1   ;               0  or  2
         add     rax,-1  ;              -1 or  +1
@@ -681,7 +706,7 @@ header  "sfind",sfind
 ; on return: eax is next word in dictionary, Z set if no more words
 nextword:
         mov     ebx,dword [rax]
-        and     ebx,~1
+        and     ebx,~(IMMEDIATE|INLINE)
         cmp     ebx,0
         cmove   rbx,rax
         sub     rax,rbx
@@ -708,6 +733,8 @@ header "accept",accept ; ( c-addr +n1 -- +n2 )
 
 .0:
         call    key
+        cmp     eax,0           ;; key returns a 32-bit int, so -1 is FFFFFFFF
+        jl      bye
         cmp     al,10
         je      .1
         call    over
@@ -917,9 +944,7 @@ header  "abort",abort
         lit     'a'
         call    emit
         call    cr
-        lit     26
-        call    emit
-.1:     jmp     .1
+        jmp     bye
 
         header  "postpone",postpone,IMMEDIATE
         call    parse_name
@@ -1152,14 +1177,6 @@ quit:
 .1:
         ret
 
-        header  "[",left_bracket,IMMEDIATE
-        mov     qword [r12 + _state],0
-        ret
-
-        header  "]",right_bracket
-        mov     qword [r12 + _state],3
-        ret
-
         header  "here",here
         _dup
         mov     rax,[r12 + _dp]
@@ -1223,112 +1240,7 @@ quit:
         pop     rdi
         jmp     two_drop
 
-        header  "code.,",code_comma
-        mov     rbx,[r12 + _cp]
-        mov     [rbx],rax
-        add     rbx,8
-        mov     [r12 + _cp],rbx
-        jmp     drop
-
-        header  "code.c,",code_c_comma
-        mov     rbx,[r12 + _cp]
-        mov     [rbx],al
-        add     rbx,1
-        mov     [r12 + _cp],rbx
-        jmp     drop
-
-        header  "code.s,",code_s_comma
-        push    rdi
-        mov     rsi,[rdi]
-        mov     rdi,[r12 + _cp]
-        mov     rcx,rax
-        rep movsb
-        mov     [r12 + _cp],rdi
-        pop     rdi
-        jmp     two_drop
-
-
-;   align
-;   here lastword _!
-;   forth @i w,
-;   parse-name
-;   s,
-;   dp @i thisxt _!
-
-mkheader:
-        call    parse_name
-        call    w2scratch
-        call    two_drop
-
-        mov     rbx,[r12 + _cp]
-        add     rbx,31
-        and     rbx,~31
-        mov     rdx,[r12 + _scratch]             ; is the word itself
-        mov     [rbx],rdx
-        mov     rdx,[r12 + _scratch + 8]
-        mov     [rbx + 8],rdx
-        mov     rdx,[r12 + _scratch + 16]
-        mov     [rbx + 16],rdx
-        mov     rdx,[r12 + _scratch + 24]
-        mov     [rbx + 24],rdx
-        add     rbx,32
-
-        mov     [r12 + _lastword],rbx
-        mov     rdx,rbx
-        sub     rdx,[r12 + _forth]
-        mov     [rbx],edx
-        add     rbx,4
-        mov     [r12 + _thisxt],ebx
-        mov     [r12 + _cp],ebx
-
-        ret
-
-attach:
-        mov     rbx,[r12 + _lastword]
-        mov     [r12 + _forth],rbx
-        ret
-
-        header  ":noname",colon_noname
-        add     qword [r12 + _cp],15
-        and     qword [r12 + _cp],~15
-        call    chere
-        mov     [r12 + _thisxt],rax
-        jmp     right_bracket
-
-        header  ":",colon
-        call    mkheader
-        jmp     right_bracket
-
-        header  ";",semi_colon,IMMEDIATE
-        call    exit
-        call    attach
-        jmp     left_bracket
-
-        header  "exit",exit,IMMEDIATE
-        mov     rbx,[r12 + _cp]
-        sub     rbx,5
-        cmp     rbx,[r12 + _prevcall]
-        jne     .1
-        mov     byte [rbx],0xe9
-.1:
-        lit     0xc3
-        jmp     code_c_comma
-
-        header  "immediate",immediate
-        mov     rbx,[r12 + _lastword]
-        or      dword [rbx],1
-        ret
-
-        header  "does>",does
-        pop     rcx                             ; return address will be branch target
-        mov     rbx,[r12 + _lastword]           ; points to link and LITERAL
-        mov     byte [rbx + (4 + 17)],0xe9      ; patch to a JMP
-        sub     rcx,rbx                         ;
-        sub     rcx,(4 + 17 + 1 + 4)
-        mov     [rbx + (4 + 17 + 1)],ecx        ; JMP destination
-        ret
-
-;; ================ program structure ================ 
+;; ================ R stack           ================ 
 
         %macro  frag    1
         _dup
@@ -1383,6 +1295,138 @@ len_r_at equ $ - frag_r_at
         mov     rax,[rsp + 8]
         ret
 
+;; ================ Compiling         ================ 
+
+        header  "code.,",code_comma
+        mov     rbx,[r12 + _cp]
+        mov     [rbx],rax
+        add     rbx,8
+        mov     [r12 + _cp],rbx
+        jmp     drop
+
+        header  "code.c,",code_c_comma
+        mov     rbx,[r12 + _cp]
+        mov     [rbx],al
+        add     rbx,1
+        mov     [r12 + _cp],rbx
+        jmp     drop
+
+        header  "code.s,",code_s_comma
+        push    rdi
+        mov     rsi,[rdi]
+        mov     rdi,[r12 + _cp]
+        mov     rcx,rax
+        rep movsb
+        mov     [r12 + _cp],rdi
+        pop     rdi
+        jmp     two_drop
+
+;   align
+;   here lastword _!
+;   forth @i w,
+;   parse-name
+;   s,
+;   dp @i thisxt _!
+
+mkheader:
+        call    parse_name
+        call    w2scratch
+        call    two_drop
+
+        mov     rbx,[r12 + _cp]
+        add     rbx,31
+        and     rbx,~31
+        mov     rdx,[r12 + _scratch]             ; is the word itself
+        mov     [rbx],rdx
+        mov     rdx,[r12 + _scratch + 8]
+        mov     [rbx + 8],rdx
+        mov     rdx,[r12 + _scratch + 16]
+        mov     [rbx + 16],rdx
+        mov     rdx,[r12 + _scratch + 24]
+        mov     [rbx + 24],rdx
+        add     rbx,32
+
+        mov     [r12 + _lastword],rbx
+        mov     rdx,rbx
+        sub     rdx,[r12 + _forth]
+        or      rdx,INLINE                      ;; words are inline by default
+        mov     [rbx],edx
+        mov     dword [rbx+4],0                 ;; WORD_CBYTES
+        add     rbx,WORD_CODE
+        mov     [r12 + _thisxt],rbx
+        mov     [r12 + _cp],rbx
+        ret
+
+attach:
+        mov     rbx,[r12 + _lastword]
+        mov     [r12 + _forth],rbx
+        mov     rcx,[r12 + _cp]
+        sub     rcx,[r12 + _thisxt]
+        sub     rcx,1
+        mov     [rbx + WORD_CBYTES],ecx
+        ret
+
+        header  ":noname",colon_noname
+        add     qword [r12 + _cp],15
+        and     qword [r12 + _cp],~15
+        call    chere
+        mov     [r12 + _thisxt],rax
+        jmp     right_bracket
+
+        header  ":",colon
+        call    mkheader
+        jmp     right_bracket
+
+        header  ";",semi_colon,IMMEDIATE
+        call    exit
+        call    attach
+        jmp     left_bracket
+
+        header  "exit",exit,IMMEDIATE
+        mov     rbx,[r12 + _cp]
+        sub     rbx,5
+        cmp     rbx,[r12 + _prevcall]
+        jne     .1
+        mov     byte [rbx],0xe9
+.1:
+        lit     0xc3
+        jmp     code_c_comma
+
+        header  "immediate",immediate
+        mov     rbx,[r12 + _lastword]
+        or      dword [rbx],1
+        ret
+
+        header  "noinline",noinline
+        mov     rbx,[r12 + _lastword]
+        and     dword [rbx],~INLINE
+        ret
+
+;; CREATE makes a word that pushes a literal, followed by
+;; a return.
+;; DOES> works by patching the return instruction to a jump.
+
+;; CREATERET is the offset from the word to the RET opcode
+%define CREATERET       (WORD_CODE + 18)
+
+        header  "does>",does
+        call    noinline
+        pop     rcx                             ; return address will be branch target
+        mov     rbx,[r12 + _lastword]           ; points to link and LITERAL
+        mov     byte [rbx + CREATERET],0xe9     ; patch to a JMP
+        sub     rcx,rbx                         ;
+        sub     rcx,(CREATERET + 1 + 4)
+        mov     [rbx + (CREATERET + 1)],ecx     ; JMP destination
+        ret
+
+        header  "[",left_bracket,IMMEDIATE
+        mov     qword [r12 + _state],0
+        ret
+
+        header  "]",right_bracket
+        mov     qword [r12 + _state],3
+        ret
+
 frag_lit64:
         _dup
         mov     rax,0x1234567812345678
@@ -1395,6 +1439,17 @@ len_lit64 equ ($ - 8) - frag_lit64
         jmp     code_comma
 
         header  "compile,",compile_comma
+        mov     ebx,dword [rax - WORD_CODE]
+        test    ebx,INLINE
+        je      .1
+        ;; inline it
+        mov     qword [r12 + _prevcall],0
+        _dup
+        mov     eax,dword [rax - WORD_CBYTES]
+        jmp     code_s_comma
+
+.1:
+        call    noinline
         call    chere
         mov     [r12 + _prevcall],rax
         add     rax,5
@@ -1404,16 +1459,11 @@ len_lit64 equ ($ - 8) - frag_lit64
         call    code_c_comma
 
 l_comma:
-        _dup
-        call    code_c_comma
-        sar     rax,8
-        _dup
-        call    code_c_comma
-        sar     rax,8
-        _dup
-        call    code_c_comma
-        sar     rax,8
-        jmp     code_c_comma
+        mov     rbx,[r12 + _cp]
+        mov     [rbx],eax
+        add     rbx,4
+        mov     [r12 + _cp],rbx
+        jmp     drop
 
         header  "2literal",two_literal,IMMEDIATE
         call    swap
@@ -1510,6 +1560,7 @@ backjmp: ;; ( dst -- ) make a backwards jump from here to dst
         jmp     backjmp
 
         header  "recurse",recurse,IMMEDIATE
+        call    noinline
         _dup
         mov     rax,[r12 + _thisxt]
         jmp     compile_comma
@@ -1675,20 +1726,22 @@ header  "decimal",decimal
         ret
 
 header  "dummy",dummy
+L%[wnum]:
 
 init:
         push    rbp
         push    rbx
         push    r12
+
+        mov     r15,0
         mov     r12,rdi
 
         call    left_bracket
 
-        mov     [r12 + _emit],rsi
-        mov     [r12 + _dotx],rdx
-        mov     [r12 + _key],rcx
+        mov     [r12 + _cfuncs],rsi
 
-        lea     rax,[rel dummy - 4]
+        lea     rax,[rel dummy - WORD_CODE]
+        call    nextword
         mov     [r12 + _forth],rax
 
         lea     rax,[rel mem]
@@ -1717,11 +1770,6 @@ init:
         mov     [r12 + _jumptab + 40],rax
 
         call    quit
-        ; vmovdqu xmm0,[rel dummy-40]
-        ; vmovdqu xmm1,[rel dummy-40]
-        ; vpcmpeqb xmm1,xmm1,xmm0
-        ; VPMOVMSKB rax,xmm1
-        ; call    dotx
 
         mov     rax,rdi
         pop     r12
@@ -1731,4 +1779,7 @@ init:
 
         align 32
 mem:
-        align   65536
+global swapforth_ends
+swapforth_ends:
+global _swapforth_ends
+_swapforth_ends:

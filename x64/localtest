@@ -1,0 +1,4 @@
+set -e
+nasm -f elf64 nuc.asm
+gcc -Wall main.c nuc.o 
+python expand.py swapforth.fs runtests.fs | ./a.out | grep '^Forth tests completed'

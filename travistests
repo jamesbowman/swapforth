@@ -9,7 +9,15 @@ echo | python nuc.py -c 8 runtests.fs
 echo | python nuc.py -c 2 -b runtests.fs
 echo | python nuc.py -c 4 -b runtests.fs
 echo | python nuc.py -c 8 -b runtests.fs
+cd ../x64
+sh localtest
 cd ../j1a/verilator
 sh localtest
 cd ../../j1b/verilator
 sh localtest
+cd ../../j1a/doc
+rm -f j1a-reference.pdf
+make
+cd ../../j1b/doc
+rm -f j1b-reference.pdf
+make
