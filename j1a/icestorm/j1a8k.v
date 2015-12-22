@@ -166,8 +166,8 @@ module top(input pclk,
 );
   localparam MHZ = 12;
 
-    wire clk, pll_lock;
-  
+  /*
+  wire clk, pll_lock;
   wire pll_reset;
   assign pll_reset = !reset;
   wire resetq; // note port changed, .pcf needs update too.
@@ -191,9 +191,17 @@ module top(input pclk,
                          .LOCK(pll_lock),
                          .RESETB(pll_reset),
                          .BYPASS(1'b0)
-                        ); // runs about 37.5 MHz, just to prove it works.
-  /*
+                        ); // runs about 37.5 MHz. Default is 48 MHz.
+                        // for some reason this crashes arachne-pnr now. Unfortunately the 8k has timing issues at 48 MHz, where
+                        // port writes are affected by the next on stack. (I assume because the larger chip means slightly more routing delay, as parts end up more widely distributed). Problem shows up as `-1 leds` not turning all leds on, and `-1 0 leds drop` not turning them all off, yet `-1 -1 leds drop` will turn them all on.
+  */
   wire clk;
+  wire resetq;
+  assign resetq = reset;
+  //reg [3:0] debounce;
+  //always @(posedge clk) debounce <= {reset, debounce[3:1]};
+  //assign resetq = &debounce; // die, metastabile and runt reset pulses, die!
+  
   SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
                   .PLLOUT_SELECT("GENCLK"),
                   .DIVR(4'b0000),
@@ -208,7 +216,8 @@ module top(input pclk,
                          .RESETB(1'b1),
                          .BYPASS(1'b0)
                         );
-*/
+                        
+
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
@@ -407,7 +416,7 @@ module top(input pclk,
       {boot, s1, s0} <= dout_[2:0];
   end
 
-  always @(negedge resetq or posedge clk)
+  always @( negedge resetq or posedge clk)
     if (!resetq)
       unlocked <= 0;
     else

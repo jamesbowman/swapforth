@@ -1181,8 +1181,8 @@ header init :noname var:
 create init meta t' quit 2* target ,
 
 : main
-    tasksel
     cr
+    tasksel
     decimal
     tethered off
     key> drop

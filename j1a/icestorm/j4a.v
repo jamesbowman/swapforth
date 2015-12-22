@@ -166,11 +166,14 @@ module top(input pclk,
 );
   localparam MHZ = 12;
 
+/*
   wire clk, pll_lock;
   
   wire pll_reset;
   assign pll_reset = !reset;
- 
+  wire resetq;  // note port changed, .pcf needs update too.
+  assign resetq = reset & !pll_lock;
+  
   SB_PLL40_CORE #(.FEEDBACK_PATH("PHASE_AND_DELAY"),
                   .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
                   .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
@@ -190,10 +193,29 @@ module top(input pclk,
                          .RESETB(pll_reset),
                          .BYPASS(1'b0)
                         ); // 37.5 MHz, fout = [ fin * (DIVF+1) ] / [ DIVR+1 ], fout must be 16 ..275MHz, fVCO from 533..1066 MHz (!! we're 600 here I think), and phase detector / input clock from 10 .. 133 MH (ok, we're 75 because DIVQ divides by 2^DIVQ, but doesn't affect output otherwise, and input is 12 MHz)
-  
-  
+                        // for some reason this crashes arachne-pnr now. 
+
+  */
+  wire clk;
   wire resetq;
-  assign resetq = reset & !pll_lock;
+  assign resetq = reset;
+  
+  SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
+                  .PLLOUT_SELECT("GENCLK"),
+                  .DIVR(4'b0000),
+                  .DIVF(7'd3),
+                  .DIVQ(3'b000),
+                  .FILTER_RANGE(3'b001),
+                 ) uut (
+                         .REFERENCECLK(pclk),
+                         .PLLOUTCORE(clk),
+                         //.PLLOUTGLOBAL(clk),
+                         // .LOCK(D5),
+                         .RESETB(1'b1),
+                         .BYPASS(1'b0)
+                        );
+
+  
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
@@ -448,7 +470,7 @@ module top(input pclk,
   endfunction
    
    
-  always @(posedge clk) begin
+  always @(negedge resetq or posedge clk) begin
     if (!resetq) begin
     
         {tasktime[1],tasktime[2],tasktime[3]} <= 0;
@@ -501,8 +523,10 @@ module top(input pclk,
       // if you need to do it to meet performance requirements, instead consider adding your own custom coprocessor here or datapath to 
       // send the data someplace better suited to heavy lifting. Sheer Data crunching performance isn't what this thing is for.
         
-        
-    end // resetable registers done, following are inferred nonresetable registers
+    end // resetable registers done
+  end
+  
+  always@( posedge clk) begin
     
     
     case ({io_wr_ , io_addr_[14], io_thread})
@@ -533,6 +557,6 @@ module top(input pclk,
     if (!resetq)
       unlocked <= 0; // ram write clock enable
     else
-      unlocked <= (unlocked | io_wr_) & pll_lock;
+      unlocked <= unlocked | io_wr_;
 
 endmodule // top
