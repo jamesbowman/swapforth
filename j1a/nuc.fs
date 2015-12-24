@@ -1156,6 +1156,19 @@ header quit
         cr
     again
 
+header tasksel
+: tasksel
+    h# 8000 io@ if 
+        begin 
+            h# 4000 io@ dup if 
+                execute 
+            else 
+                drop
+            then
+        again 
+    then
+;
+
 header .s
 : .s
     [char] < emit depth hex2 [char] > emit space
@@ -1170,6 +1183,7 @@ header init :noname var:
 create init meta t' quit 2* target ,
 
 : main
+    tasksel
     cr
     decimal
     tethered off
