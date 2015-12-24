@@ -162,16 +162,17 @@ module top(input pclk,
            inout PIO2_16,    // HDR2 7
            inout PIO2_17,    // HDR2 8
 
-           input reset,
+           input reset // note, this is an *active low* reset.
 );
   localparam MHZ = 12;
 
   /*
+  // begin adv PLL
   wire clk, pll_lock;
   wire pll_reset;
-  assign pll_reset = !reset;
+  assign pll_reset = reset; // resets are all active low in this design.
   wire resetq; // note port changed, .pcf needs update too.
-  assign resetq = !pll_lock;
+  assign resetq =  pll_lock;
  
   SB_PLL40_CORE #(.FEEDBACK_PATH("PHASE_AND_DELAY"),
                   .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
@@ -186,21 +187,21 @@ module top(input pclk,
                   .FILTER_RANGE(3'b001),
                  ) uut (
                          .REFERENCECLK(pclk),
-                         //.PLLOUTCORE(clk),
-                         .PLLOUTGLOBAL(clk),
+                         .PLLOUTCORE(clk),
+                         //.PLLOUTGLOBAL(clk), // crashes arachne-pnr?
                          .LOCK(pll_lock),
                          .RESETB(pll_reset),
                          .BYPASS(1'b0)
                         ); // runs about 37.5 MHz. Default is 48 MHz.
                         // for some reason this crashes arachne-pnr now. Unfortunately the 8k has timing issues at 48 MHz, where
                         // port writes are affected by the next on stack. (I assume because the larger chip means slightly more routing delay, as parts end up more widely distributed). Problem shows up as `-1 leds` not turning all leds on, and `-1 0 leds drop` not turning them all off, yet `-1 -1 leds drop` will turn them all on.
+  // end adv PLL
   */
+ 
+  // begin alt PLL
   wire clk;
   wire resetq;
-  assign resetq = reset;
-  //reg [3:0] debounce;
-  //always @(posedge clk) debounce <= {reset, debounce[3:1]};
-  //assign resetq = &debounce; // die, metastabile and runt reset pulses, die!
+ 
   
   SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
                   .PLLOUT_SELECT("GENCLK"),
@@ -212,11 +213,11 @@ module top(input pclk,
                          .REFERENCECLK(pclk),
                          .PLLOUTCORE(clk),
                          //.PLLOUTGLOBAL(clk),
-                         // .LOCK(D5),
-                         .RESETB(1'b1),
+                         .LOCK(resetq),
+                         .RESETB(reset),
                          .BYPASS(1'b0)
                         );
-                        
+  // end alt PLL                     
 
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
@@ -250,8 +251,8 @@ module top(input pclk,
 
   // ######   IO SIGNALS   ####################################
 
-`define EASE_IO_TIMING
-`ifdef EASE_IO_TIMING
+  // note that this isn't optional, io_din has to be delayed one cycle, but it depends upon io_addr_, which is.
+  // it doesn't hurt to run dout_ delayed too.
   reg io_wr_, io_rd_;
   reg [15:0] dout_;
   reg [15:0] io_addr_;
@@ -260,12 +261,9 @@ module top(input pclk,
     {io_rd_, io_wr_, dout_} <= {io_rd, io_wr, dout};
     if (io_rd | io_wr)
       io_addr_ <= mem_addr;
+    else
+      io_addr_ <= 0; // because we don't want to actuate things unless there really is a read or write.
   end
-`else
-  wire io_wr_ = io_wr, io_rd_ = io_rd;
-  wire [15:0] dout_ = dout;
-  wire [15:0] io_addr_ = mem_addr;
-`endif
 
   // ######   PMOD   ##########################################
 
@@ -336,16 +334,6 @@ module top(input pclk,
                .wd(dout_),
                .rd(LEDS),
                .dir(8'hff)); 
-  /*
-  outpin led0 (.clk(clk), .we(w4), .pin(D1), .wd(dout_[0]), .rd(LEDS[0]));
-  outpin led1 (.clk(clk), .we(w4), .pin(D2), .wd(dout_[1]), .rd(LEDS[1]));
-  outpin led2 (.clk(clk), .we(w4), .pin(D3), .wd(dout_[2]), .rd(LEDS[2]));
-  outpin led3 (.clk(clk), .we(w4), .pin(D4), .wd(dout_[3]), .rd(LEDS[3]));
-  outpin led4 (.clk(clk), .we(w4), .pin(D5), .wd(dout_[4]), .rd(LEDS[4]));
-  outpin led5 (.clk(clk), .we(w4), .pin(D6), .wd(dout_[5]), .rd(LEDS[5]));
-  outpin led6 (.clk(clk), .we(w4), .pin(D7), .wd(dout_[6]), .rd(LEDS[6]));
-  outpin led7 (.clk(clk), .we(w4), .pin(D8), .wd(dout_[7]), .rd(LEDS[7]));
-*/
 
   wire [2:0] PIOS;
   wire w8 = io_wr_ & io_addr_[3];

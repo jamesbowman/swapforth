@@ -162,7 +162,7 @@ module top(input pclk,
            inout PIO2_16,    // HDR2 7
            inout PIO2_17,    // HDR2 8
 
-           input reset,
+           input reset
 );
   localparam MHZ = 12;
 
@@ -198,7 +198,7 @@ module top(input pclk,
   */
   wire clk;
   wire resetq;
-  assign resetq = reset;
+ // assign resetq = reset; // now passed through PLL to keep design in reset until lock. note active low resets.
   
   SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
                   .PLLOUT_SELECT("GENCLK"),
@@ -210,8 +210,8 @@ module top(input pclk,
                          .REFERENCECLK(pclk),
                          .PLLOUTCORE(clk),
                          //.PLLOUTGLOBAL(clk),
-                         // .LOCK(D5),
-                         .RESETB(1'b1),
+                         .LOCK(resetq),
+                         .RESETB(reset),
                          .BYPASS(1'b0)
                         );
 
@@ -222,15 +222,33 @@ module top(input pclk,
   wire [15:0] dout;
   wire [15:0] io_din;
   wire [12:0] code_addr;
-  wire [1:0] io_thread;
   reg unlocked = 0;
-  
+
+  wire [1:0] io_thread;
   wire [15:0] return_top;
-  
   wire [3:0] kill_slot_rq;
 
 `include "../build/ram.v"
-
+/*
+  j1 _j1(
+    .clk(clk),
+    .resetq(resetq),
+    .io_rd(io_rd),
+    .io_wr(io_wr),
+    .mem_addr(mem_addr),
+    .mem_wr(mem_wr),
+    .dout(dout),
+    .io_din(io_din),
+    .code_addr(code_addr),
+    .insn(insn));
+    
+  reg [1:0] slot = 2'b00;
+  wire [1:0] nextslot;
+  greycount gc(.last(slot), .next(nextslot));
+  always @(posedge clk) slot <= nextslot;
+  assign io_thread = slot;
+ */ 
+ 
   j4 _j4(
     .clk(clk),
     .resetq(resetq),
@@ -245,8 +263,12 @@ module top(input pclk,
     .io_slot(io_thread),
     .return_top(return_top),
     .kill_slot_rq(kill_slot_rq));
+     
 
+  
   /*
+  
+  
   // ######   TICKS   #########################################
 
   reg [15:0] ticks;
@@ -256,22 +278,21 @@ module top(input pclk,
 
   // ######   IO SIGNALS   ####################################
 
-`define EASE_IO_TIMING
-`ifdef EASE_IO_TIMING
+  // note that io_din has to be delayed one instruction, but it depends upon io_addr_, which is, so it does.
+  // it doesn't hurt to run dout_ delayed too.
   reg io_wr_, io_rd_;
   reg [15:0] dout_;
   reg [15:0] io_addr_;
-
+  reg [1:0] io_thread_;
+  
   always @(posedge clk) begin
     {io_rd_, io_wr_, dout_} <= {io_rd, io_wr, dout};
+    io_thread_ <= io_thread;
     if (io_rd | io_wr)
       io_addr_ <= mem_addr;
+    else
+      io_addr_ <= 0; // because we don't want to actuate things unless there really is a read or write.
   end
-`else
-  wire io_wr_ = io_wr, io_rd_ = io_rd;
-  wire [15:0] dout_ = dout;
-  wire [15:0] io_addr_ = mem_addr;
-`endif
 
   // ######   PMOD   ##########################################
 
@@ -330,20 +351,18 @@ module top(input pclk,
      .rx_data(uart0_data));
 
   wire [7:0] LEDS;
-  wire w4 = io_wr_ & io_addr_[2];
+  
+  
+   // ######   LEDS   ##########################################
 
   
-  
-  
-  outpin led0 (.clk(clk), .we(w4), .pin(D1), .wd(dout_[0]), .rd(LEDS[0]));
-  outpin led1 (.clk(clk), .we(w4), .pin(D2), .wd(dout_[1]), .rd(LEDS[1]));
-  outpin led2 (.clk(clk), .we(w4), .pin(D3), .wd(dout_[2]), .rd(LEDS[2]));
-  outpin led3 (.clk(clk), .we(w4), .pin(D4), .wd(dout_[3]), .rd(LEDS[3]));
-  outpin led4 (.clk(clk), .we(w4), .pin(D5), .wd(dout_[4]), .rd(LEDS[4]));
-  outpin led5 (.clk(clk), .we(w4), .pin(D6), .wd(dout_[5]), .rd(LEDS[5]));
-  outpin led6 (.clk(clk), .we(w4), .pin(D7), .wd(dout_[6]), .rd(LEDS[6]));
-  outpin led7 (.clk(clk), .we(w4), .pin(D8), .wd(dout_[7]), .rd(LEDS[7]));
 
+  ioport _leds (.clk(clk),
+               .pins({D8, D7, D6, D5, D4, D3, D2, D1}),
+               .we(io_wr_ & io_addr_[2]),
+               .wd(dout_),
+               .rd(LEDS),
+               .dir(8'hff)); 
 
   wire [2:0] PIOS;
   wire w8 = io_wr_ & io_addr_[3];
@@ -421,33 +440,37 @@ module top(input pclk,
       So of those two time critical things could be done in one, and less-time-critical multitasking in the other. It would even be possible then to have the managing task implement a soft-realtime OS with or without preemption on the one slot, whilst handling the io hardware by running a hard-real time scheduler on the other.
   */
 
-  reg [15:0] tasklap [1:3], tasktime [1:3], taskexec, taskexecn [1:3];
+//  reg [15:0] tasklap [1:3], tasktime [1:3];
+  reg [15:0] taskexec;
+  reg [47:0] taskexecn;
   
   always @* begin
-    case (io_thread)
+    case (io_thread_)
       2'b00: taskexec = 16'b0;// all tasks start with taskexec zeroed, and all tasks will try to run all code from zero. 
-      2'b01: taskexec = taskexecn[1];
-      2'b10: taskexec = taskexecn[2];
-      2'b11: taskexec = taskexecn[3];
+      2'b01: taskexec = taskexecn[15:0];
+      2'b10: taskexec = taskexecn[31:16];
+      2'b11: taskexec = taskexecn[47:32];
     endcase
   end  
 
-  assign io_din =
-    (io_addr_[ 0] ? {8'd0, pmod_in}                                     : 16'd0) |
-    (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0) |
-    (io_addr_[ 2] ? {8'd0, LEDS}                                        : 16'd0) |
-    (io_addr_[ 3] ? {13'd0, PIOS}                                       : 16'd0) |
-    (io_addr_[ 4] ? {8'd0, hdr1_in}                                     : 16'd0) |
-    (io_addr_[ 5] ? {8'd0, hdr1_dir}                                    : 16'd0) |
-    (io_addr_[ 6] ? {8'd0, hdr2_in}                                     : 16'd0) |
-    (io_addr_[ 7] ? {8'd0, hdr2_dir}                                    : 16'd0) |
-    (io_addr_[ 8] ? {|io_thread ? tasktime[1] : tasklap[1]}: 16'd0) |
-    (io_addr_[ 9] ? {|io_thread ? tasktime[2] : tasklap[2]}: 16'd0) |
-    (io_addr_[10] ? {|io_thread ? tasktime[3] : tasklap[3]}: 16'd0) |
-    (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
-    (io_addr_[13] ? {11'd0, random, 1'b0, PIOS_01, uart0_valid, !uart0_busy} : 16'd0) |
-    (io_addr_[14] ? {taskexec}: 16'd0) |
-    (io_addr_[15] ? {14'd0, io_thread}: 16'd0) ; // so init code can stop all but one thread, or alternatively, restart their task by reading taskexec then executing it, or else going into a reboot poll loop until given something to do.
+
+  assign io_din = 
+    (io_addr_[ 0] ? {8'd0, pmod_in}                                     : 16'd0)|
+    (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0)|
+    (io_addr_[ 2] ? {8'd0, LEDS}                                        : 16'd0)|
+    (io_addr_[ 3] ? {13'd0, PIOS}                                       : 16'd0)|
+    (io_addr_[ 4] ? {8'd0, hdr1_in}                                     : 16'd0)|
+    (io_addr_[ 5] ? {8'd0, hdr1_dir}                                    : 16'd0)|
+    (io_addr_[ 6] ? {8'd0, hdr2_in}                                     : 16'd0)|
+    (io_addr_[ 7] ? {8'd0, hdr2_dir}                                    : 16'd0)|
+    /*(io_addr_[ 8] ? {|io_thread ? tasktime[1] : tasklap[1]}: 16'd0),*/
+    /*(io_addr_[ 9] ? {|io_thread ? tasktime[2] : tasklap[2]}: 16'd0),*/
+    /*(io_addr_[10] ? {|io_thread ? tasktime[3] : tasklap[3]}: 16'd0),*/
+    (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0)|
+    (io_addr_[13] ? {11'd0, random, 1'b0, PIOS_01, uart0_valid, !uart0_busy} : 16'd0)|
+    (io_addr_[14] ? {taskexec}: 16'd0)|
+    (io_addr_[15] ? {14'd0, io_thread_}: 16'd0); // so init code can stop all but one thread, or alternatively, restart their task by reading taskexec then executing it, or else going into a reboot poll loop until given something to do.
+
 
   reg boot, s0, s1;
 
@@ -458,27 +481,17 @@ module top(input pclk,
     );
 
   
-  function [15:0] wrapproofdiff(input [15:0] old, new);
-    reg [15:0] temp;
-    begin
-      temp = new - old;
-      if (temp[15])
-        wrapproofdiff = ~temp+1;
-      else
-        wrapproofdiff = temp;
-    end
-  endfunction
-   
-   
-  always @(negedge resetq or posedge clk) begin
+
+/*   
+  always @(posedge clk) begin
     if (!resetq) begin
     
-        {tasktime[1],tasktime[2],tasktime[3]} <= 0;
-        {taskexecn[1],taskexecn[2],taskexecn[3]} <= 0;
+        {tasktime[1],tasktime[2],tasktime[3]} <= {0,0,0};
+        {taskexecn[1],taskexecn[2],taskexecn[3]} <= {0,0,0};
 
     end else begin    
       
-      case (io_thread) // io_thread is a grey code counter.
+      case (io_thread_) // io_thread is a grey code counter.
         2'b00:  begin 
           if(!io_wr_) begin // cleared on thread 0's read, so busy/stalled threads easy to detect, 
             if (io_addr_[8]) tasklap[1] <= 'b0; 
@@ -525,12 +538,18 @@ module top(input pclk,
         
     end // resetable registers done
   end
+  */
   
   always@( posedge clk) begin
+  
+    if (io_wr_ ) begin // any slot can change any other's schedule, except none can mess with slot 0
+      if (io_addr_[8]) taskexecn[15:0] <= dout_;
+      if (io_addr_[9]) taskexecn[31:16] <= dout_;
+      if (io_addr_[10]) taskexecn[47:32] <= dout_;
+    end  // it is even possible to assign the same task to multiple threads, although this isn't recommended.
     
-    
-    case ({io_wr_ , io_addr_[14], io_thread})
-        4'b1100:   kill_slot_rq <= dout_[4:0];
+    case ({io_wr_ , io_addr_[14], io_thread_})
+        4'b1100:   kill_slot_rq <= dout_[3:0];
         4'b1101:   kill_slot_rq <= 4'b0010;
         4'b1111:   kill_slot_rq <= 4'b1000;
         4'b1110:   kill_slot_rq <= 4'b0100;

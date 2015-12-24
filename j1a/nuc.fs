@@ -1158,11 +1158,13 @@ header quit
 
 header tasksel
 : tasksel
-    $8000 io@ if 
+    h# 8000 io@ if 
         begin 
-            $4000 io@ dup if 
+            h# 4000 io@ dup if 
                 execute 
-            then 
+            else 
+                drop
+            then
         again 
     then
 ;
