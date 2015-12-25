@@ -1,13 +1,16 @@
 set -e
 
-# tput clear ; python fill.py ; exit
+# tput clear ; python fill.py `tput cols` `tput lines` ; exit
 # python draw.py ; exit
 if [ `uname` = "Darwin" ]
 then
   nasm -f macho64 -l lst nuc.asm
 else
-  nasm -f elf64 -l lst nuc.asm
+  # nasm -D CELL=4 -f elf32 -l lst nuc.asm
+  nasm -D CELL=8 -f elf64 -l lst nuc.asm
 fi
+
+python expand.py swapforth.fs runtests.fs > 1
 
 gcc -Wall main.c nuc.o 
 
@@ -15,7 +18,13 @@ gcc -Wall main.c nuc.o
 # echo "false false parse-name 66x >number .x .x .x .x" | ./a.out
 # echo "parse-name HELLO_WORLD type space 16 base ! abcdef12345678abcdef. 10000 um/mod .x .x cr words" | ./a.out
 # echo "16 base ! : foo2 41 emit 21 emit ; foo2 foo2 foo2 " | ./a.out
-python expand.py swapforth.fs runtests.fs | time ./a.out
+
+./a.out < 1 | tail -24
+
 # python expand.py swapforth.fs > 0 ; cat 0 - | ./a.out
 # ./bench
 # /usr/bin/time gforth-fast 8080.fs -e bye
+
+nasm -D CELL=4 -f elf32 -l lst nuc.asm
+gcc -m32 -Wall main.c nuc.o
+./a.out < 1 | tail -24
