@@ -3,6 +3,6 @@ nasm -f elf64 -D CELL=8 nuc.asm
 gcc -Wall main.c nuc.o 
 python expand.py swapforth.fs runtests.fs | ./a.out | grep '^Forth tests completed'
 
-nasm -f elf32 -D CELL=4 nuc.asm
-gcc -m32 -Wall main.c nuc.o 
-python expand.py swapforth.fs runtests.fs | ./a.out | grep '^Forth tests completed'
+# nasm -f elf32 -D CELL=4 nuc.asm
+# gcc -m32 -Wall main.c nuc.o 
+# python expand.py swapforth.fs runtests.fs | ./a.out | grep '^Forth tests completed'
