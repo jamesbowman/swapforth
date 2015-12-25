@@ -93,6 +93,7 @@ Or even
     2032 March 28 
     2033 April 17 
     2034 April 9   ok
+    
 
 Building from Scratch
 ---------------------
@@ -114,7 +115,29 @@ Compile the rest of SwapForth and write the finished executable by
     #flash build/nuc.hex
     #bye
 
-Now run `make` again - this compiles an FPGA image with the complete code base built-in.
+Now run `make j1a` again - this compiles an FPGA image with the complete code base built-in.
+
+Deploying an Embedded Application
+---------------------------------
+
+To make a flash image that turns the LEDs on at boot:
+
+    :noname -1 leds quit ; init !
+    #flash build/nuc.hex
+    
+To make an image that continously blinks the LEDs:
+
+    : blink 0 begin dup leds 1+ 10 ms again ;
+    ' blink init !
+    #flash build/nuc.hex
+    
+To make an image that blinks on power up, but on reset will run the command prompt:
+
+    :noname ['] quit init ! blink ; init !
+    #flash build/nuc.hex
+    
+
+
 
 Resources
 ---------
