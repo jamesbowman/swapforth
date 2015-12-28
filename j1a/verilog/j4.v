@@ -45,9 +45,10 @@ module j4(
   // We make this two clock cycles into the future, and then register again insn so
   // that the instruction is already available, not needing to be read from ram... This is why it's pcD[25:13], then:
   
-  reg [15:0] insn_now = 0;// Why does return stack start out full of 16'h55aa; ?
+  reg [15:0] insn_now = 0;
+
    // adds a clock delay, but this is fine.
-  always @(posedge clk) insn_now <= (reboot) ? 16'b0 : insn; 
+  always @(posedge clk) insn_now <= insn; 
   // note every reference below here which was to insn will now be to inst_now instead.
   // this automatically includes all memory reads, instructions or otherwise.
 
@@ -79,10 +80,10 @@ module j4(
   begin
     // Compute the new value of st0. Could be pipelined now.
     casez ({pc[12], insn_now[15:8]})
-      9'b1_???_?????: st0N = insn_now;                    // literal
+      9'b1_???_?????: st0N = insn_now;                    // fetch from ram cycle. pc[12] isn't part of ram memory, rather is used to signify that a fetch from ram was requested, not a call.
       9'b0_1??_?????: st0N = { {(`WIDTH - 15){1'b0}}, insn_now[14:0] };    // literal
       9'b0_000_?????: st0N = st0;                     // jump
-      9'b0_010_?????: st0N = st0;                     // call
+      9'b0_010_?????: st0N = st0;                     // call, or fetch from ram if insn[12] is set.
       9'b0_001_?????: st0N = st1;                     // conditional jump
       9'b0_011_?0000: st0N = st0;                     // ALU operations...
       9'b0_011_?0001: st0N = st1;
@@ -132,18 +133,18 @@ module j4(
     dspN = dsp + {dspI[1], dspI[1], dspI[1], dspI};
 
     casez ({pc[12], insn_now[15:13]})
-    4'b1_???: /* readram */  {rstkW, rspI} = {1'b0,      2'b11};// pop r to pcN
-    4'b0_010: /* call */   {rstkW, rspI} = {1'b1,      2'b01}; // push PC+1 to rstkD
-    4'b0_011: /* ALU  */  {rstkW, rspI} = {func_T_R,  insn_now[3:2]}; // as ALU opcode asks
+    4'b1_???: /* readram */  {rstkW, rspI} = {1'b0,      2'b11};// pop r to pcN, so execution continues after an inserted fetch from ram cycle
+    4'b0_010: /* call */   {rstkW, rspI} = {1'b1,      2'b01}; // push PC+1 to rstkD. Abused with 13th bit set to allow fetches from ram.
+    4'b0_011: /* ALU  */  {rstkW, rspI} = {func_T_R,  insn_now[3:2]}; // as ALU opcode asks.
     default:    {rstkW, rspI} = {1'b0,      2'b00}; // nop r stack, same on jumps.
     endcase
 
     casez ({reboot, pc[12], insn_now[15:13], insn_now[7], |st0})
-    7'b1_0_???_?_?:   pcN = 0;
+    7'b1_?_???_?_?:   pcN = 0; // reboot request must override all else, even a fetch cycle.
     7'b0_0_000_?_?,
     7'b0_0_010_?_?,
     7'b0_0_001_?_0:   pcN = insn_now[12:0];
-    7'b0_1_???_?_?, /* auto return after a load from ram */
+    7'b0_1_???_?_?, /* fetch from ram cycle, abuses instruction fetch to load the stack instead */
     7'b0_0_011_1_?:   pcN = rst0[13:1]; // r stack is 16 bits wide, but PC is always even.
     default:          pcN = pc_plus_1;
     endcase
@@ -165,10 +166,11 @@ module j4(
       slot <= 2'b00;
       kill_slot <= 4'hf;
     end else begin
+      // reboot needs to be set a clock in advance of the targeted slot. 
+                                    // kill_slot_rq is read-ahead in case the next thread to execute's time should be up already.
+      reboot <= kill_slot[slotN] | kill_slot_rq[slotN]; 
       
-      reboot <= kill_slot[slotN] | kill_slot_rq[slot]; 
-      
-
+     	// kill_slot register holds the signals until the right time, and are auto-cleared as each slot is reached, as it will already have been reset by the clock before.
       kill_slot[3] <= kill_slot_rq[3] ? 1'b1 : ( (slot == 2'd3) ? 1'b0 : kill_slot[3]) ;
       kill_slot[2] <= kill_slot_rq[2] ? 1'b1 : ( (slot == 2'd2) ? 1'b0 : kill_slot[2]) ;
       kill_slot[1] <= kill_slot_rq[1] ? 1'b1 : ( (slot == 2'd1) ? 1'b0 : kill_slot[1]) ; 
