@@ -5,57 +5,136 @@
 ;
 ; In SwapForth usage is:
 ;
-; rax   Top-of-stack
-; rdi   data stack pointer
-; rsp   return stack pointer
-; r12   context pointer
-; r13   loop counter
-; r14   loop offset
-; r15   constant 0
+; TOS    Top-of-stack                rax        eax
+; TMP    scratch register            rcx        ecx
+; DSP    data stack pointer          rdi        edi
+;        return stack pointer        rsp        esp
+; CTX    context pointer             r12        ebp
+; LPC    loop counter                r13        ebx
+; LPO    loop offset                 r14        edx
 ;
 
-CFUNC_DOTX      equ     0       ;; This table matches CFUNCS in main.c
-CFUNC_BYE       equ     8
-CFUNC_EMIT      equ     16
-CFUNC_KEY       equ     24
+%if (CELL == 8)
+%define L2CELL          3
+%define CELLPTR         qword
+
+%define TOS             rax
+%define DSP             rdi
+%define CTX             r12
+%define TMP             rcx
+%define LPC             r13
+%define LPO             rdx
+
+%define SXT             cqo
+
+        ;; C interface macro, parameter is offset into CTABLE
+        %macro  c_pre   1
+        push    rbp
+        push    rdi     ;; Our data stack pointer, C clobbers
+        mov     rbp,rsp ;; Save the SP
+        or      rsp,8   ;; Now align SP, C needs this
+        sub     rsp,8
+        mov     rdi,TOS ;; Always pass TOS as argument
+        mov     rax,[r12 + _cfuncs]
+        call    [rax + %1]
+        mov     rsp,rbp ;; restore our SP
+        pop     rdi     ;; restore our data stack pointer
+        pop     rbp
+        %endmacro
+%else
+%define L2CELL          2
+%define CELLPTR         dword
+
+%define TOS             eax
+%define DSP             edi
+%define CTX             ebp
+%define TMP             ecx
+%define rsp             esp
+%define LPC             ebx
+%define LPO             edx
+
+%define SXT             cdq
+
+        ;; C interface macro, parameter is offset into CTABLE
+        %macro  c_pre   1
+        push    edx
+        push    ebx
+        push    ebp
+        push    edi     ;; Our data stack pointer, C clobbers
+        mov     ebx,esp ;; Caller-preserved
+        sub     esp,16
+        and     esp,~15
+        mov     [esp+0],eax
+        mov     eax,[ebp + _cfuncs]
+        call    [eax + %1]
+        mov     esp,ebx
+        pop     edi     ;; restore our data stack pointer
+        pop     ebp
+        pop     ebx
+        pop     edx
+        %endmacro
+%endif
+
+%define CELLS(N)        (CELL * N)
+
+;; A dictionary entry (i.e. a word) looks like this:
+;;
+;;     |--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--|
+;; -32 |C | NAME                                       |
+;;     |--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--|
+;; -16 |                                               |
+;;     |--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--|
+;; +0  | LINK      | CBYTES    | CODE...
+;;     |--+--+--+--+--+--+--+--+
+;;
+;; Note that LINK is a relative link to the next word.
+;; CBYTES is the size of the code in bytes, used for inlining.
+;;
 
 %define WORD_NAME       -32     ;; word name as a counted string
 %define WORD_LINK       0       ;; relative link to prev word
 %define WORD_CBYTES     4       ;; code size in bytes, for inlining
 %define WORD_CODE       8       ;; start of native code
 
+;; This table matches CFUNCS in main.c
+
+CFUNC_DOTX      equ     CELLS(0)
+CFUNC_BYE       equ     CELLS(1)
+CFUNC_EMIT      equ     CELLS(2)
+CFUNC_KEY       equ     CELLS(3)
+
 section .text
 
 global swapforth
-swapforth:
 global _swapforth
+swapforth:
 _swapforth:
         jmp     init
 
 %define ao 0
 %macro object   2
 %1      equ     ao
-%%n     equ     ao+(8*%2)
+%%n     equ     ao+%2
         %define ao %%n
 %endmacro
 
-        object  _base,1
-        object  _forth,1
-        object  _dp,1
-        object  _cp,1
-        object  _in,1
-        object  _jumptab,6
-        object  _prevcall,1
-        object  _lastword,1
-        object  _thisxt,1
-        object  _sourceid,1
-        object  _sourceC,2
-        object  _state,1
-        object  _leaves,1
-        object  _tethered,1
-        object  _scratch,4
-        object  _cfuncs,1
-        object  _tib,32
+        object  _base,          CELLS(1)
+        object  _forth,         CELLS(1)
+        object  _dp,            CELLS(1)
+        object  _cp,            CELLS(1)
+        object  _in,            CELLS(1)
+        object  _jumptab,       CELLS(6)
+        object  _prevcall,      CELLS(1)
+        object  _lastword,      CELLS(1)
+        object  _thisxt,        CELLS(1)
+        object  _sourceid,      CELLS(1)
+        object  _sourceC,       CELLS(2)
+        object  _state,         CELLS(1)
+        object  _leaves,        CELLS(1)
+        object  _tethered,      CELLS(1)
+        object  _scratch,       32
+        object  _cfuncs,        CELLS(1)
+        object  _tib,           128
 
 %define link $
 
@@ -77,211 +156,219 @@ L%[wnum]:
 %2:
 %endmacro
 
-%macro  poprbx  0
-        mov     rbx,[rdi]
-        add     rdi,8
+%macro  popTMP  0
+        mov     TMP,[DSP]
+        add     DSP,CELL
 %endmacro
 
 %macro  _dup    0
-        mov     [rdi-8],rax
-        sub     rdi,8
+        mov     [DSP-CELL],TOS
+        sub     DSP,CELL
+%endmacro
+
+%macro  _nip    0
+        add     DSP,CELL
 %endmacro
 
 %macro  _drop   0
-        mov     rax,[rdi]
-        add     rdi,8
+        mov     TOS,[DSP]
+        add     DSP,CELL
 %endmacro
 
 %macro  _drop2   0
-        mov     rax,[rdi+8]
-        add     rdi,16
+        mov     TOS,[DSP+CELL]
+        add     DSP,CELLS(2)
 %endmacro
 
 %macro  _drop3   0
-        mov     rax,[rdi+16]
-        add     rdi,24
+        mov     TOS,[DSP+CELLS(2)]
+        add     DSP,CELLS(3)
 %endmacro
 
 %macro  _tos0   0
-        or      rax,rax
-        mov     rax,[rdi]
-        lea     rdi,[rdi+8]
+        or      TOS,TOS
+        mov     TOS,[DSP]
+        lea     DSP,[DSP+CELL]
 %endmacro
 
 %macro  lit     1
         _dup
-        mov     rax,%1
+        mov     TOS,%1
 %endmacro
 
+%if (CELL == 8)
+
+%macro  tick    1
+        _dup
+        lea     TOS,[rel %1]
+%endm
+
+%else
+
+%macro  tick    1
+        _dup
+        call    fowia
+        add     eax,(%1 - $)
+%endm
+
+%endif
+
 %macro  cond    1
-        mov     rax,r15
-        lea     rbx,[r15-1]
-        cmov%1  rax,rbx
+        mov     TOS,0
+        mov     TMP,-1
+        cmov%1  TOS,TMP
 %endmacro
 
 %macro  _to_r   0
-        push    rax
+        push    TOS
         _drop
 %endmacro
 
 %macro  _r_from 0
         _dup
-        pop     rax
+        pop     TOS
 %endmacro
 
 
-        ;; C interface macro, parameter is offset into CTABLE
-
-        %macro  c_pre   1
-        push    rdi     ;; Our data stack pointer, C clobbers
-        mov     rbp,rsp ;; Save the SP
-        or      rsp,8   ;; Now align SP, C needs this
-        sub     rsp,8
-        mov     rdi,rax ;; Always pass TOS as argument
-        mov     rax,[r12 + _cfuncs]
-        call    [rax + %1]
-        mov     rsp,rbp ;; restore our SP
-        pop     rdi     ;; restore our data stack pointer
-        %endmacro
-
-        header  '.x',dotx       ; ( x -- )
-        c_pre   CFUNC_DOTX
-        mov     rax,[rdi]
-        add     rdi,8
+fowia:  mov     eax,[esp]
         ret
 
-        header  'bye',bye
+        header  ".x",dotx       ; ( x -- )
+        c_pre   CFUNC_DOTX
+        jmp     drop
+
+        header  "bye",bye
         c_pre   CFUNC_BYE       ;; never returns
 
-        header  'emit',emit     ; ( x -- )
+        header  "emit",emit     ; ( x -- )
         c_pre   CFUNC_EMIT
         jmp     drop
 
-        header  'key',key       ;; ( -- x )
+        header  "key",key       ;; ( -- x )
         _dup
         c_pre   CFUNC_KEY
         ret
 
 header  "depth",depth
-        mov     rbx,r12
-        sub     rbx,rdi
+        mov     TMP,CTX
+        sub     TMP,DSP
         _dup
-        mov     rax,rbx
-        sar     rax,3
+        mov     TOS,TMP
+        sar     TOS,L2CELL
         ret
 
 header  "base",base
         _dup
-        lea     rax,[r12 + _base]
+        lea     TOS,[CTX + _base]
         ret
 
 header  ">in",to_in
         _dup
-        lea     rax,[r12 + _in]
+        lea     TOS,[CTX + _in]
         ret
 
 header  "source",source
         _dup
-        lea     rax,[r12 + _sourceC]
+        lea     TOS,[CTX + _sourceC]
         jmp     two_fetch
 
 header  "source-id",source_id
         _dup
-        mov     rax,[r12 + _sourceid]
+        mov     TOS,[CTX + _sourceid]
         ret
 
 source_store:
         _dup
-        lea     rax,[r12 + _sourceC]
+        lea     TOS,[CTX + _sourceC]
         jmp     two_store
 
 header "2*",two_times,INLINE
-        sal     rax,1
+        sal     TOS,1
         ret
 
 header "2/",two_slash,INLINE
-        sar     rax,1
+        sar     TOS,1
         ret
 
 header "1+",one_plus,INLINE
-        inc     rax
+        inc     TOS
         ret
 
 header "1-",one_minus,INLINE
-        dec     rax
+        dec     TOS
         ret
 
 header "0=",zero_equals,INLINE
-        cmp     rax,r15
+        cmp     TOS,0
         cond    e
         ret
 
 header "cell+",cell_plus,INLINE
-        add     rax,8
+        add     TOS,CELL
         ret
 
 header "cells",cells,INLINE
-        shl     rax,3
+        shl     TOS,L2CELL
         ret
 
 header "<>",not_equal,INLINE
-        cmp     [rdi],rax
+        cmp     [DSP],TOS
         cond    ne
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header "=",equal,INLINE
-        cmp     [rdi],rax
+        cmp     [DSP],TOS
         cond    e
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header ">",greater,INLINE
-        cmp     [rdi],rax
+        cmp     [DSP],TOS
         cond    g
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header "<",less,INLINE
-        cmp     [rdi],rax
+        cmp     [DSP],TOS
         cond    l
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header "0<",less_than_zero,INLINE
-        sar     rax,63
+        sar     TOS,(8*CELL-1)
         ret
 
 header "0>",greater_than_zero,INLINE
-        cmp     rax,r15
+        cmp     TOS,0
         cond    g
         ret
 
 header "0<>",not_equal_zero,INLINE
-        add     rax,-1
-        sbb     rax,rax
+        add     TOS,-1
+        sbb     TOS,TOS
         ret
 
 header "u<",unsigned_less,INLINE
-        cmp     [rdi],rax
+        cmp     [DSP],TOS
         cond    b
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header "u>",unsigned_greater,INLINE
-        cmp     [rdi],rax
+        cmp     [DSP],TOS
         cond    a
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header  "+",plus,INLINE
-        add     rax,[rdi]
-        add     rdi,8
+        add     TOS,[DSP]
+        add     DSP,CELL
         ret
 
 header  "s>d",s_to_d,INLINE
         _dup
-        sar     rax,63
+        sar     TOS,(8*CELL-1)
         ret
 
 header  "d>s",d_to_s,INLINE
@@ -293,227 +380,235 @@ header  "m+",m_plus
         jmp     d_plus
 
 header  "d+",d_plus
-        mov     rbx,[rdi]
-        add     [rdi+16],rbx
-        adc     [rdi+8],rax
+        mov     TMP,[DSP]
+        add     [DSP+CELLS(2)],TMP
+        adc     [DSP+CELL],TOS
         _drop2
         ret
 
 header  "d=",d_equal
-        cmp     [rdi+8],rax
+        cmp     [DSP+CELL],TOS
         jne     .1
-        mov     rbx,[rdi+16]
-        cmp     rbx,[rdi]
+        mov     TMP,[DSP+CELLS(2)]
+        cmp     TMP,[DSP]
 .1:
         cond    e
-        add     rdi,24
+        add     DSP,CELLS(3)
         ret
 
 header  "du<",d_u_less
-        cmp     [rdi+8],rax
+        cmp     [DSP+CELL],TOS
         jne     .1
-        mov     rbx,[rdi+16]
-        cmp     rbx,[rdi]
+        mov     TMP,[DSP+CELLS(2)]
+        cmp     TMP,[DSP]
 .1:
         cond    b
-        add     rdi,24
+        add     DSP,CELLS(3)
         ret
 
 header  "d<",d_less
-        cmp     [rdi+8],rax
+        cmp     [DSP+CELL],TOS
         jne     .1
-        mov     rbx,[rdi+16]
-        cmp     rbx,[rdi]
+        mov     TMP,[DSP+CELLS(2)]
+        cmp     TMP,[DSP]
         cond    b
-        add     rdi,24
+        add     DSP,CELLS(3)
         ret
 .1:
         cond    l
-        add     rdi,24
+        add     DSP,CELLS(3)
         ret
 
 header  "d0<",d_less_than_zero
-        call    nip
+        _nip
         jmp     less_than_zero
 
 header  "dnegate",d_negate
-        not     rax
-        not     qword [rdi]
+        not     TOS
+        not     CELLPTR [DSP]
         lit     1
         jmp     m_plus
 
 header  "d-",d_minus
-        mov     rbx,[rdi]
-        sub     [rdi+16],rbx
-        sbb     [rdi+8],rax
+        mov     TMP,[DSP]
+        sub     [DSP+CELLS(2)],TMP
+        sbb     [DSP+CELL],TOS
         jmp     two_drop
 
 header  "d2*",d_two_times,INLINE
-        shl     qword [rdi],1
-        adc     rax,rax
+        shl     CELLPTR [DSP],1
+        adc     TOS,TOS
         ret
 
 header  "d2/",d_two_slash,INLINE
-        sar     rax,1
-        rcr     qword [rdi],1
+        sar     TOS,1
+        rcr     CELLPTR [DSP],1
         ret
 
 header  "-",minus,INLINE
-        poprbx
-        sub     rbx,rax
-        mov     rax,rbx
+        popTMP
+        sub     TMP,TOS
+        mov     TOS,TMP
         ret
 
 header  "negate",negate,INLINE
-        neg     rax
+        neg     TOS
         ret
 
 header  "invert",invert,INLINE
-        not     rax
+        not     TOS
         ret
 
 header  "and",and,INLINE
-        and     rax,[rdi]
-        add     rdi,8
+        and     TOS,[DSP]
+        add     DSP,CELL
         ret
 
 header  "or",or,INLINE
-        or      rax,[rdi]
-        add     rdi,8
+        or      TOS,[DSP]
+        add     DSP,CELL
         ret
 
 header  "xor",xor,INLINE
-        xor     rax,[rdi]
-        add     rdi,8
+        xor     TOS,[DSP]
+        add     DSP,CELL
         ret
 
 header  "lshift",lshift,INLINE
-        mov     rcx,rax
-        mov     rax,[rdi]
-        shl     rax,cl
-        add     rdi,8
+        mov     TMP,TOS
+        mov     TOS,[DSP]
+        shl     TOS,cl
+        add     DSP,CELL
         ret
 
 header  "rshift",rshift,INLINE
-        mov     rcx,rax
-        mov     rax,[rdi]
-        shr     rax,cl
-        add     rdi,8
+        mov     TMP,TOS
+        mov     TOS,[DSP]
+        shr     TOS,cl
+        add     DSP,CELL
         ret
 
 header  "abs",_abs,INLINE
-        mov     rbx,rax
-        sar     rbx,63
-        xor     rax,rbx
-        sub     rax,rbx
+        mov     TMP,TOS
+        sar     TMP,(8*CELL-1)
+        xor     TOS,TMP
+        sub     TOS,TMP
         ret
 
 header  "um*",u_m_multiply,INLINE
-        mul     qword [rdi]
-        mov     [rdi],rax
-        mov     rax,rdx
+        push    LPO
+        mul     CELLPTR [DSP]
+        mov     [DSP],TOS
+        mov     TOS,LPO
+        pop     LPO
         ret
 
 header  "*",multiply,INLINE
-        imul    rax,[rdi]
-        add     rdi,8
+        imul    TOS,[DSP]
+        add     DSP,CELL
         ret
 
 header  "/",divide
-        mov     rbx,rax
-        mov     rax,[rdi]
-        cqo
-        idiv    rbx
-        add     rdi,8
+        mov     TMP,TOS
+        mov     TOS,[DSP]
+        SXT
+        idiv    TMP
+        add     DSP,CELL
         ret
 
 header  "mod",mod
-        mov     rbx,rax
-        mov     rax,[rdi]
-        cqo
-        idiv    rbx
-        mov     rax,rdx
-        add     rdi,8
+        push    LPO
+        mov     TMP,TOS
+        mov     TOS,[DSP]
+        SXT
+        idiv    TMP
+        mov     TOS,LPO
+        add     DSP,CELL
+        pop     LPO
         ret
 
 header  "um/mod",u_m_slash_mod
-        mov     rbx,rax
-        mov     rdx,[rdi]
-        mov     rax,[rdi+8]
-        div     rbx
-        mov     [rdi+8],rdx
-        call    nip
+        push    LPO
+        mov     TMP,TOS
+        mov     LPO,[DSP]
+        mov     TOS,[DSP+CELL]
+        div     TMP
+        mov     [DSP+CELL],LPO
+        _nip
+        pop     LPO
         ret
 
 header  "c@",c_fetch,INLINE
-        movzx   rax,byte [rax]
+        movzx   TOS,byte [TOS]
         ret
 
 header  "c!",c_store,INLINE
-        mov     bl,byte [rdi]
-        mov     [rax],bl
+        mov     cl,byte [DSP]
+        mov     [TOS],cl
         _drop2
         ret
 
 header  "@",fetch,INLINE
-        mov     rax,[rax]
+        mov     TOS,[TOS]
         ret
 
 header  "!",store,INLINE
-        mov     rbx,[rdi]
-        mov     [rax],rbx
+        mov     TMP,[DSP]
+        mov     [TOS],TMP
         _drop2
         ret
 
+%if (CELL == 8)
 header  "ul@",u_l_fetch,INLINE
-        mov     eax,dword [rax]
+        mov     eax,dword [TOS]
         ret
 
 header  "sl@",s_l_fetch,INLINE
-        movsx   rax,dword [rax]
+        movsx   TOS,dword [TOS]
         ret
+%endif
 
 header  "2@",two_fetch,INLINE
-        mov     rbx,[rax+8]
-        mov     rax,[rax]
-        sub     rdi,8
-        mov     [rdi],rbx
+        mov     TMP,[TOS+CELL]
+        mov     TOS,[TOS]
+        sub     DSP,CELL
+        mov     [DSP],TMP
         ret
 
 header  "2!",two_store,INLINE
-        mov     rbx,[rdi]
-        mov     [rax],rbx
-        mov     rbx,[rdi+8]
-        mov     [rax+8],rbx
+        mov     TMP,[DSP]
+        mov     [TOS],TMP
+        mov     TMP,[DSP+CELL]
+        mov     [TOS+CELL],TMP
         _drop3
         ret
 
 header  "/string",slash_string
-        mov     rbx,rax
+        mov     TMP,TOS
         _drop
-        sub     rax,rbx
-        add     [rdi],rbx
+        sub     TOS,TMP
+        add     [DSP],TMP
         ret
 
 header  "swap",swap,INLINE
-        mov     rbx,[rdi]
-        mov     [rdi],rax
-        mov     rax,rbx
+        mov     TMP,[DSP]
+        mov     [DSP],TOS
+        mov     TOS,TMP
         ret
 
 header  "over",over,INLINE
         _dup
-        mov     rax,[rdi+8]
+        mov     TOS,[DSP+CELL]
         ret
 
 header "false",false,INLINE
         _dup
-        xor     rax,rax
+        xor     TOS,TOS
         ret
 
 header "true",true,INLINE
         _dup
-        lea     rax,[r15-1]
+        mov     TOS,-1
         ret
 
 header "bl",_bl,INLINE
@@ -521,16 +616,16 @@ header "bl",_bl,INLINE
         ret
 
 header "rot",rot,INLINE
-        xchg    rax,[rdi]
-        xchg    rax,[rdi+8]
+        xchg    TOS,[DSP]
+        xchg    TOS,[DSP+CELL]
         ret
 
 header "noop",noop
         ret
 
 header "-rot",minus_rot,INLINE
-        xchg    rax,[rdi+8]
-        xchg    rax,[rdi]
+        xchg    TOS,[DSP+CELL]
+        xchg    TOS,[DSP]
         ret
 
 header "tuck",tuck     ; : tuck  swap over ; 
@@ -538,47 +633,47 @@ header "tuck",tuck     ; : tuck  swap over ;
         jmp     over
 
 header "?dup",question_dupe     ; : ?dup  dup if dup then ;
-        cmp     rax,r15
+        cmp     TOS,0
         jne     dupe
         ret
 
 header "2dup",two_dup,INLINE     ; : 2dup  over over ; 
         _dup
-        mov     rax,[rdi+8]
+        mov     TOS,[DSP+CELL]
         _dup
-        mov     rax,[rdi+8]
+        mov     TOS,[DSP+CELL]
         ret
 
 header "+!",plus_store,INLINE       ; : +!    tuck @ + swap ! ; 
-        mov     rbx,[rdi]
-        add     [rax],rbx
+        mov     TMP,[DSP]
+        add     [TOS],TMP
         _drop2
         ret
 
 header "2swap",two_swap,INLINE    ; : 2swap rot >r rot r> ;
-        mov     rbx,[rdi]
-        xchg    rax,[rdi+8]
-        xchg    rbx,[rdi+16]
-        mov     [rdi],rbx
+        mov     TMP,[DSP]
+        xchg    TOS,[DSP+CELL]
+        xchg    TMP,[DSP+CELLS(2)]
+        mov     [DSP],TMP
         ret
 
  header "2over",two_over,INLINE
         _dup
-        mov     rax,[rdi+24]
+        mov     TOS,[DSP+CELLS(3)]
         _dup
-        mov     rax,[rdi+24]
+        mov     TOS,[DSP+CELLS(3)]
         ret
 
-header "min",min,INLINE      ; : min   2dup< if drop else nip then ;
-        poprbx
-        cmp     rax,rbx
-        cmovg   rax,rbx
+header "min",min,INLINE
+        popTMP
+        cmp     TOS,TMP
+        cmovg   TOS,TMP
         ret
 
-header "max",max,INLINE      ; : max   2dup< if nip else drop then ;
-        poprbx
-        cmp     rax,rbx
-        cmovl   rax,rbx
+header "max",max,INLINE
+        popTMP
+        cmp     TOS,TMP
+        cmovl   TOS,TMP
         ret
 
 header  "space",space
@@ -590,9 +685,9 @@ header  "cr",cr
         jmp     emit
 
 header "count",count,INLINE
-        inc     rax
+        inc     TOS
         _dup
-        movzx   rax,byte [rax-1]
+        movzx   TOS,byte [TOS-1]
         ret
 
 header "dup",dupe,INLINE
@@ -604,7 +699,7 @@ header "drop",drop,INLINE
         ret
 
 header  "nip",nip,INLINE
-        add     rdi,8
+        add     DSP,CELL
         ret
 
 header "2drop",two_drop,INLINE
@@ -612,45 +707,44 @@ header "2drop",two_drop,INLINE
         ret
 
 header "execute",execute
-        mov     rbx,rax
+        mov     TMP,TOS
         _drop
-        jmp     rbx
+        jmp     TMP
 
 header "bounds",bounds,INLINE ; ( a n -- a+n a )
-        mov     rbx,[rdi]
-        add     rax,rbx
-        mov     [rdi],rax
-        mov     rax,rbx
+        mov     TMP,[DSP]
+        add     TOS,TMP
+        mov     [DSP],TOS
+        mov     TOS,TMP
         ret
 
 header "type",type
         call    bounds
 .0:
-        cmp     rax,[rdi]
+        cmp     TOS,[DSP]
         je      .2
         _dup
-        movzx   rax,byte [rax]
+        movzx   TOS,byte [TOS]
         call    emit
-        inc     rax
+        inc     TOS
         jmp     .0
 .2:     jmp     two_drop
 
 ; ( caddr u -- caddr u )
 ; write a word into the scratch area with appropriate padding etc
 w2scratch:
-        mov     rbx,0x9090909090909090
-        mov     [r12+_scratch],rbx
-        mov     [r12+_scratch + 8],rbx
-        mov     byte [r12+_scratch],al
-        push    rdi
-        mov     rsi,[rdi]
-        lea     rdi,[r12+_scratch+1]
-        mov     rcx,rax
-        rep movsb
-        pop     rdi
-        ret
+        movaps  xmm0,[rel nops]
+        movups  [CTX+_scratch],xmm0
+
+        mov     byte [CTX+_scratch],al
+        call    two_dup
+        _dup
+        lea     TOS,[CTX+_scratch+1]
+        call    swap
+        jmp     cmove
 
         align   32
+nops:   times 16 db 0x90
 aaaa:   times 16 db ('A'-1)
 zzzz:   times 16 db 'Z'
 case:   times 16 db 0x20
@@ -669,55 +763,54 @@ case:   times 16 db 0x20
 header  "sfind",sfind
         call    w2scratch
 
-        mov     rdx,[r12+_scratch]
-        ; Search for a word starting with rdx
-        vmovdqu xmm0,[r12+_scratch]
+        ; Search for a word starting with xmm0
+        vmovdqu xmm0,[CTX+_scratch]
         lower   xmm0
 
         _dup
-        mov     rax,[r12 + _forth]
+        mov     TOS,[CTX + _forth]
 .0:
-        vmovdqu xmm1,[rax-32]
+        vmovdqu xmm1,[TOS-32]
         lower   xmm1
 
         vpcmpeqb xmm2,xmm1,xmm0
-        vpmovmskb rcx,xmm2
-        cmp     rcx,0xffff
+        vpmovmskb TMP,xmm2
+        cmp     TMP,0xffff
         je      .match
 
         call    nextword
         jne     .0
 
-        xor     rax,rax
+        xor     TOS,TOS
         ret
 
 .match:
-        call    nip
-        call    nip
-        add     rax,WORD_CODE
+        _nip
+        _nip
+        add     TOS,WORD_CODE
         _dup
-        mov     eax,[rax-WORD_CODE]
+        mov     eax,[TOS-WORD_CODE]
         and     eax,1   ;               0  or  1
-        sal     rax,1   ;               0  or  2
-        add     rax,-1  ;              -1 or  +1
+        sal     TOS,1   ;               0  or  2
+        add     TOS,-1  ;              -1 or  +1
         ret
 
-; current word in rax
+; current word in TOS
 ; on return: eax is next word in dictionary, Z set if no more words
 nextword:
-        mov     ebx,dword [rax]
-        and     ebx,~(IMMEDIATE|INLINE)
-        cmp     ebx,0
-        cmove   rbx,rax
-        sub     rax,rbx
+        mov     ecx,dword [TOS]
+        and     ecx,~(IMMEDIATE|INLINE)
+        cmp     ecx,0
+        cmove   TMP,TOS
+        sub     TOS,TMP
         ret
 
 header  "words",words
         _dup
-        mov     rax,[r12 + _forth]
+        mov     TOS,[CTX + _forth]
 .0:
         _dup
-        sub     rax,32
+        sub     TOS,32
         call    count
         call    type
         call    space
@@ -748,13 +841,13 @@ header "accept",accept ; ( c-addr +n1 -- +n2 )
 
 header  "refill",refill
         _dup
-        mov     rax,[r12 + _sourceid]
+        mov     TOS,[CTX + _sourceid]
         call    zero_equals
-        or      rax,rax
+        or      TOS,TOS
         je      .1
 
         _dup
-        lea     rax,[r12 + _tib]
+        lea     TOS,[CTX + _tib]
         _dup
         lit     128
         call    accept
@@ -762,7 +855,7 @@ header  "refill",refill
   call type
   call cr
         call    source_store
-        mov     qword [r12 + _in],0
+        mov     CELLPTR [CTX + _in],0
 .1:
         ret
 
@@ -795,13 +888,13 @@ isnotspace:
 ;     r> drop ;
 
 xt_skip:
-        push    r13
-        mov     r13,rax
+        push    LPC
+        mov     LPC,TOS
         _drop
 .0:
         call    over
         call    c_fetch
-        call    r13
+        call    LPC
         call    over
         call    and
         _tos0
@@ -810,7 +903,7 @@ xt_skip:
         call    slash_string
         jmp     .0
 .1:
-        pop     r13
+        pop     LPC
         ret
 ; 
 ; header parse-name
@@ -821,20 +914,16 @@ xt_skip:
 ;     2dup d# 1 min + source drop - >in !
 ;     drop r> tuck -
 ; ;
-%macro  tick    1
-        _dup
-        lea     rax,[rel %1]
-%endmacro
 
 header  "parse-name",parse_name
-        push    r13
+        push    LPC
         call    source
         call    to_in
         call    fetch
         call    slash_string
         tick    isspace
         call    xt_skip
-        mov     r13,[rdi]
+        mov     LPC,[DSP]
         tick    isnotspace
         call    xt_skip
         call    two_dup
@@ -848,10 +937,10 @@ header  "parse-name",parse_name
         call    store
         call    drop
         _dup
-        mov     rax,r13
+        mov     TOS,LPC
         call    tuck
         call    minus
-        pop     r13
+        pop     LPC
         ret
 
 ; : digit? ( c -- u f )
@@ -861,11 +950,11 @@ header  "parse-name",parse_name
 ;    dup base @i u<
 ; ;
 isdigit:
-        cmp     rax,'A'
+        cmp     TOS,'A'
         jl      .1
-        cmp     rax,'Z'
+        cmp     TOS,'Z'
         jg      .1
-        add     rax,0x20
+        add     TOS,0x20
 .1:
         call    dupe
         lit     0x39
@@ -903,7 +992,7 @@ isdigit:
 ; ;
 header  ">number",to_number
 .0:
-        or      rax,rax
+        or      TOS,TOS
         je      .1
 
         call    over
@@ -951,20 +1040,19 @@ header  "abort",abort
         call    sfind
         call    dupe
         call    zero_equals
-        and     rax,-13
+        and     TOS,-13
         call    throw
         call    less_than_zero
         _tos0
         je      .1
         call    literal
-        _dup
-        lea     rax,[rel compile_comma]
+        tick    compile_comma
 .1:
         jmp     compile_comma
 
 isnotdelim:
         _dup
-        mov     rax,[r12 + _scratch]
+        mov     TOS,[CTX + _scratch]
         jmp     not_equal
 
 ;;      : parse ( "ccc<char" -- c-addr u )
@@ -978,7 +1066,7 @@ isnotdelim:
 
         header  "parse",parse
 
-        mov     [r12 + _scratch],rax
+        mov     [CTX + _scratch],TOS
         _drop
 
         call    source
@@ -989,8 +1077,7 @@ isnotdelim:
         call    over
         _to_r
 
-        _dup
-        lea     rax,[rel isnotdelim]
+        tick    isnotdelim
         call    xt_skip
 
         call    two_dup
@@ -1017,7 +1104,7 @@ header  "throw",throw
 
 ; : isvoid ( caddr u -- ) \ any char remains, abort
 isvoid:
-        call    nip
+        _nip
         _tos0
         jne     abort
         ret
@@ -1038,7 +1125,7 @@ consume1:
         call    not_equal_zero
         call    and
 
-        push    rax
+        push    TOS
         lit     1
         call    and
         call    slash_string
@@ -1078,41 +1165,41 @@ doubleAlso2:
         ret
 
 doubleAlso1:
-        mov     rbx,[rdi]
+        mov     TMP,[DSP]
         cmp     eax,3                   ;; Handle 'c' case
         jne     .1
-        cmp     byte [rbx],"'"
+        cmp     byte [TMP],"'"
         jne     .1
-        cmp     byte [rbx+2],"'"
+        cmp     byte [TMP+2],"'"
         jne     .1
         _drop2
         _dup
-        movzx   rax,byte [rbx+1]
+        movzx   TOS,byte [TMP+1]
         lit     1
         ret
 .1:
-        lit     "$"
+        lit     "$"                     ;; hex
         call    consume1
         _tos0
-        mov     rbx,16
+        mov     TMP,16
         jne     .base
-        lit     "#"
+        lit     "#"                     ;; decimal
         call    consume1
         _tos0
-        mov     rbx,10
+        mov     TMP,10
         jne      .base
-        lit     "%"
+        lit     "%"                     ;; binary
         call    consume1
         _tos0
-        mov     rbx,2
+        mov     TMP,2
         jne      .base
         jmp     doubleAlso2
 
 .base:
-        push    qword [r12 + _base]
-        mov     [r12 + _base],rbx
+        push    CELLPTR [CTX + _base]
+        mov     [CTX + _base],TMP
         call    doubleAlso1
-        pop     qword [r12 + _base]
+        pop     CELLPTR [CTX + _base]
         ret
 
 doubleAlso:
@@ -1129,16 +1216,16 @@ doubleAlso_comma:
 interpret:
 .0:
         call    parse_name
-        or      rax,rax
+        or      TOS,TOS
         je      .1
         call    sfind
 
-        add     rax,[r12 + _state]
+        add     TOS,[CTX + _state]
 
         call    one_plus
-        mov     rbx,rax
+        mov     TMP,TOS
         _drop
-        call    [r12 + _jumptab + 8 * rbx]
+        call    [CTX + _jumptab + CELL * TMP]
         jmp     .0
 .1:     call    two_drop
         ret
@@ -1151,23 +1238,23 @@ interpret:
 ;   r> >in ! r> r> source!
 
 header  "evaluate",evaluate
-        push    qword [r12 + _sourceC]
-        push    qword [r12 + _sourceC + 8]
-        push    qword [r12 + _in]
-        push    qword [r12 + _sourceid]
-        mov     qword [r12 + _sourceid],-1
+        push    CELLPTR [CTX + _sourceC]
+        push    CELLPTR [CTX + _sourceC + CELL]
+        push    CELLPTR [CTX + _in]
+        push    CELLPTR [CTX + _sourceid]
+        mov     CELLPTR [CTX + _sourceid],-1
 
         call    source_store
-        mov     qword [r12 + _in],0
+        mov     CELLPTR [CTX + _in],0
         call    interpret
-        pop     qword [r12 + _sourceid]
-        pop     qword [r12 + _in]
-        pop     qword [r12 + _sourceC + 8]
-        pop     qword [r12 + _sourceC]
+        pop     CELLPTR [CTX + _sourceid]
+        pop     CELLPTR [CTX + _in]
+        pop     CELLPTR [CTX + _sourceC + CELL]
+        pop     CELLPTR [CTX + _sourceC]
         ret
 
 quit:
-        mov     qword [r12 + _sourceid],0
+        mov     CELLPTR [CTX + _sourceid],0
         call    refill
         _tos0
         je      .1
@@ -1179,32 +1266,32 @@ quit:
 
         header  "here",here
         _dup
-        mov     rax,[r12 + _dp]
+        mov     TOS,[CTX + _dp]
         ret
 
         header  "dp",dp
         _dup
-        lea     rax,[r12 + _dp]
+        lea     TOS,[CTX + _dp]
         ret
 
         header  "chere",chere
         _dup
-        mov     rax,[r12 + _cp]
+        mov     TOS,[CTX + _cp]
         ret
 
         header  "cp",cp
         _dup
-        lea     rax,[r12 + _cp]
+        lea     TOS,[CTX + _cp]
         ret
 
         header  "forth",forth
         _dup
-        lea     rax,[r12 + _forth]
+        lea     TOS,[CTX + _forth]
         ret
 
         header  "state",state
         _dup
-        lea     rax,[r12 + _state]
+        lea     TOS,[CTX + _state]
         ret
 
         header  "unused",unused
@@ -1212,39 +1299,44 @@ quit:
         jmp     negate
 
         header  "aligned",aligned
-        add     rax,7
-        and     rax,~7
+        add     TOS,(CELL-1)
+        and     TOS,~(CELL-1)
         ret
 
         header  ",",comma
-        mov     rbx,[r12 + _dp]
-        mov     [rbx],rax
-        add     rbx,8
-        mov     [r12 + _dp],rbx
+        mov     TMP,[CTX + _dp]
+        mov     [TMP],TOS
+        add     TMP,CELL
+        mov     [CTX + _dp],TMP
         jmp     drop
 
         header  "c,",c_comma
-        mov     rbx,[r12 + _dp]
-        mov     [rbx],al
-        add     rbx,1
-        mov     [r12 + _dp],rbx
+        mov     TMP,[CTX + _dp]
+        mov     [TMP],al
+        add     TMP,1
+        mov     [CTX + _dp],TMP
         jmp     drop
 
         header  "s,",s_comma
-        push    rdi
-        mov     rsi,[rdi]
-        mov     rdi,[r12 + _dp]
-        mov     rcx,rax
+        push    DSP
+%if (CELL == 8)
+        mov     rsi,[DSP]
+        mov     rdi,[CTX + _dp]
+        mov     rcx,TOS
+%else
+        mov     esi,[DSP]
+        mov     edi,[CTX + _dp]
+        mov     ecx,TOS
+%endif
         rep movsb
-        mov     [r12 + _dp],rdi
-        pop     rdi
+        mov     [CTX + _dp],DSP
+        pop     DSP
         jmp     two_drop
 
 ;; ================ R stack           ================ 
 
         %macro  frag    1
-        _dup
-        lea     rax,[rel frag_%1]
+        tick    frag_%1
         lit     len_%1
         call    code_s_comma
         %endmacro
@@ -1258,8 +1350,7 @@ len_to_r equ $ - frag_to_r
         ret
 
         header  "2>r",two_to_r,IMMEDIATE
-        _dup
-        lea     rax,[rel swap]
+        tick    swap
         call    compile_comma
         call    to_r
         jmp     to_r
@@ -1275,13 +1366,12 @@ len_r_from equ $ - frag_r_from
         header  "2r>",two_r_from,IMMEDIATE
         call    r_from
         call    r_from
-        _dup
-        lea     rax,[rel swap]
+        tick    swap
         jmp     compile_comma
 
 frag_r_at:
         _dup
-        mov     rax,[rsp]
+        mov     TOS,[rsp]
 len_r_at equ $ - frag_r_at
 
         header  "r@",r_at,IMMEDIATE
@@ -1290,35 +1380,41 @@ len_r_at equ $ - frag_r_at
 
         header  "2r@",two_r_at
         _dup
-        mov     rax,[rsp + 16]
+        mov     TOS,[rsp + CELLS(2)]
         _dup
-        mov     rax,[rsp + 8]
+        mov     TOS,[rsp + CELL]
         ret
 
 ;; ================ Compiling         ================ 
 
         header  "code.,",code_comma
-        mov     rbx,[r12 + _cp]
-        mov     [rbx],rax
-        add     rbx,8
-        mov     [r12 + _cp],rbx
+        mov     TMP,[CTX + _cp]
+        mov     [TMP],TOS
+        add     TMP,CELL
+        mov     [CTX + _cp],TMP
         jmp     drop
 
         header  "code.c,",code_c_comma
-        mov     rbx,[r12 + _cp]
-        mov     [rbx],al
-        add     rbx,1
-        mov     [r12 + _cp],rbx
+        mov     TMP,[CTX + _cp]
+        mov     [TMP],al
+        add     TMP,1
+        mov     [CTX + _cp],TMP
         jmp     drop
 
         header  "code.s,",code_s_comma
-        push    rdi
-        mov     rsi,[rdi]
-        mov     rdi,[r12 + _cp]
-        mov     rcx,rax
+        push    DSP
+%if (CELL == 8)
+        mov     rsi,[DSP]
+        mov     rdi,[CTX + _cp]
+        mov     rcx,TOS
+%else
+        mov     esi,[DSP]
+        mov     edi,[CTX + _cp]
+        mov     ecx,TOS
+%endif
         rep movsb
-        mov     [r12 + _cp],rdi
-        pop     rdi
+        mov     [CTX + _cp],DSP
+        pop     DSP
         jmp     two_drop
 
 ;   align
@@ -1333,44 +1429,48 @@ mkheader:
         call    w2scratch
         call    two_drop
 
-        mov     rbx,[r12 + _cp]
-        add     rbx,31
-        and     rbx,~31
-        mov     rdx,[r12 + _scratch]             ; is the word itself
-        mov     [rbx],rdx
-        mov     rdx,[r12 + _scratch + 8]
-        mov     [rbx + 8],rdx
-        mov     rdx,[r12 + _scratch + 16]
-        mov     [rbx + 16],rdx
-        mov     rdx,[r12 + _scratch + 24]
-        mov     [rbx + 24],rdx
-        add     rbx,32
+        _dup
+        mov     TOS,[CTX + _cp]
+        add     TOS,31
+        and     TOS,~31
 
-        mov     [r12 + _lastword],rbx
-        mov     rdx,rbx
-        sub     rdx,[r12 + _forth]
-        or      rdx,INLINE                      ;; words are inline by default
-        mov     [rbx],edx
-        mov     dword [rbx+4],0                 ;; WORD_CBYTES
-        add     rbx,WORD_CODE
-        mov     [r12 + _thisxt],rbx
-        mov     [r12 + _cp],rbx
-        ret
+        vmovdqu xmm0,[CTX + _scratch]
+        vmovdqa xmm1,[CTX + _scratch + 16]
+        vmovdqu [TOS],xmm0
+        vmovdqa [TOS + 16],xmm1
+
+        add     TOS,32
+
+        mov     [CTX + _lastword],TOS
+        mov     TMP,TOS
+        sub     TMP,[CTX + _forth]
+        or      TMP,INLINE                      ;; words are inline by default
+        mov     [TOS],ecx
+        mov     dword [TOS+4],0                 ;; WORD_CBYTES
+        add     TOS,WORD_CODE
+        mov     [CTX + _thisxt],TOS
+        mov     [CTX + _cp],TOS
+        jmp     drop
 
 attach:
-        mov     rbx,[r12 + _lastword]
-        mov     [r12 + _forth],rbx
-        mov     rcx,[r12 + _cp]
-        sub     rcx,[r12 + _thisxt]
-        sub     rcx,1
-        mov     [rbx + WORD_CBYTES],ecx
-        ret
+        mov     TMP,[CTX + _lastword]
+        mov     [CTX + _forth],TMP
+        _dup
+        mov     TOS,[CTX + _cp]
+        sub     TOS,[CTX + _thisxt]
+        sub     TOS,1
+        mov     [TMP + WORD_CBYTES],eax
+        jmp     drop
 
         header  ":noname",colon_noname
-        add     qword [r12 + _cp],15
-        and     qword [r12 + _cp],~15
+        ;; add     CELLPTR [CTX + _cp],15
+        ;; and     CELLPTR [CTX + _cp],~15
+        call    false
+        call    code_comma
+        call    false
+        call    code_comma
         call    chere
-        mov     [r12 + _thisxt],rax
+        mov     [CTX + _thisxt],TOS
         jmp     right_bracket
 
         header  ":",colon
@@ -1383,23 +1483,23 @@ attach:
         jmp     left_bracket
 
         header  "exit",exit,IMMEDIATE
-        mov     rbx,[r12 + _cp]
-        sub     rbx,5
-        cmp     rbx,[r12 + _prevcall]
+        mov     TMP,[CTX + _cp]
+        sub     TMP,5
+        cmp     TMP,[CTX + _prevcall]
         jne     .1
-        mov     byte [rbx],0xe9
+        mov     byte [TMP],0xe9
 .1:
         lit     0xc3
         jmp     code_c_comma
 
         header  "immediate",immediate
-        mov     rbx,[r12 + _lastword]
-        or      dword [rbx],1
+        mov     TMP,[CTX + _lastword]
+        or      dword [TMP],1
         ret
 
         header  "noinline",noinline
-        mov     rbx,[r12 + _lastword]
-        and     dword [rbx],~INLINE
+        mov     TMP,[CTX + _lastword]
+        and     dword [TMP],~INLINE
         ret
 
 ;; CREATE makes a word that pushes a literal, followed by
@@ -1407,62 +1507,71 @@ attach:
 ;; DOES> works by patching the return instruction to a jump.
 
 ;; CREATERET is the offset from the word to the RET opcode
+%if (CELL == 8)
 %define CREATERET       (WORD_CODE + 18)
+%else
+%define CREATERET       (WORD_CODE + 11)
+%endif
 
         header  "does>",does
         call    noinline
-        pop     rcx                             ; return address will be branch target
-        mov     rbx,[r12 + _lastword]           ; points to link and LITERAL
-        mov     byte [rbx + CREATERET],0xe9     ; patch to a JMP
-        sub     rcx,rbx                         ;
-        sub     rcx,(CREATERET + 1 + 4)
-        mov     [rbx + (CREATERET + 1)],ecx     ; JMP destination
-        ret
+        _r_from
+        mov     TMP,[CTX + _lastword]           ; points to link and LITERAL
+        mov     byte [TMP + CREATERET],0xe9     ; patch to a JMP
+        sub     TOS,TMP                         ;
+        sub     TOS,(CREATERET + 1 + 4)
+        mov     [TMP + (CREATERET + 1)],eax     ; JMP destination
+        jmp     drop
 
         header  "[",left_bracket,IMMEDIATE
-        mov     qword [r12 + _state],0
+        mov     CELLPTR [CTX + _state],0
         ret
 
         header  "]",right_bracket
-        mov     qword [r12 + _state],3
+        mov     CELLPTR [CTX + _state],3
         ret
 
-frag_lit64:
+%if (CELL == 8)
+frag_litCell:
         _dup
-        mov     rax,0x1234567812345678
-len_lit64 equ ($ - 8) - frag_lit64
+        mov     TOS,0x1234567812345678
+len_litCell equ ($ - 8) - frag_litCell
+%else
+frag_litCell:
+        _dup
+        mov     TOS,0x12345678
+len_litCell equ ($ - 4) - frag_litCell
+%endif
 
         header  "literal",literal,IMMEDIATE
-        mov     rbx,0x100000000
-        cmp     rax,rbx
-        frag    lit64
+        frag    litCell
         jmp     code_comma
 
         header  "compile,",compile_comma
-        mov     ebx,dword [rax - WORD_CODE]
-        test    ebx,INLINE
+        mov     ecx,dword [TOS - WORD_CODE]
+        test    ecx,INLINE
         je      .1
         ;; inline it
-        mov     qword [r12 + _prevcall],0
+        mov     CELLPTR [CTX + _prevcall],0
         _dup
-        mov     eax,dword [rax - WORD_CBYTES]
+        mov     eax,dword [TOS - WORD_CBYTES]
         jmp     code_s_comma
 
 .1:
         call    noinline
         call    chere
-        mov     [r12 + _prevcall],rax
-        add     rax,5
+        mov     [CTX + _prevcall],TOS
+        add     TOS,5
         call    minus
 
         lit     0xe8
         call    code_c_comma
 
 l_comma:
-        mov     rbx,[r12 + _cp]
-        mov     [rbx],eax
-        add     rbx,4
-        mov     [r12 + _cp],rbx
+        mov     TMP,[CTX + _cp]
+        mov     [TMP],eax
+        add     TMP,4
+        mov     [CTX + _cp],TMP
         jmp     drop
 
         header  "2literal",two_literal,IMMEDIATE
@@ -1472,44 +1581,79 @@ l_comma:
 
 ;; ================ block copy        ================ 
 
+%if (CELL == 8)
         header  "cmove",cmove
-        push    rdi
-        mov     rsi,[rdi+8]
-        mov     rdi,[rdi]
-        mov     rcx,rax
+        push    DSP
+        mov     rsi,[DSP+CELL]
+        mov     DSP,[DSP]
+        mov     rcx,TOS
         rep movsb
-        pop     rdi
+        pop     DSP
         _drop3
         ret
 
         header  "cmove>",cmove_up
-        push    rdi
-        mov     rsi,[rdi+8]
-        mov     rdi,[rdi]
-        mov     rcx,rax
+        push    DSP
+        mov     rsi,[DSP+CELL]
+        mov     DSP,[DSP]
+        mov     rcx,TOS
         lea     rsi,[rsi + rcx - 1]
-        lea     rdi,[rdi + rcx - 1]
+        lea     DSP,[DSP + rcx - 1]
         std
         rep movsb
         cld
-        pop     rdi
+        pop     DSP
         _drop3
         ret
 
         header  "fill",fill
-        push    rdi
-        mov     rcx,[rdi]
-        mov     rdi,[rdi+8]
+        push    DSP
+        mov     rcx,[DSP]
+        mov     DSP,[DSP+CELL]
         rep stosb
-        pop     rdi
+        pop     DSP
         _drop3
         ret
+%else
+        header  "cmove",cmove
+        push    edi
+        mov     esi,[DSP+CELL]
+        mov     edi,[DSP]
+        mov     ecx,TOS
+        rep movsb
+        pop     edi
+        _drop3
+        ret
+
+        header  "cmove>",cmove_up
+        push    edi
+        mov     esi,[DSP+CELL]
+        mov     edi,[DSP]
+        mov     ecx,TOS
+        lea     esi,[esi + ecx - 1]
+        lea     edi,[edi + ecx - 1]
+        std
+        rep movsb
+        cld
+        pop     edi
+        _drop3
+        ret
+
+        header  "fill",fill
+        push    edi
+        mov     ecx,[DSP]
+        mov     edi,[DSP+CELL]
+        rep stosb
+        pop     edi
+        _drop3
+        ret
+%endif
 
 ;; ================ program structure ================ 
 
         header  "begin",begin,IMMEDIATE
         _dup
-        mov     rax,[r12 + _cp]
+        mov     TOS,[CTX + _cp]
         ret
 
         header  "ahead",ahead,IMMEDIATE
@@ -1530,25 +1674,25 @@ len_tos0 equ $ - frag_tos0
         lit     $84
         call    code_c_comma
         call    begin
-        add     qword [r12 + _cp],4
+        add     CELLPTR [CTX + _cp],4
         ret
 
         header  "then",then,IMMEDIATE
-        mov     rbx,[r12 + _cp]
-        sub     rbx,rax
-        sub     rbx,4
-        mov     [rax],ebx
+        mov     TMP,[CTX + _cp]
+        sub     TMP,TOS
+        sub     TMP,4
+        mov     [TOS],ecx
         jmp     drop
 
         header  "again",again,IMMEDIATE
         lit     0xe9
         call    code_c_comma
 backjmp: ;; ( dst -- ) make a backwards jump from here to dst
-        mov     rbx,[r12 + _cp]
-        sub     rax,rbx
-        sub     rax,4
-        mov     [rbx],eax
-        add     qword [r12 + _cp],4
+        mov     TMP,[CTX + _cp]
+        sub     TOS,TMP
+        sub     TOS,4
+        mov     [TMP],eax
+        add     CELLPTR [CTX + _cp],4
         jmp     drop
 
         header  "until",until,IMMEDIATE
@@ -1562,73 +1706,79 @@ backjmp: ;; ( dst -- ) make a backwards jump from here to dst
         header  "recurse",recurse,IMMEDIATE
         call    noinline
         _dup
-        mov     rax,[r12 + _thisxt]
+        mov     TOS,[CTX + _thisxt]
         jmp     compile_comma
 
 ;; 
 ;; How DO...LOOP is implemented
 ;; 
 ;; Uses two registers:
-;;    r13 is the counter; it starts negative and counts up. When it reaches 0, loop exits
-;;    r14 is the offset. It is set up at loop start so that I can be computed from (r13+r14)
+;;    LPC is the counter; it starts negative and counts up. When it reaches 0, loop exits
+;;    LPO is the offset. It is set up at loop start so that I can be computed from (LPC+LPO)
 ;; 
 ;; So when DO we have ( limit start ) on the stack so need to compute:
-;;      r13 = start - limit
-;;      r14 = limit
+;;      LPC = start - limit
+;;      LPO = limit
 ;; 
 ;; E.g. for "13 3 DO"
-;;      r13 = -10
-;;      r14 = 13
+;;      LPC = -10
+;;      LPO = 13
 ;; 
 ;; So the loop runs:
-;;      r13     -10 -9 -8 -7 -6 -5 -4 -3 -2 -1
+;;      LPC     -10 -9 -8 -7 -6 -5 -4 -3 -2 -1
 ;;      I         3  4  5  6  7  8  9 10 11 12
 ;; 
 ;; 
 
+%if (CELL == 8)
+        %define HIBIT $8000000000000000
+%else
+        %define HIBIT $80000000
+%endif
+
 frag_do:
-        push    r13
-        push    r14
-        mov     r13,rax                 ; start
-        mov     r14,[rdi]               ; limit
+        push    LPC
+        push    LPO
+        mov     LPC,TOS                 ; start
+        mov     LPO,[DSP]               ; limit
         _drop2
-        mov     rbx,$8000000000000000
-        xor     r14,rbx
-        sub     r13,r14
+        mov     TMP,HIBIT
+        xor     LPO,TMP
+        sub     LPC,LPO
 len_do equ $ - frag_do
 
         header  "do",do,IMMEDIATE
         _dup
-        mov     rax,[r12 + _leaves]
-        mov     qword [r12 + _leaves],0
+        mov     TOS,[CTX + _leaves]
+        mov     CELLPTR [CTX + _leaves],0
         frag    do
         jmp     begin
 
 frag_qdo:
-        push    r13
-        push    r14
-        mov     r13,rax                 ; start
-        mov     r14,[rdi]               ; limit
-        mov     rbx,$8000000000000000
-        xor     r14,rbx
-        sub     r13,r14
-        cmp     rax,[rdi]
-        mov     rax,[rdi+8]
-        lea     rdi,[rdi + 16]
+        push    LPC
+        push    LPO
+        mov     LPC,TOS                 ; start
+        mov     LPO,[DSP]               ; limit
+        mov     TMP,HIBIT
+        xor     LPO,TMP
+        sub     LPC,LPO
+        cmp     TOS,[DSP]
+        mov     TOS,[DSP+CELL]
+        lea     DSP,[DSP + CELLS(2)]
 len_qdo equ $ - frag_qdo
 
         header  "?do",question_do,IMMEDIATE
         _dup
-        mov     rax,[r12 + _leaves]
-        mov     qword [r12 + _leaves],0
+        mov     TOS,[CTX + _leaves]
+        mov     CELLPTR [CTX + _leaves],0
         frag    qdo
 
         lit     0x0f
         call    code_c_comma
         lit     0x84
         call    code_c_comma
-        mov     rbx,[r12 + _cp]
-        mov     [r12 + _leaves],rbx
+        mov     TMP,[CTX + _cp]
+        mov     [CTX + _leaves],TMP
         lit     0
         call    l_comma
 
@@ -1636,40 +1786,42 @@ len_qdo equ $ - frag_qdo
 
         header  "leave",leave,IMMEDIATE
         call    ahead
-        cmp     qword [r12 + _leaves],0
+        cmp     CELLPTR [CTX + _leaves],0
         je      .1
-        ;; Write [rax - _leaves] into [rax]
+        ;; Write [TOS - _leaves] into [TOS]
         ;; the leave chain is a chain of 32-bit relative links
-        mov     rbx,rax
-        sub     rbx,[r12 + _leaves]
-        mov     dword [rax],ebx
+        mov     TMP,TOS
+        sub     TMP,[CTX + _leaves]
+        mov     dword [TOS],ecx
 .1:
-        mov     [r12 + _leaves],rax
+        mov     [CTX + _leaves],TOS
         _drop
         ret
 
 resolveleaves:
         _dup
-        mov     rax,[r12 + _leaves]
-        or      rax,rax
+        mov     TOS,[CTX + _leaves]
+        or      TOS,TOS
         je      .2
 
 .1:
-        mov     ecx,dword [rax]
+        mov     ecx,dword [TOS]
         _dup
+        push    TMP
         call    then
+        pop     TMP
         
         or      ecx,ecx
         je      .2
-        sub     rax,rcx
+        sub     TOS,TMP
         jmp     .1
 .2:
         _drop
-        mov     [r12 + _leaves],rax
+        mov     [CTX + _leaves],TOS
         jmp     drop
 
 frag_loop:
-        inc     r13
+        inc     LPC
 len_loop equ $ - frag_loop
 
         header  "loop",loop,IMMEDIATE
@@ -1683,9 +1835,9 @@ len_loop equ $ - frag_loop
         jmp     unloop
 
 frag_plus_loop:
-        mov     rbx,rax
+        mov     TMP,TOS
         _drop
-        add     r13,rbx
+        add     LPC,TMP
         jno     swapforth
 len_plus_loop equ ($ - 4) - frag_plus_loop
 
@@ -1696,8 +1848,8 @@ len_plus_loop equ ($ - 4) - frag_plus_loop
         jmp     unloop
 
 frag_unloop:
-        pop     r14
-        pop     r13
+        pop     LPO
+        pop     LPC
 len_unloop equ $ - frag_unloop
 
         header  "unloop",unloop,IMMEDIATE
@@ -1706,8 +1858,8 @@ len_unloop equ $ - frag_unloop
 
 frag_i:
         _dup
-        mov     rax,r13
-        add     rax,r14
+        mov     TOS,LPC
+        add     TOS,LPO
 len_i equ $ - frag_i
 
         header  "i",i,IMMEDIATE
@@ -1716,70 +1868,95 @@ len_i equ $ - frag_i
 
         header  "j",j
         _dup
-        mov     rax,[rsp+16]
-        add     rax,[rsp+8]
+        mov     TOS,[rsp+CELLS(2)]
+        add     TOS,[rsp+CELL]
         ret
 
 
 header  "decimal",decimal
-        mov     qword [r12 + _base],10
+        mov     CELLPTR [CTX + _base],10
         ret
 
 header  "dummy",dummy
 L%[wnum]:
 
 init:
-        push    rbp
+
+%if (CELL == 8)
         push    rbx
         push    r12
+        mov     CTX,rdi
+        mov     [CTX + _cfuncs],rsi
+%else
+        push    ebx
+        push    esi
+        push    edi
+        push    ebp
 
-        mov     r15,0
-        mov     r12,rdi
+        mov     CTX,[esp + 20]
+        mov     eax,[esp + 24]
+        mov     [CTX + _cfuncs],eax
+        mov     DSP,CTX
+
+%endif
 
         call    left_bracket
 
-        mov     [r12 + _cfuncs],rsi
-
-        lea     rax,[rel dummy - WORD_CODE]
+        tick    dummy
+        sub     TOS,WORD_CODE
         call    nextword
-        mov     [r12 + _forth],rax
+        mov     [CTX + _forth],TOS
+        _drop
 
-        lea     rax,[rel mem]
-        mov     [r12 + _cp],rax
-        add     rax,512*1024
-        mov     [r12 + _dp],rax
+        tick    mem
+        mov     [CTX + _cp],TOS
+        add     TOS,512*1024
+        mov     [CTX + _dp],TOS
+        _drop
 
         call    decimal
 
-        lea     rax,[rel execute]
-        mov     [r12 + _jumptab + 0],rax
+        tick    execute
+        mov     [CTX + _jumptab + CELLS(0)],TOS
+        _drop
 
-        lea     rax,[rel doubleAlso]
-        mov     [r12 + _jumptab + 8],rax
+        tick    doubleAlso
+        mov     [CTX + _jumptab + CELLS(1)],TOS
+        _drop
 
-        lea     rax,[rel execute]
-        mov     [r12 + _jumptab + 16],rax
+        tick    execute
+        mov     [CTX + _jumptab + CELLS(2)],TOS
+        _drop
 
-        lea     rax,[rel compile_comma]
-        mov     [r12 + _jumptab + 24],rax
+        tick    compile_comma
+        mov     [CTX + _jumptab + CELLS(3)],TOS
+        _drop
 
-        lea     rax,[rel doubleAlso_comma]
-        mov     [r12 + _jumptab + 32],rax
+        tick    doubleAlso_comma
+        mov     [CTX + _jumptab + CELLS(4)],TOS
+        _drop
 
-        lea     rax,[rel execute]
-        mov     [r12 + _jumptab + 40],rax
+        tick    execute
+        mov     [CTX + _jumptab + CELLS(5)],TOS
+        _drop
 
         call    quit
 
-        mov     rax,rdi
+%if (CELL == 8)
         pop     r12
         pop     rbx
-        pop     rbp
+%else
+        pop     ebp
+        pop     edi
+        pop     esi
+        pop     ebx
+%endif
         ret
 
         align 32
 mem:
+
 global swapforth_ends
-swapforth_ends:
 global _swapforth_ends
+swapforth_ends:
 _swapforth_ends:

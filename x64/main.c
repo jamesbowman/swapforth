@@ -12,9 +12,11 @@
 // This means that SwapForth itself does not refer to any
 // external symbols, so it can be relocated with memcpy().
 
-void _dotx(uint64_t x)
+typedef size_t cell_t;
+
+void _dotx(cell_t x)
 {
-  printf("%016" PRIx64 " ", x);
+  printf("%016zx ", x);
 }
 
 void _bye()
@@ -52,14 +54,17 @@ int main()
 
   // copy runtime code into allocated memory
   memcpy(mem, &swapforth, &swapforth_ends - &swapforth);
+  printf("swapforth = %p\n", &swapforth);
+  printf("mem       = %p\n", mem);
 
   // typecast allocated memory to a function pointer
   int64_t (*func) () = mem;
 
   int64_t stack[512 + 500];
-  int64_t r = func(stack + 512, cfuncs);
-  printf("r = %" PRIu64 "x\n", r);
-  printf("\ndepth = %d\n", (int)((stack + 512) - (int64_t*)r));
+  cell_t r = func(stack + 512, cfuncs);
+  printf("(%p, %p)\n", stack + 512, cfuncs);
+  printf("r = %zx\n", r);
+  // printf("\ndepth = %d\n", (int)((stack + 512) - (int64_t*)r));
 
   // Free up allocated memory
   munmap(mem, MEMSIZE);

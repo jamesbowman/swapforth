@@ -1,6 +1,6 @@
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq verilator gforth nasm make texlive-latex-base texlive-latex-extra
+  - sudo apt-get install -qq verilator gforth nasm make texlive-latex-base texlive-latex-extra libc6-dev-i386
 language: python
 python:
   - "2.6"

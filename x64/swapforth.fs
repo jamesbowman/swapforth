@@ -28,8 +28,11 @@ include core0.fs
     postpone ;
 ;
 
+\ Offset of the LIT in a CREATE is
+\  7 bytes for x86
+\ 10 bytes for x86-64
 : >body
-     10 + @
+     [ 1 cells 8 = 3 and 7 + ] literal + @
 ;
 
 include double.fs
