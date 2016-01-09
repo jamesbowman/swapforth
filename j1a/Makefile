@@ -33,10 +33,10 @@ endif
 
 ifeq ($(UNAME_S),Darwin)
 
-/dev/tty.usbserial-241B: mackextload
+/dev/tty.usbserial-*B: mackextload
 
-connect: /dev/tty.usbserial-241B
-	sudo python shell.py -h /dev/tty.usbserial-241B -p ../common/
+connect: /dev/tty.usbserial-*B
+	sudo python shell.py -h /dev/tty.usbserial-*B -p ../common/
 
 j4a: mackextunload
 	make -C icestorm j4a

@@ -1,3 +1,4 @@
 *.pyc
 TAGS
 log
+*.DS_Store
