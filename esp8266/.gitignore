@@ -1,6 +1,6 @@
 swapforth
 swapforth-0x00000.bin
 swapforth-0x40000.bin
-swapforth.o
+*.o
 [0-9]
 lst
