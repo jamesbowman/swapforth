@@ -951,7 +951,7 @@ header abort
 : consume1 ( caddr u ch -- caddr' u' f )
     >r over c@ r> =
     over 0<> and
-    dup>r d# 1 and /string r>
+    dup>r negate /string r>
 ;
 
 : ((doubleAlso))
