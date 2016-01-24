@@ -1,5 +1,4 @@
         .section        .irom0.text
- j snap
 
 // The CALL0 c   ing convention is:
 //
@@ -195,10 +194,12 @@ header  "base",base
         ret
 
 header  ">in",to_in
-        j       abort
+        lit     _in
+        ret
 
 header  "source",source
-        j       abort
+        lit     _source
+        j       two_fetch
 
 header  "source-id",source_id
         j       abort
@@ -626,6 +627,7 @@ header  "sfind",sfind
         extui   X0,X0,0,8
         addi    X0,X0,5
         add     TOS,TOS,X0
+        c       aligned
         c       swap
         l32i    TOS,TOS,0
         extui   TOS,TOS,0,1     // immediate: 1, otherwise 0
@@ -899,7 +901,10 @@ header  "unused",unused
         j       abort
 
 header  "aligned",aligned
-        j       abort
+        addi    TOS,TOS,3
+        srli    TOS,TOS,2
+        slli    TOS,TOS,2
+        ret
 
 header  ",",comma
         j       abort
@@ -1063,6 +1068,26 @@ snap:
 3:
         j       3b
 
+        .p2align        2
+        .long   execute
+dispatch:
+        .long   snap
+        .long   execute
+
+interpret:
+        prolog
+0:
+        c       parse_name
+        beqz    TOS,1f
+        c       sfind
+        c       cells
+        lit     dispatch
+        c       plus
+        c       fetch
+        c       execute
+        j       0b
+1:      c       two_drop
+        epilog
 
         .p2align  2
 .global swapforth
@@ -1088,14 +1113,15 @@ swapforth:
         c       dotx
 
         lit     ssss
-        lit     7
-        c       sfind
-        c       dotx
-        c       dotx
+        lit     14
+        lit     _source
+        c       two_store
 
-        lit     cr
-        c       execute
-        c       words
+        lit     0
+        lit     _in
+        c       store
+
+        c       interpret
 
         c       depth
         l32i    a15,a1,4                // }
@@ -1104,9 +1130,13 @@ swapforth:
         .section        .data
 _base:  .long   0
 _forth: .long   forth_link
+_in:    .skip   4
+_source:
+        .skip   8
 _wbuf:  .skip   32
 
-ssss:   .string         "recurse"
+ssss:   .string         "words cr 12345"
+tttt:
 nnnn:   .string         "1234567812345678."
         .p2align        2
         .skip           512
