@@ -52,6 +52,7 @@ void some_timerfunc(void *arg)
   static int i; i++;
   ets_printf("Hello World %d!\r\n", i);
 
+#if 0
   // See eagle_soc.h for timer layout
   {
     uint32*ptr = (uint32_t*)0x60000600;
@@ -68,8 +69,9 @@ void some_timerfunc(void *arg)
   dump(0x40000390);
   dump(0x3fffc100);
   dump(0x401006a0);
+#endif
 
-  if (i == 40) {
+  if (i == 60) {
     _ptrUDPServer = (struct espconn *) os_zalloc(sizeof(struct espconn));
     _ptrUDPServer->type = ESPCONN_UDP;
     _ptrUDPServer->state = ESPCONN_NONE;
@@ -93,6 +95,61 @@ user_procTask(os_event_t *events)
     os_delay_us(10);
 }
 
+#define UART0   0
+#define UART1   1
+
+#include "uart_register.h"
+
+LOCAL void
+uart0_rx_intr_handler(void *para)
+{
+  //Set GPIO2 to HIGH
+  gpio_output_set(BIT2, 0, BIT2, 0);
+
+  if (UART_RXFIFO_FULL_INT_ST != (READ_PERI_REG(UART_INT_ST(UART0)) & UART_RXFIFO_FULL_INT_ST)) {
+    return;
+  }
+
+  WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
+
+  if (READ_PERI_REG(UART_STATUS(UART0)) & (UART_RXFIFO_CNT << UART_RXFIFO_CNT_S)) {
+    uint8 RcvChar;
+    RcvChar = READ_PERI_REG(UART_FIFO(UART0)) & 0xFF;
+    ets_printf("%c", RcvChar);
+    os_delay_us(1000);
+  }
+}
+
+void
+uart_config(uint8 uart_no)
+{
+    if (uart_no == UART1) {
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
+    } else {
+        /* rcv_buff size if 0x100 */
+        ETS_UART_INTR_ATTACH(uart0_rx_intr_handler,  NULL);
+        PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+    }
+
+    uart_div_modify(uart_no, UART_CLK_FREQ / 1000000);
+
+
+    //clear rx and tx fifo,not ready
+    SET_PERI_REG_MASK(UART_CONF0(uart_no), UART_RXFIFO_RST | UART_TXFIFO_RST);
+    CLEAR_PERI_REG_MASK(UART_CONF0(uart_no), UART_RXFIFO_RST | UART_TXFIFO_RST);
+
+    //set rx fifo trigger
+    WRITE_PERI_REG(UART_CONF1(uart_no), (1 & UART_RXFIFO_FULL_THRHD) << UART_RXFIFO_FULL_THRHD_S);
+
+    //clear all interrupt
+    WRITE_PERI_REG(UART_INT_CLR(uart_no), 0xffff);
+    //enable rx_interrupt
+    SET_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_RXFIFO_FULL_INT_ENA);
+
+    ETS_UART_INTR_ENABLE();
+}
+
 //Init function 
 void ICACHE_FLASH_ATTR
 user_init()
@@ -100,7 +157,6 @@ user_init()
   // system_set_os_print(0);
   uart_div_modify(0, UART_CLK_FREQ / 1000000);
 
-#if 0
   // Initialize the GPIO subsystem.
   gpio_init();
 
@@ -110,6 +166,7 @@ user_init()
   //Set GPIO2 low
   gpio_output_set(0, BIT2, BIT2, 0);
 
+#if 0
   //Disarm timer
   os_timer_disarm(&some_timer);
 
@@ -120,7 +177,7 @@ user_init()
   //&some_timer is the pointer
   //1000 is the fire time in ms
   //0 for once and 1 for repeating
-  os_timer_arm(&some_timer, 100, 1);
+  os_timer_arm(&some_timer, 2000, 1);
 #endif
 
   //Start os task
@@ -128,8 +185,6 @@ user_init()
   int j;
   for (j = 0; j < 2000; j++)
     ets_printf(".");
-
-#if 0
 
   const char ssid[32] = "bowmanvilleshed";
   const char password[32] = "qwertyui";
@@ -142,24 +197,7 @@ user_init()
   wifi_station_set_config(&stationConf);
   wifi_station_connect();
 
-  system_print_meminfo();
-
-  uint32_t dat[] = {
-    0x12345678,
-    0x12345678,
-    0x12345678,
-    0x12345678};
-  spi_flash_erase_sector(0);
-  spi_flash_write(0, dat, 16);
-
-  {
-    uint32_t *p = (uint32_t*)0x40200000;
-    int i;
-    
-    for (i = 0; i < 32; i++, p++)
-      ets_printf("%p %08x\n", p, *p);
-  }
-#endif
+  uart_config(0);
 
   extern int swapforth();
   ets_printf("\nreturn: %08x\n", swapforth());
