@@ -23,6 +23,8 @@
 #define X6      a10     // temp reg
 #define X7      a11     // temp reg
 #define X8      a12     // temp reg
+#define LPC     a13     // loop count
+#define LPO     a14     // loop offset
 #define TRUE    a15     // constant -1
 
         .set    forth_link,0
@@ -45,19 +47,47 @@
         call0   \d
         .endm
 
+        // prolog, epilog 
+        // are the entry/exit sequences for non-leaf words
+
         .macro  prolog
         addi    RSP,RSP,-16
-        s32i.n  a0,RSP,0
+        s32i    a0,RSP,0
         .endm
 
         .macro  epilog
-        l32i.n  a0,RSP,0
+        l32i    a0,RSP,0
         addi    RSP,RSP,16
         ret
         .endm
 
         .macro  tail    d
         l32i.n  a0,RSP,0
+        addi    RSP,RSP,16
+        j       \d
+        .endm
+
+        // prologL, epilogL are
+        // as above but also preserving loop regs LPC, LPO
+        .macro  prologL
+        addi    RSP,RSP,-16
+        s32i    a0,RSP,0
+        s32i    LPC,RSP,4
+        s32i    LPO,RSP,8
+        .endm
+
+        .macro  epilogL
+        l32i    a0,RSP,0
+        l32i    LPC,RSP,4
+        l32i    LPO,RSP,8
+        addi    RSP,RSP,16
+        ret
+        .endm
+
+        .macro  tailL   d
+        l32i.n  a0,RSP,0
+        l32i    LPC,RSP,4
+        l32i    LPO,RSP,8
         addi    RSP,RSP,16
         j       \d
         .endm
@@ -306,7 +336,13 @@ header  "d0<",d_less_than_zero
         j       abort
 
 header  "dnegate",d_negate
-        j       abort
+        prolog
+        c       invert
+        c       swap
+        c       invert
+        c       swap
+        lit     1
+        tail    m_plus
 
 header  "d-",d_minus
         j       abort
@@ -605,6 +641,11 @@ header  "sfind",sfind
         lit     _wbuf
         c       c_store
 
+        lit     _wbuf+1
+        lit     31
+        lit     0
+        c       fill
+        
         c       two_dup
         lit     _wbuf+1
         c       swap
@@ -1000,7 +1041,17 @@ header  "cmove>",cmove_up
         j       abort
 
 header  "fill",fill
-        j       abort
+        l32i    X0,DSP,0
+        l32i    X1,DSP,4
+        add     X0,X0,X1
+        // Fill X1 with TOS until X1 reaches X0
+        j       2f
+1:
+        s8i     TOS,X1,0
+        addi    X1,X1,1
+2:
+        bne     X1,X0,1b
+        j       three_drop
 
 header  "begin",begin,IMMEDIATE
         j       abort
@@ -1068,10 +1119,126 @@ snap:
 3:
         j       3b
 
+// ====================   NUMBERS   ===========================
+
+// : isvoid ( caddr u -- ) \ any char remains, abort
+isvoid:
+        addi    DSP,DSP,4
+        tosX0
+        bnez    X0,abort
+        ret
+
+// : consume1 ( caddr u ch -- caddr' u' f )
+//     >r over c@ r> =
+//     over 0<> and
+//     dup>r d# 1 and /string r>
+// ;
+consume1:
+        prolog
+        to_r
+        c       over
+        c       c_fetch
+        r_from
+        c       equal
+
+        c       over
+        c       not_equal_zero
+        c       and
+
+        dup
+        to_r
+        c       negate
+        c       slash_string
+        r_from
+        epilog
+
+doubleAlso2:
+        prolog
+        lit     0
+        dup
+        c       two_swap
+        lit     '-'
+        c       consume1
+        to_r
+        c       to_number
+        lit     '.'
+        c       consume1
+        tosX0
+        beqz    X0,1f
+        c       isvoid
+        r_from
+        tosX0
+        beqz    X0,2f
+        c       d_negate
+2:
+        lit     2
+        epilog
+
+1:
+        c       isvoid
+        c       drop
+        r_from
+        tosX0
+        beqz    X0,3f
+        c       negate
+3:
+        lit     1
+        epilog
+
+doubleAlso1:
+        prolog
+        // Handle 'X' here
+        bnei    TOS,3,1f
+        l32i    X0,DSP,0
+        movi    X2,0x27                 // ascii '
+        l8ui    X1,X0,0
+        bne     X1,X2,1f
+        l8ui    X1,X0,2
+        bne     X1,X2,1f
+        // matches 'X'. Return ( X 1 )
+        _drop
+        l8ui    TOS,X0,1
+        lit     1
+        epilog
+1:
+        lit     '$'                     // hex
+        c       consume1
+        movi    X1,16
+        tosX0
+        bnez    X0,inbase
+        lit     '#'                     // decimal
+        c       consume1
+        tosX0
+        movi    X1,10
+        bnez    X0,inbase
+        lit     '%'                     // binary
+        c       consume1
+        tosX0
+        movi    X1,2
+        bnez    X0,inbase
+        tail    doubleAlso2
+
+inbase:                                 // conversion in base X1
+        dup
+        movi    X0,_base
+        l32i    TOS,X0,0
+        s32i    X1,X0,0
+        to_r
+        c       doubleAlso2
+        r_from
+        c       base
+        tail    store
+
+doubleAlso:
+        prolog
+        c       doubleAlso1
+        tail    drop
+
         .p2align        2
+
         .long   execute
 dispatch:
-        .long   snap
+        .long   doubleAlso
         .long   execute
 
 interpret:
@@ -1080,14 +1247,27 @@ interpret:
         c       parse_name
         beqz    TOS,1f
         c       sfind
-        c       cells
-        lit     dispatch
-        c       plus
-        c       fetch
+        movi    X0,dispatch
+        addx4   TOS,TOS,X0
+        l32i    TOS,TOS,0
         c       execute
         j       0b
 1:      c       two_drop
         epilog
+
+// ====================   ESP SYSTEM INTERFACE   ==============
+
+header  "us@",us_fetch
+        dup
+        addi    RSP,RSP,-16
+        s32i    a0,RSP,0
+        s32i    DSP,RSP,4
+        movi    X0,system_get_time
+        callx0  X0
+        l32i    a0,RSP,0
+        l32i    DSP,RSP,4
+        addi    RSP,RSP,16
+        ret
 
         .p2align  2
 .global swapforth
@@ -1101,16 +1281,6 @@ swapforth:
         c       decimal
         c       cr
         c       cr
-
-        lit     0
-        lit     0
-        lit     nnnn
-        lit     17
-        c       to_number
-        c       dotx
-        c       dotx
-        c       dotx
-        c       dotx
 
         lit     ssss
         lit     14
@@ -1135,7 +1305,7 @@ _source:
         .skip   8
 _wbuf:  .skip   32
 
-ssss:   .string         "words cr 12345"
+ssss:   .string         "us@ us@ .x .x "
 tttt:
 nnnn:   .string         "1234567812345678."
         .p2align        2
