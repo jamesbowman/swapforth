@@ -665,11 +665,59 @@ def main():
             esp.flash_finish(reboot)
         """
         esp.run(1)
+
+        sys.path.append("../shell")
+        import swapforth
+
+        class TetheredESP(swapforth.TetheredTarget):
+
+            def open_ser(self, port, speed):
+                self.ser = port
+
+            def reset(self):
+                while 1:
+                    c = self.ser.read(1)
+                    if c == b'\x1e':
+                        break
+                    sys.stdout.write(c)
+                    sys.stdout.flush()
+                print 'ESCAPED'
+                # time.sleep(1)
+                # self.ser.write("...!" * 30)
+                self.ser.flush();
+                while 1:
+                    c = self.ser.read(1)
+                    sys.stdout.write(c)
+                    sys.stdout.flush()
+    
+            def boot(self, bootfile = None):
+                sys.stdout.write('Contacting... ')
+                self.reset()
+                print('established')
+
+            def interrupt(self):
+                self.reset()
+
+            def serialize(self):
+                l = self.command_response('0 here dump')
+                lines = l.strip().replace('\r', '').split('\n')
+                s = []
+                for l in lines:
+                    l = l.split()
+                    s += [int(b, 16) for b in l[1:17]]
+                s = array.array('B', s).tostring().ljust(32768, chr(0xff))
+                return array.array('i', s)
+
+        r = TetheredESP(esp._port)
+        r.boot()
+        r.shell()
+
         while 1:
             sys.stdout.write(esp._port.read(1))
             sys.stdout.flush()
 
     elif args.operation == 'run':
+        swapforth.main(TetheredJ1b)
         esp.run()
 
     elif args.operation == 'image_info':
