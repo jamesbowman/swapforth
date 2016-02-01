@@ -8,15 +8,17 @@
 #include "espconn.h"
 #include "user_interface.h"
 
+extern int swapforth(), swapforth2();
+
 // #undef ICACHE_FLASH_ATTR
 // #define ICACHE_FLASH_ATTR
 
 #define user_procTaskPrio        0
-#define user_procTaskQueueLen    1
+#define user_procTaskQueueLen    128
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t *events);
 
-static volatile os_timer_t some_timer;
+volatile os_timer_t some_timer;
 
 struct espconn *_ptrUDPServer;
 uint8 udpServerIP[] = { 192, 168, 0, 64 };
@@ -30,6 +32,11 @@ void dump(uint32 a)
   for (i = 0; i < 8; i++)
     ets_printf("%08x ", *ptr++);
   ets_printf("\n");
+}
+
+void timer_action(void *arg)
+{
+  system_os_post(user_procTaskPrio, 0, 0 );
 }
 
 void some_timerfunc(void *arg)
@@ -71,7 +78,7 @@ void some_timerfunc(void *arg)
   dump(0x401006a0);
 #endif
 
-  if (i == 60) {
+  if (1) {
     _ptrUDPServer = (struct espconn *) os_zalloc(sizeof(struct espconn));
     _ptrUDPServer->type = ESPCONN_UDP;
     _ptrUDPServer->state = ESPCONN_NONE;
@@ -86,13 +93,17 @@ void some_timerfunc(void *arg)
     os_sprintf(USER_DATA, "%07d\n", i);
     espconn_sent(_ptrUDPServer, (uint8 *) USER_DATA, (uint16) strlen(USER_DATA));
   }
+  system_os_post(user_procTaskPrio, 0, 0 );
 }
 
 //Do nothing function
 static void ICACHE_FLASH_ATTR
-user_procTask(os_event_t *events)
+user_procTask(os_event_t *e)
 {
-    os_delay_us(10);
+  // ets_printf("/idle %d %d/\n", e->sig, e->par);
+  // os_delay_us(10);
+  // ets_printf("\nreturn B: %08x\n", swapforth2(e->sig, e->par));
+  swapforth2(e->sig, e->par);
 }
 
 #define UART0   0
@@ -113,10 +124,10 @@ uart0_rx_intr_handler(void *para)
   WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
 
   if (READ_PERI_REG(UART_STATUS(UART0)) & (UART_RXFIFO_CNT << UART_RXFIFO_CNT_S)) {
-    uint8 RcvChar;
-    RcvChar = READ_PERI_REG(UART_FIFO(UART0)) & 0xFF;
-    ets_printf("%c", RcvChar);
-    os_delay_us(1000);
+    uint8 RcvChar = READ_PERI_REG(UART_FIFO(UART0)) & 0xFF;
+    // ets_printf("^^^%c", RcvChar);
+    // os_delay_us(1000);
+    system_os_post(user_procTaskPrio, 0x947, RcvChar );
   }
 }
 
@@ -150,12 +161,29 @@ uart_config(uint8 uart_no)
     ETS_UART_INTR_ENABLE();
 }
 
+void wifi_config()
+{
+  const char ssid[32] = "bowmanvilleshed";
+  const char password[64] = "qwertyui";
+  wifi_station_get_connect_status();
+  struct station_config stationConf;
+
+  wifi_set_opmode(STATION_MODE);
+  stationConf.bssid_set = 0;
+  os_memcpy(&stationConf.ssid, ssid, 32);
+  os_memcpy(&stationConf.password, password, 64);
+  wifi_station_set_config(&stationConf);
+  // wifi_station_connect();
+};
+
 //Init function 
 void ICACHE_FLASH_ATTR
 user_init()
 {
-  // system_set_os_print(0);
+  system_set_os_print(0);
   uart_div_modify(0, UART_CLK_FREQ / 1000000);
+
+  // wifi_config();
 
   // Initialize the GPIO subsystem.
   gpio_init();
@@ -170,41 +198,35 @@ user_init()
   //Disarm timer
   os_timer_disarm(&some_timer);
 
-  //Setup timer
+  // Setup timer
   os_timer_setfn(&some_timer, (os_timer_func_t *)some_timerfunc, NULL);
-
   //Arm the timer
   //&some_timer is the pointer
   //1000 is the fire time in ms
   //0 for once and 1 for repeating
-  os_timer_arm(&some_timer, 2000, 1);
+  // os_timer_arm(&some_timer, 2000, 1);
 #endif
+
+  os_timer_disarm(&some_timer);
+  os_timer_setfn(&some_timer, (os_timer_func_t *)timer_action, NULL);
+  // os_timer_arm(&some_timer, 2000, 1);
 
   //Start os task
   system_os_task(user_procTask, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
+
   int j;
   for (j = 0; j < 2000; j++)
     ets_printf(".");
 
-  const char ssid[32] = "bowmanvilleshed";
-  const char password[32] = "qwertyui";
-
-  struct station_config stationConf;
-
-  wifi_set_opmode( STATION_MODE );
-  os_memcpy(&stationConf.ssid, ssid, 32);
-  os_memcpy(&stationConf.password, password, 32);
-  wifi_station_set_config(&stationConf);
-  wifi_station_connect();
-
   uart_config(0);
 
-  extern int swapforth();
-  ets_printf("\nreturn: %08x\n", swapforth());
+  //ets_printf("\nreturn A: %08x\n", swapforth());
+  swapforth();
 }
 
 int ICACHE_FLASH_ATTR
 klok()
 {
+  os_timer_arm(&some_timer, 2000, 1);
   return 101;
 }

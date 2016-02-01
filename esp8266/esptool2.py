@@ -682,8 +682,9 @@ def main():
                     sys.stdout.write(c)
                     sys.stdout.flush()
                 print 'ESCAPED'
+                return
                 # time.sleep(1)
-                # self.ser.write("...!" * 30)
+                self.ser.write("words\n1 2 + .x\nwords\n")
                 self.ser.flush();
                 while 1:
                     c = self.ser.read(1)

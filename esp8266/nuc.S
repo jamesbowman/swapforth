@@ -1,5 +1,3 @@
-        .section        .irom0.text
-
 // The CALL0 c   ing convention is:
 //
 //      a0      Return address
@@ -22,10 +20,56 @@
 #define X5      a9      // temp reg
 #define X6      a10     // temp reg
 #define X7      a11     // temp reg
-#define X8      a12     // temp reg
+#define CTX     a12     // context pointer
 #define LPC     a13     // loop count
 #define LPO     a14     // loop offset
 #define TRUE    a15     // constant -1
+
+        .set    ramhere,0
+
+        .macro  allot   name size
+        .equ    \name,ramhere
+        .set    ramhere,ramhere+\size
+        .endm
+
+        allot   context_0,0
+        allot   dp,4            /* RAM data pointer */
+        allot   cp,4            /* Code pointer */
+        allot   _forth,4        /* Dictionary pointer */
+        allot   aname,32        /* name buffer, used during dictionary search */
+        allot   sourceA,4       /* tib+1 */
+        allot   sourceC,4
+        allot   _in,4           /* >IN */
+        allot   _inwas,4        /* >IN at start of previous word */
+        allot   recent,4        /* most recent CREATE */
+        allot   thisxt,4        /* most recent xt */
+        allot   tosmudge,4      /* smudge point, usually xt-4 */
+        allot   leaves,4        /* chain of LEAVE pointers */
+        allot   _source_id,4
+        allot   _state,4
+        allot   _base,4
+        allot   _tethered,4
+
+        allot   _dsp,4
+        allot   _lpc,4
+        allot   _lpo,4
+        allot   _rsp,4
+        allot   _rdepth,4
+        allot   _pc,4
+        allot   _rstk,(4*32)
+
+        allot   tib,256         /* terminal input buffer */
+
+        .if 0
+        allot   cwl,4           /* Compilation word list */
+        allot   wordlists,4     /* All word lists */
+        allot   nsearch,4       /* Number of word lists in searchlist */
+        allot   searchlist,4*16 /* search list */
+        allot   context_1,0
+        allot   forth,8         /* Forth word list */
+        allot   internal,8      /* Internal word list */
+        allot   handler,4       /* exception handler */
+        .endif
 
         .set    forth_link,0
         .equ    INLINE,1
@@ -51,36 +95,42 @@
         // are the entry/exit sequences for non-leaf words
 
         .macro  prolog
-        addi    RSP,RSP,-16
+        addi    RSP,RSP,-4
         s32i    a0,RSP,0
         .endm
 
         .macro  epilog
         l32i    a0,RSP,0
-        addi    RSP,RSP,16
+        addi    RSP,RSP,4
         ret
         .endm
 
         .macro  tail    d
         l32i.n  a0,RSP,0
-        addi    RSP,RSP,16
+        addi    RSP,RSP,4
         j       \d
         .endm
 
         // prologL, epilogL are
-        // as above but also preserving loop regs LPC, LPO
+        // as above but also preserving the C callee-saved
+        // registers a12-15
+        //
         .macro  prologL
-        addi    RSP,RSP,-16
+        addi    RSP,RSP,-32
         s32i    a0,RSP,0
         s32i    LPC,RSP,4
         s32i    LPO,RSP,8
+        s32i    a15,RSP,12
+        s32i    CTX,RSP,16
         .endm
 
         .macro  epilogL
         l32i    a0,RSP,0
         l32i    LPC,RSP,4
         l32i    LPO,RSP,8
-        addi    RSP,RSP,16
+        l32i    a15,RSP,12
+        l32i    CTX,RSP,16
+        addi    RSP,RSP,32
         ret
         .endm
 
@@ -100,6 +150,16 @@
         .macro  lit     v
         dup
         movi    TOS,\v
+        .endm
+
+        .macro  lita    o
+        dup
+        addi    TOS,CTX,\o
+        .endm
+
+        .macro  ctxvar  o
+        dup
+        l32i    TOS,CTX,\o
         .endm
 
         .macro  popX0
@@ -124,7 +184,7 @@
         .endm
 
         .macro  to_r
-        addi    RSP,RSP,-16
+        addi    RSP,RSP,-4
         s32i    TOS,RSP,0
         _drop
         .endm
@@ -136,7 +196,7 @@
 
         .macro  r_from
         r_at
-        addi    RSP,RSP,16
+        addi    RSP,RSP,4
         .endm
 
         .macro  cmpop   op
@@ -151,11 +211,11 @@
 
         .macro  icmpop  op
         popX0
-        b\op    X0,TOS,1f
-        movi    TOS,-1
+        b\op    TOS,X0,1f
+        movi    TOS,0
         ret
 1:
-        movi    TOS,0
+        movi    TOS,-1
         ret
         .endm
 
@@ -164,6 +224,8 @@
 // See p.598 of
 //  Xtensa Instruction Set Architecture (ISA) Reference Manual
 // which lists useful idioms
+
+        .section        .irom0.text
 
 header  ".x",dotx
         prolog
@@ -210,7 +272,10 @@ header  "emit",emit
         j       drop
 
 header  "key",key
-        j       abort
+        prolog
+        c       suspend
+        c       drop
+        epilog
 
 header  "depth",depth
         dup
@@ -220,15 +285,15 @@ header  "depth",depth
         ret
 
 header  "base",base
-        lit     _base
+        lita    _base
         ret
 
 header  ">in",to_in
-        lit     _in
+        lita    _in
         ret
 
 header  "source",source
-        lit     _source
+        lita    sourceA
         j       two_fetch
 
 header  "source-id",source_id
@@ -638,25 +703,24 @@ nextword:
 header  "sfind",sfind
         prolog
         dup
-        lit     _wbuf
+        lita    aname
         c       c_store
 
-        lit     _wbuf+1
+        lita    aname+1
         lit     31
         lit     0
         c       fill
         
         c       two_dup
-        lit     _wbuf+1
+        lita    aname+1
         c       swap
         c       cmove
 
-        lit     _forth
+        lita    _forth
 2:
         c       nextword
         beqz    TOS,1f
-        movi    X0,_wbuf
-        l32i    X0,X0,0
+        l32i    X0,CTX,aname
         l32i    X1,TOS,4
         bne     X0,X1,2b
 
@@ -680,32 +744,31 @@ header  "sfind",sfind
 
 header  "words",words
         prolog
-        lit     _forth
+        lita    _forth
 2:      c       nextword
         beqz    TOS,1f
         dup
         c       cell_plus
-        movi    X0,_wbuf
 
         l32i    X1,TOS,0
-        s32i    X1,X0,0
+        s32i    X1,CTX,aname+0
         l32i    X1,TOS,4
-        s32i    X1,X0,4
+        s32i    X1,CTX,aname+4
         l32i    X1,TOS,8
-        s32i    X1,X0,8
+        s32i    X1,CTX,aname+8
         l32i    X1,TOS,12
-        s32i    X1,X0,12
+        s32i    X1,CTX,aname+12
         l32i    X1,TOS,16
-        s32i    X1,X0,16
+        s32i    X1,CTX,aname+16
         l32i    X1,TOS,20
-        s32i    X1,X0,20
+        s32i    X1,CTX,aname+20
         l32i    X1,TOS,24
-        s32i    X1,X0,24
+        s32i    X1,CTX,aname+24
         l32i    X1,TOS,28
-        s32i    X1,X0,28
+        s32i    X1,CTX,aname+28
         c       drop
 
-        lit     _wbuf
+        lita    aname
         c       count
         c       type
         c       space
@@ -714,11 +777,39 @@ header  "words",words
 1:
         tail    drop
 
-header "accept",accept
-        j       abort
+header "accept",accept  // ( c-addr +n1 -- +n2 )
+        prolog
+        lit     0x1e            // tethered
+        c       emit
+
+        c       drop
+        c       dupe
+0:
+        c       key
+        movi    X0,13
+        beq     TOS,X0,1f
+        c       over
+        c       c_store
+        c       one_plus
+        j       0b
+1:
+        c       drop
+        c       swap
+        tail    minus
 
 header  "refill",refill
-        j       abort
+        prolog
+        lita    tib
+        c       dupe
+        lit     128
+        c       accept
+        lita    sourceA
+        c       two_store
+        lit     0
+        lita    _in
+        c       store
+        c       true
+        epilog
 
 // \ From Forth200x - public domain
 // 
@@ -780,8 +871,7 @@ xt_skip:
 header  "parse-name",parse_name
         prolog
         c       source
-        c       to_in
-        c       fetch
+        ctxvar  _in
         c       slash_string
         lit     isspace
         c       xt_skip
@@ -835,8 +925,7 @@ isdigit:
         c       minus
 
         c       dupe
-        c       base
-        c       fetch
+        ctxvar  _base
         tail    unsigned_less
 
 // : >number ( ud1 c-addr1 u1 -- ud2 c-addr2 u2 )
@@ -860,7 +949,6 @@ header  ">number",to_number
         c       over
         c       c_fetch
         c       isdigit
-
         tosX0
         bnez    X0,2f
         tail    drop
@@ -868,8 +956,7 @@ header  ">number",to_number
 
         to_r
         c       two_swap
-        c       base
-        c       fetch
+        ctxvar  _base
 
         c       tuck
         c       multiply
@@ -903,7 +990,6 @@ header  "abort",abort
         lit     'T'
         c       emit
         c       cr
-
 1:
         j       1b
 
@@ -920,7 +1006,8 @@ header  "evaluate",evaluate
         j       abort
 
 header  "here",here
-        j       abort
+        ctxvar  dp
+        ret
 
 header  "dp",dp
         j       abort
@@ -932,11 +1019,12 @@ header  "cp",cp
         j       abort
 
 header  "forth",forth
-        lit     _forth
+        lita    _forth
         ret
 
 header  "state",state
-        j       abort
+        lita    _state
+        ret
 
 header  "unused",unused
         j       abort
@@ -1100,8 +1188,7 @@ header  "j",j
 
 header  "decimal",decimal
         movi    X0,10
-        movi    X1,_base
-        s32i    X0,X1,0
+        s32i    X0,CTX,_base
         ret
 
 snap:
@@ -1220,9 +1307,8 @@ doubleAlso1:
 
 inbase:                                 // conversion in base X1
         dup
-        movi    X0,_base
-        l32i    TOS,X0,0
-        s32i    X1,X0,0
+        l32i    TOS,CTX,_base
+        s32i    X1,CTX,_base
         to_r
         c       doubleAlso2
         r_from
@@ -1269,11 +1355,63 @@ header  "us@",us_fetch
         addi    RSP,RSP,16
         ret
 
+header  "ms",ms
+        addi    RSP,RSP,-16
+        s32i    a0,RSP,0
+        s32i    DSP,RSP,4
+        mov     a3,a2
+        movi    a2,some_timer
+        movi    a4,0
+        movi    a5,1
+        movi    a0,ets_timer_arm_new
+        callx0  a0
+        l32i    a0,RSP,0
+        l32i    DSP,RSP,4
+        addi    RSP,RSP,16
+        _drop
+        j       suspend
+
+        .p2align 2
+suspend:
+        s32i    a0,CTX,_pc
+        dup
+        s32i    DSP,CTX,_dsp
+        mov     a4,a1
+        l32i    a1,CTX,_rsp
+        sub     a5,a1,a4
+        s32i    a5,CTX,_rdepth
+        // Preserve the Rstack by copying from a4..a1 to _rstk+4
+        addi    a5,CTX,_rstk+4
+        j       2f
+1:
+        l32i    a6,a4,0
+        s32i    a6,a5,0
+        addi    a4,a4,4
+        addi    a5,a5,4
+2:      bne     a4,a1,1b
+
+        epilogL
+
+header  "quit",quit
+        prolog
+        c       refill
+        c       drop
+        c       interpret
+        c       space
+        lit     'o'
+        c       emit
+        lit     'k'
+        c       emit
+        c       cr
+        j       quit
+1:      epilog
+
         .p2align  2
 .global swapforth
 swapforth:
-        prolog
-        s32i    a15,a1,4                // {
+        prologL
+        movi    CTX,_ctx
+        s32i    a1,CTX,_rsp
 
         movi    DSP,dstk
         movi    TRUE,-1
@@ -1282,32 +1420,95 @@ swapforth:
         c       cr
         c       cr
 
+        j       quit
+
         lit     ssss
-        lit     14
-        lit     _source
+        lit     80
+        lita    sourceA
         c       two_store
 
         lit     0
-        lit     _in
+        lita    _in
         c       store
 
         c       interpret
+        c       cr
 
-        c       depth
-        l32i    a15,a1,4                // }
-        epilog
+        lit     0x947
+        to_r
+
+1:
+        c       refill
+
+        c       source
+        c       type
+        j       1b
+
+1:
+        c       key
+        c       dotx
+        j       1b
+
+        c       cr
+        r_from
+        dup
+        c       dotx
+        c       cr
+        c       one_plus
+        to_r
+
+        // lit     4000
+        // c       ms
+        c       suspend
+
+        j       1b
+
+        .p2align  2
+.global swapforth2
+swapforth2:
+        prologL
+        mov     X0,a3
+        movi    CTX,_ctx
+        s32i    a1,CTX,_rsp
+
+        l32i    DSP,CTX,_dsp
+        movi    TRUE,-1
+
+        // Stage incoming arguments (a2, a3) on the stack
+        addi    DSP,DSP,-4
+        s32i    X0,DSP,0                // ( par sig )
+
+        l32i    a4,CTX,_rdepth
+        sub     a1,a1,a4
+        addi    a5,CTX,_rstk+4
+        add     a4,a5,a4
+        // Restore the Rstack by copying from _rstk+4 to r1
+        // So copy a5..a4 to a1 up
+        mov     a7,a1
+        j       2f
+1:
+        l32i    a6,a5,0
+        s32i    a6,a7,0
+        addi    a5,a5,4
+        addi    a7,a7,4
+2:      bne     a4,a5,1b
+
+        l32i    a0,CTX,_pc
+        jx      a0
 
         .section        .data
-_base:  .long   0
-_forth: .long   forth_link
-_in:    .skip   4
-_source:
-        .skip   8
-_wbuf:  .skip   32
 
-ssss:   .string         "us@ us@ .x .x "
-tttt:
-nnnn:   .string         "1234567812345678."
+        .p2align        2
+_ctx:   .long           0
+        .long           0
+        .long           forth_link
+        .skip           ramhere-12
+
+ssss:   
+        # .ascii          "us@ 1+ 1- us@ swap - .x"
+        .ascii          "$123456789. 2dup .x .x cr dnegate .x .x"
+        .ascii          "                                                                                "
+
         .p2align        2
         .skip           512
 dstk:
