@@ -1,4 +1,4 @@
-// The CALL0 c   ing convention is:
+// The CALL0 calling convention is:
 //
 //      a0      Return address
 //      a1      Stack pointer
@@ -33,9 +33,10 @@
         .endm
 
         allot   context_0,0
-        allot   dp,4            /* RAM data pointer */
-        allot   cp,4            /* Code pointer */
+        allot   _dp,4           /* RAM data pointer */
+        allot   _cp,4           /* Code pointer */
         allot   _forth,4        /* Dictionary pointer */
+        allot   kpool,4         /* Constant pool */
         allot   aname,32        /* name buffer, used during dictionary search */
         allot   sourceA,4       /* tib+1 */
         allot   sourceC,4
@@ -49,6 +50,7 @@
         allot   _state,4
         allot   _base,4
         allot   _tethered,4
+        allot   oburn,4         /* burn offset */
 
         allot   _dsp,4
         allot   _lpc,4
@@ -59,6 +61,7 @@
         allot   _rstk,(4*32)
 
         allot   tib,256         /* terminal input buffer */
+        allot   burn,1024       /* flash burn area */
 
         .if 0
         allot   cwl,4           /* Compilation word list */
@@ -72,8 +75,14 @@
         .endif
 
         .set    forth_link,0
-        .equ    INLINE,1
-        .equ    IMMEDIATE,2
+        .equ    INLINE,2
+        .equ    IMMEDIATE,1
+
+        .macro  noheader label
+        .section        .irom0.text
+        .p2align  2
+\label:
+        .endm
 
         .macro  header   fname,label,immediate=0
         .section        .irom0.text
@@ -173,9 +182,13 @@
         ret
         .endm
 
+        .macro  _dropN  n
+        l32i    TOS,DSP,4*(\n-1)
+        addi    DSP,DSP,4*\n
+        .endm
+
         .macro  _drop
-        l32i    TOS,DSP,0
-        addi    DSP,DSP,4
+        _dropN  1
         .endm
 
         .macro  tosX0
@@ -651,8 +664,7 @@ header "dup",dupe,INLINE
         ret
 
 header "drop",drop,INLINE
-        l32i    TOS,DSP,0
-        addi    DSP,DSP,4
+        _drop
         ret
 
 header  "nip",nip,INLINE
@@ -660,8 +672,7 @@ header  "nip",nip,INLINE
         ret
 
 header "2drop",two_drop,INLINE
-        l32i    TOS,DSP,4
-        addi    DSP,DSP,8
+        _dropN  2
         ret
 
 header "execute",execute
@@ -671,6 +682,22 @@ header "execute",execute
 
 header "bounds",bounds,INLINE
         j       abort
+
+// : within    over - >r - r> u< ;
+header "within",within,INLINE
+        l32i    X0,DSP,4
+        l32i    X1,DSP,0
+        addi    DSP,DSP,8
+        // So now have: X0 X1 TOS
+        //              v  lo hi
+        sub     TOS,TOS,X1      // TOS is hi-lo
+        sub     X0,X0,X1        // X0 is v-lo
+        bltu    X0,TOS,1f
+        movi    TOS,0
+        ret
+1:
+        movi    TOS,-1
+        ret
 
 header "type",type
         prolog
@@ -700,7 +727,7 @@ nextword:
 //         immediate, also return one (1), otherwise also return minus-one
 //         (-1).
 
-header  "sfind",sfind
+toaname:        // ( caddr u -- ) store string in aname, padded with zeroes
         prolog
         dup
         lita    aname
@@ -710,11 +737,15 @@ header  "sfind",sfind
         lit     31
         lit     0
         c       fill
-        
-        c       two_dup
+
         lita    aname+1
         c       swap
-        c       cmove
+        tail    cmove
+
+header  "sfind",sfind
+        prolog
+        c       two_dup
+        c       toaname
 
         lita    _forth
 2:
@@ -1000,23 +1031,26 @@ header  "parse",parse
         j       abort
 
 header  "throw",throw
+        beqz    TOS,drop
         j       abort
 
 header  "evaluate",evaluate
         j       abort
 
 header  "here",here
-        ctxvar  dp
+        ctxvar  _dp
         ret
 
 header  "dp",dp
-        j       abort
+        lita    _dp
+        ret
 
 header  "chere",chere
         j       abort
 
 header  "cp",cp
-        j       abort
+        lita    _cp
+        ret
 
 header  "forth",forth
         lita    _forth
@@ -1062,26 +1096,122 @@ header  "r@",r_at,IMMEDIATE
 header  "2r@",two_r_at
         j       abort
 
-header  "code.,",code_comma
-        j       abort
+atburn:
+        ctxvar  oburn
+        lita    burn
+        j       plus
 
-header  "code.c,",code_c_comma
-        j       abort
+header  "code.,",code_comma
+        prolog
+        c       atburn
+        c       store
+        lit     4
+        lita    oburn
+        tail    plus_store
+
+header  "code.,",code_c_comma
+        prolog
+        c       atburn
+        c       c_store
+        lit     1
+        lita    oburn
+        tail    plus_store
+
+header  "code.24,",code_24_comma
+        prolog
+        dup
+        c       code_c_comma
+
+        lit     8
+        c       rshift
+        dup
+        c       code_c_comma
+
+        lit     8
+        c       rshift
+        tail    code_c_comma
 
 header  "code.s,",code_s_comma
-        j       abort
+        prolog
+        c       count
+1:
+        beqz    TOS,2f
+        c       over
+        c       c_fetch
+        c       code_c_comma
+        lit     1
+        c       slash_string
+        j       1b
+2:      tail    two_drop
 
 header  ":noname",colon_noname
         j       abort
 
 header  ":",colon
-        j       abort
+        prolog
+        c       parse_name
+        beqz    TOS,abort
+
+        ctxvar  _forth
+        c       code_comma
+
+        c       tuck
+        c       toaname
+        c       one_plus
+        c       aligned         // ( n )
+        dup
+
+        lita    aname
+        c       atburn
+        c       rot             // ( aname burn@ n )
+        c       cmove
+        lita    oburn
+        c       plus_store      // advance burn pointer
+        c       right_bracket
+
+        lit     s_prolog
+        tail    code_s_comma
+
+doburn:
+        prolog
+
+        ctxvar  oburn
+        c       aligned
+        lita    oburn
+        c       store
+
+        l32i    X0,CTX,_cp
+        s32i    X0,CTX,_forth
+
+        ctxvar  _cp
+        movi    X0,0x40200000
+        sub     TOS,TOS,X0
+        lita    burn
+        ctxvar  oburn
+        c       _spi_flash_write
+        c       throw
+
+        ctxvar  oburn
+        lita    _cp
+        c       plus_store
+
+        c       false
+        lita    oburn
+        tail    store
 
 header  ";",semi_colon,IMMEDIATE
-        j       abort
+        prolog
+        c       exit
+ lit 0x947
+ c dotx
+        c       doburn
+ lit 0x948
+ c dotx
+        tail    left_bracket
 
 header  "exit",exit,IMMEDIATE
-        j       abort
+        lit     s_epilog
+        j       code_s_comma
 
 header  "immediate",immediate
         j       abort
@@ -1093,16 +1223,115 @@ header  "does>",does
         j       abort
 
 header  "[",left_bracket,IMMEDIATE
-        j       abort
+        movi    X0,0
+        s32i    X0,CTX,_state
+        ret
 
 header  "]",right_bracket
-        j       abort
+        movi    X0,3
+        s32i    X0,CTX,_state
+        ret
+
+// ====================   LITERALS   ==========================
+
+noheader k_1
+        dup
+        movi    TOS,1
+        ret
+
+noheader k_2
+        dup
+        movi    TOS,2
+        ret
+
+noheader k_3
+        dup
+        movi    TOS,3
+        ret
+
+noheader k_4
+        dup
+        movi    TOS,4
+        ret
+
+        .p2align 2
+        .long   true    // -1
+fastconsts:
+        .long   false   // 0
+        .long   k_1
+        .long   k_2
+        .long   k_3
+        .long   k_4
 
 header  "literal",literal,IMMEDIATE
-        j       abort
+        prolog
+
+        dup
+        lit     -1
+        lit     5
+        c       within
+        tosX0
+        beqz    X0,1f
+
+        movi    X0,fastconsts
+        addx4   TOS,TOS,X0
+        l32i    TOS,TOS,0
+        tail    compile_comma
+
+1:
+        // Now search through kpool, stopping on a match or on FFFFFFFF
+        s32i    TOS,CTX,aname
+        mov     X0,TOS
+        l32i    TOS,CTX,kpool
+2:
+        l32i    X1,TOS,0
+        beq     X1,X0,4f
+        beqi    X1,-1,3f
+
+        addi    TOS,TOS,4
+        j       2b
+
+3:      // no match found, assign slot at TOS
+
+        dup
+        movi    X0,0x40200000
+        sub     TOS,TOS,X0
+        lita    aname
+        lit     4
+        c       _spi_flash_write
+        c       throw
+
+4:      // match found at TOS
+
+        lit     s_dup
+        c       code_s_comma
+
+        srli    TOS,TOS,2
+        ctxvar  _cp
+        ctxvar  oburn
+        c       plus
+        addi    TOS,TOS,3
+        srli    TOS,TOS,2
+        c       minus
+        slli    TOS,TOS,8
+        addi    TOS,TOS,0x21    // l32r a2,
+        tail    code_24_comma
 
 header  "compile,",compile_comma
-        j       abort
+        prolog
+        ctxvar  _cp
+        ctxvar  oburn
+        c       plus
+        srli    TOS,TOS,2
+        slli    TOS,TOS,2
+        addi    TOS,TOS,4
+        c       minus
+        lit     2
+        c       rshift
+        lit     6
+        c       lshift
+        addi    TOS,TOS,0x05
+        tail    code_24_comma
 
 header  "2literal",two_literal,IMMEDIATE
         j       abort
@@ -1142,22 +1371,87 @@ header  "fill",fill
         j       three_drop
 
 header  "begin",begin,IMMEDIATE
-        j       abort
+        j       atburn
 
 header  "ahead",ahead,IMMEDIATE
-        j       abort
+        prolog
+        c       begin
+        lit     0x000006
+        tail    code_24_comma
 
 header  "if",if,IMMEDIATE
-        j       abort
+        prolog
+        lit     s_tosX0
+        c       code_s_comma
+        c       begin
+        lit     0x000416
+        tail    code_24_comma
 
 header  "then",then,IMMEDIATE
-        j       abort
+        prolog
+        dup
+        addi    TOS,TOS,4
+        c       begin
+        c       swap
+        c       minus
+        tail    patch
+
+// patch ( ptr offset )
+// patch OFFSET into jump/branch instruction at byte-aligned PTR
+// Byte at PTR determines the instruction pattern:
+//
+// 06:    "J" instruction, so left-shift 6
+// else:  branch instruction, so left-shift 12
+//
+
+patch:
+        l32i    X0,DSP,0   // X0:ptr TOS:insn
+
+        l8ui    X1,X0,0
+        beqi    X1,0x06,patch_j
+        slli    TOS,TOS,12
+        j       or24
+patch_j:
+        slli    TOS,TOS,6
+or24:
+        or      X1,X1,TOS
+        s8i     X1,X0,0
+
+        l8ui    X1,X0,1
+        srli    TOS,TOS,8
+        or      X1,X1,TOS
+        s8i     X1,X0,1
+
+        l8ui    X1,X0,2
+        srli    TOS,TOS,8
+        or      X1,X1,TOS
+        s8i     X1,X0,2
+
+        _dropN  2
+        ret
 
 header  "again",again,IMMEDIATE
-        j       abort
+        prolog
+        c       begin
+        addi    TOS,TOS,4
+        c       minus
+        lit     6
+        c       lshift
+        addi    TOS,TOS,0x06
+        tail    code_24_comma
 
 header  "until",until,IMMEDIATE
-        j       abort
+        prolog
+        lit     s_tosX0
+        c       code_s_comma
+
+        c       begin
+        addi    TOS,TOS,4
+        c       minus
+        slli    TOS,TOS,12
+        lit     0x000416
+        c       or
+        tail    code_24_comma
 
 header  "recurse",recurse,IMMEDIATE
         j       abort
@@ -1320,11 +1614,24 @@ doubleAlso:
         c       doubleAlso1
         tail    drop
 
+doubleAlso_comma:
+        prolog
+        c       doubleAlso1
+        tosX0
+        beqi    X0,1,1f
+        c       swap
+        c       literal
+1:
+        tail    literal
+
         .p2align        2
 
         .long   execute
 dispatch:
         .long   doubleAlso
+        .long   execute
+        .long   compile_comma
+        .long   doubleAlso_comma
         .long   execute
 
 interpret:
@@ -1332,7 +1639,9 @@ interpret:
 0:
         c       parse_name
         beqz    TOS,1f
-        c       sfind
+        c       sfind                   // -1 0 +1
+        l32i    X0,CTX,_state           // -1 0 +1 +2 +3 +4
+        add     TOS,TOS,X0
         movi    X0,dispatch
         addx4   TOS,TOS,X0
         l32i    TOS,TOS,0
@@ -1343,17 +1652,54 @@ interpret:
 
 // ====================   ESP SYSTEM INTERFACE   ==============
 
-header  "us@",us_fetch
+c_common_3_1:
+        l32i    X0,DSP,4
+        l32i    X1,DSP,0
+        mov     X2,TOS
+        _dropN  2
+        j       c_common_x_1
+
+c_common_2_1:
+        l32i    X0,DSP,0
+        mov     X1,TOS
+        _dropN  1
+        j       c_common_x_1
+
+c_common_0_1:
         dup
+        j       c_common_x_1
+
+c_common_1_1:
+        mov     X0,TOS
+c_common_x_1:
         addi    RSP,RSP,-16
-        s32i    a0,RSP,0
         s32i    DSP,RSP,4
-        movi    X0,system_get_time
-        callx0  X0
+        s32i    a0,RSP,0
+
+        mov     a2,X0
+        mov     a3,X1
+        mov     a4,X2
+        mov     a5,X3
+        mov     a6,X4
+
+        callx0  X6
+
         l32i    a0,RSP,0
         l32i    DSP,RSP,4
         addi    RSP,RSP,16
         ret
+
+header  "us@",us_fetch
+        movi    X6,system_get_time
+        j       c_common_0_1
+
+header  "spi_flash_write",_spi_flash_write  // ( byte-offset source len )
+        movi    X6,spi_flash_write
+        j       c_common_3_1
+
+header  "spi_flash_erase_sector",_spi_flash_erase_sector  // ( sector )
+        movi    X6,spi_flash_erase_sector
+        j       c_common_1_1
 
 header  "ms",ms
         addi    RSP,RSP,-16
@@ -1417,6 +1763,16 @@ swapforth:
         movi    TRUE,-1
 
         c       decimal
+
+        lit     64
+        c       _spi_flash_erase_sector
+        _drop
+
+        l32i    X0,CTX,_cp
+        s32i    X0,CTX,kpool
+        addi    X0,X0,(4*256)
+        s32i    X0,CTX,_cp
+
         c       cr
         c       cr
 
@@ -1498,9 +1854,29 @@ swapforth2:
 
         .section        .data
 
+s_prolog:
+        .byte   2f-1f
+1:      prolog
+2:
+
+s_epilog:
+        .byte   2f-1f
+1:      epilog
+2:
+
+s_tosX0:
+        .byte   2f-1f
+1:      tosX0
+2:
+
+s_dup:
+        .byte   2f-1f
+1:      dup
+2:
+
         .p2align        2
 _ctx:   .long           0
-        .long           0
+        .long           0x40240000      // CP
         .long           forth_link
         .skip           ramhere-12
 
