@@ -850,7 +850,7 @@ header-imm loop
         dup
     while
         dup @ swap        ( next leaveptr )
-        here 2/
+        tbegin
         swap _!
     repeat
     drop
