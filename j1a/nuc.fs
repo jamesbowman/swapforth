@@ -850,7 +850,7 @@ header-imm loop
         dup
     while
         dup @ swap        ( next leaveptr )
-        here 2/
+        tbegin
         swap _!
     repeat
     drop
@@ -951,7 +951,7 @@ header abort
 : consume1 ( caddr u ch -- caddr' u' f )
     >r over c@ r> =
     over 0<> and
-    dup>r d# 1 and /string r>
+    dup>r negate /string r>
 ;
 
 : ((doubleAlso))

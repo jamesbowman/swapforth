@@ -1,0 +1,6 @@
+swapforth
+swapforth-0x00000.bin
+swapforth-0x40000.bin
+*.o
+[0-9]
+lst
