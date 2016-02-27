@@ -150,3 +150,5 @@ include mini-oof.fs
     s" | marker |" evaluate
 ;
 marker |
+
+: >= < invert ;
