@@ -711,8 +711,18 @@ def main():
         esp.run(1)
         r = TetheredESP(esp._port)
         r.boot()
+
+        for i in xrange(0):
+            print i, r.command_response('words')
+            time.sleep(.1)
+        r.searchpath += ['../common', '../anstests']
+        try:
+            r.include('swapforth.fs')
+        except swapforth.Bye:
+            pass
         r.shell()
 
+        # esp._port.write('64 parse\r')
         while 0:
             sys.stdout.write(esp._port.read(1))
             sys.stdout.flush()
