@@ -150,8 +150,9 @@ header +!       : +!    tuck @ + swap _! ;
 header 2swap    : 2swap rot >r rot r> ;
 header 2over    : 2over >r >r 2dup r> r> 2swap ;
 
-header min      : min   2dup< if drop else nip then ;
-header max      : max   2dup< if nip else drop then ;
+header min      : min   2dup<
+: minmax                if drop else nip then ;
+header max      : max   2dup< invert minmax ;
 
 header c@
 : c@
@@ -249,7 +250,8 @@ header words : words
 \ ;
 
 header -        : -         negate + ;
-header abs      : abs       dup 0< if negate then ;
+header abs      : abs       dup
+                : ?neg      0< if negate then ;
 header here     : here      dp @i ;
 
 header /string
@@ -272,11 +274,8 @@ header d+
     rot + >r                      ( augend addend)
     over+                         ( augend sum)
     tuck swap                     ( sum sum augend)
-    u< if                         ( sum)
-        r> 1+
-    else
-        r>
-    then                          ( sum . )
+    u< negate                     ( sum)
+    r> +                          ( sum . )
 ;
 
 header dnegate
@@ -287,7 +286,9 @@ header dnegate
 
 header dabs
 : dabs ( d -- ud )
-    dup 0< if dnegate then
+    dup
+: ?dneg ( d n -- d2 ) \ negate d if n is negative
+    0< if dnegate then
 ;
 
 header s>d
@@ -363,12 +364,19 @@ header *
     um* drop
 ;
 
+header m*
+: m*
+    2dupxor >r
+    abs swap abs um*
+    r> ?dneg
+;
+
 \ see Hacker's Delight (2nd ed) 9-4 "Unsigned Long Division"
 
 : divstep  \ ( y x z )
     DOUBLE DOUBLE
     >r
-    dup 0< >r
+    s>d >r
     d2*
     dup r> or r@ u< invert if
         r@ -
@@ -720,33 +728,33 @@ header-imm ;
 
 header-imm ahead
 : tahead
-    here h# 0000 w,
+    here h# 0000 w,     \ forward unconditional branch
 ;
 
 header-imm if
 : tif
-    here h# 2000 w,
+    here h# 2000 w,     \ forward conditional branch
 ;
 
-header-imm then     ( addr -- )
-: tthen
-    here 2/
-    swap +!
-;
-
-header-imm begin
+header-imm begin  ( -- insn )
 : tbegin
     dp @i 2/
 ;
 
+header-imm then     ( addr -- )
+: tthen
+    tbegin
+    swap +!
+;
+
 header-imm again
 : tagain
-    w,
+    w,                  \ backward unconditional
 ;
 
 header-imm until
 : tuntil
-    h# 2000 or w,
+    h# 2000 or w,       \ backward conditional 
 ;
 
 header does>
@@ -842,7 +850,7 @@ header-imm loop
         dup
     while
         dup @ swap        ( next leaveptr )
-        here 2/
+        tbegin
         swap _!
     repeat
     drop
@@ -933,7 +941,7 @@ header abort
 ;
 
 : isvoid ( caddr u -- ) \ any char remains, abort
-    nip 0<>
+    nip
 : ?abort
     if
         abort
@@ -943,7 +951,7 @@ header abort
 : consume1 ( caddr u ch -- caddr' u' f )
     >r over c@ r> =
     over 0<> and
-    dup>r d# 1 and /string r>
+    dup>r negate /string r>
 ;
 
 : ((doubleAlso))
@@ -952,12 +960,12 @@ header abort
     >number
     [char] . consume1 if
         isvoid              \ double number
-        r> if dnegate then
+        r> ?dneg
         d# 2 exit
     then
                             \ single number
     isvoid drop
-    r> if negate then
+    r> ?neg
 : return1
     d# 1
 ;
@@ -1004,7 +1012,7 @@ header abort
 
 header-imm literal
 : tliteral
-    dup 0< if
+    s>d if
         invert tliteral
         inline: invert
     else
@@ -1147,6 +1155,18 @@ header quit
         [char] o 2emit
         cr
     again
+
+header tasksel
+: tasksel
+    h# 8000 io@ if 
+        begin 
+            h# 4000 io@ dup if 
+                execute 
+            else 
+                drop
+            then
+        again 
+    then
 ;
 
 header .s
@@ -1163,6 +1183,7 @@ header init :noname var:
 create init meta t' quit 2* target ,
 
 : main
+    tasksel
     cr
     decimal
     tethered off

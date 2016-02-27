@@ -162,18 +162,18 @@ module top(input pclk,
            inout PIO2_16,    // HDR2 7
            inout PIO2_17,    // HDR2 8
 
-           input reset // note, this is an *active low* reset.
+           input reset
 );
   localparam MHZ = 12;
 
-  /*
-  // begin adv PLL
+/*
   wire clk, pll_lock;
+  
   wire pll_reset;
-  assign pll_reset = reset; // resets are all active low in this design.
-  wire resetq; // note port changed, .pcf needs update too.
-  assign resetq =  pll_lock;
- 
+  assign pll_reset = !reset;
+  wire resetq;  // note port changed, .pcf needs update too.
+  assign resetq = reset & !pll_lock;
+  
   SB_PLL40_CORE #(.FEEDBACK_PATH("PHASE_AND_DELAY"),
                   .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
                   .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
@@ -187,21 +187,18 @@ module top(input pclk,
                   .FILTER_RANGE(3'b001),
                  ) uut (
                          .REFERENCECLK(pclk),
-                         .PLLOUTCORE(clk),
-                         //.PLLOUTGLOBAL(clk), // crashes arachne-pnr?
+                         //.PLLOUTCORE(clk),
+                         .PLLOUTGLOBAL(clk),
                          .LOCK(pll_lock),
                          .RESETB(pll_reset),
                          .BYPASS(1'b0)
-                        ); // runs about 37.5 MHz. Default is 48 MHz.
-                        // for some reason this crashes arachne-pnr now. Unfortunately the 8k has timing issues at 48 MHz, where
-                        // port writes are affected by the next on stack. (I assume because the larger chip means slightly more routing delay, as parts end up more widely distributed). Problem shows up as `-1 leds` not turning all leds on, and `-1 0 leds drop` not turning them all off, yet `-1 -1 leds drop` will turn them all on.
-  // end adv PLL
+                        ); // 37.5 MHz, fout = [ fin * (DIVF+1) ] / [ DIVR+1 ], fout must be 16 ..275MHz, fVCO from 533..1066 MHz (!! we're 600 here I think), and phase detector / input clock from 10 .. 133 MH (ok, we're 75 because DIVQ divides by 2^DIVQ, but doesn't affect output otherwise, and input is 12 MHz)
+                        // for some reason this crashes arachne-pnr now. 
+
   */
- 
-  // begin alt PLL
   wire clk;
   wire resetq;
- 
+ // assign resetq = reset; // now passed through PLL to keep design in reset until lock. note active low resets.
   
   SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
                   .PLLOUT_SELECT("GENCLK"),
@@ -217,8 +214,8 @@ module top(input pclk,
                          .RESETB(reset),
                          .BYPASS(1'b0)
                         );
-  // end alt PLL                     
 
+  
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
@@ -227,9 +224,32 @@ module top(input pclk,
   wire [12:0] code_addr;
   reg unlocked = 0;
 
-`include "../build/ram.v"
+  wire [1:0] io_slot;
+  wire [15:0] return_top;
+  wire [3:0] kill_slot_rq;
 
+`include "../build/ram.v"
+/*
   j1 _j1(
+    .clk(clk),
+    .resetq(resetq),
+    .io_rd(io_rd),
+    .io_wr(io_wr),
+    .mem_addr(mem_addr),
+    .mem_wr(mem_wr),
+    .dout(dout),
+    .io_din(io_din),
+    .code_addr(code_addr),
+    .insn(insn));
+    
+  reg [1:0] slot = 2'b00;
+  wire [1:0] nextslot;
+  greycount gc(.last(slot), .next(nextslot));
+  always @(posedge clk) slot <= nextslot;
+  assign io_slot = slot;
+ */ 
+ 
+  j4 _j4(
     .clk(clk),
     .resetq(resetq),
     .io_rd(io_rd),
@@ -239,9 +259,16 @@ module top(input pclk,
     .io_din(io_din),
     .mem_addr(mem_addr),
     .code_addr(code_addr),
-    .insn(insn));
+    .insn(insn),
+    .io_slot(io_slot),
+    .return_top(return_top),
+    .kill_slot_rq(kill_slot_rq));
+     
 
+  
   /*
+  
+  
   // ######   TICKS   #########################################
 
   reg [15:0] ticks;
@@ -251,14 +278,16 @@ module top(input pclk,
 
   // ######   IO SIGNALS   ####################################
 
-  // note that this isn't optional, io_din has to be delayed one cycle, but it depends upon io_addr_, which is.
+  // note that io_din has to be delayed one instruction, but it depends upon io_addr_, which is, so it does.
   // it doesn't hurt to run dout_ delayed too.
   reg io_wr_, io_rd_;
   reg [15:0] dout_;
   reg [15:0] io_addr_;
-
+  reg [1:0] io_slot_;
+  
   always @(posedge clk) begin
     {io_rd_, io_wr_, dout_} <= {io_rd, io_wr, dout};
+    io_slot_ <= io_slot;
     if (io_rd | io_wr)
       io_addr_ <= mem_addr;
     else
@@ -322,7 +351,7 @@ module top(input pclk,
      .rx_data(uart0_data));
 
   wire [7:0] LEDS;
- 
+  
   
    // ######   LEDS   ##########################################
 
@@ -367,23 +396,71 @@ module top(input pclk,
       0010  4     r/w     HDR1 GPIO
       0020  5     r/w     HDR1 direction
       0040  6     r/w     HDR2 GPIO
-      0080  7     r/w     HDR2 direction
+      0080  7     r/w     HDR2 direction 
+      -FIXME: Rearrange the above to be word wide, in order to compact them, and then use the space to add separate set/clear interfaces for both pins and direction controls so independant slots can easily manage separate bits on the same port without stepping on each other's toes. 
+      - reading the "set" port should read actual values, and reading the "clear" should read the inverse of actual values.
+      - it would be nice to be able to write set and clear for both the ports and their directions in one write, although this reduces the width of each addressed port to just 4 bits, this is still reasonable as many PMOD's only use four. An additional 8+8 bit "force write port and direction" would be good on at least one port to handle the rarer pmod's which need the full byte in parallel, and where only one task will write to that port. Such an arrangement would allow for task switching to handle up to 6 half-width PMOD's at once, on as many slots. 
+      
+      - because it's not changed, this IO map only adds addresses to what the j1a has, so it's at least backwards compatible with j1a.
+      
+      0100  8     r/w*    slot 1 task XT          
+      0200  9     r/w*    slot 2 task XT 
+      0400  10    r/w*    slot 3 task XT 
+      - If bit 0 in an XT is set with ` 1 or `, then the task will auto-clear to zero after being read and run once.
+      - All slots are reset at once on a CTRL-C from the shell, which also clears all tasks.
+        
+      
       0800  11      w     sb_warmboot
       1000  12    r/w     UART RX, UART TX
       2000  13    r       misc.in
+      
+      4000  14    r/w    slot task fetch (depends on which slot is running now), handled by tasksel in nuc.fs. Write here to selectively reset one or more slots, controlled by setting the low nibble.  
+      
+      8000  15    r       slot ID (depends only on which slot accesses it) - used by tasksel in nuc.fs. Can be used in parallel tasks to differentiate slots.
+      
+      This IO should only be used right after boot, and swapforth must be modified so that only slot ID 0, which is slot 0, will continue to execute main and ultimately quit, which should be modified to initialise and run itself and others via execution tokens stored in a set of eight variables which should be included in swapforth. The inital slot 0 task should start the three initial tasks, then waiting for just long enough for all to have started, before setting the main tasks and exiting to the programmer's serial interface. It is not necessary to wait until a task has completed before assigning a new task, only to wait for the initially assigned task to begin.
+      
+      The practical upshot of all this is that the j1a will initially behave to the programmer like a (one quarter speed until pipelining optimisation is added - then possibly exactly as fast) j1a. When the programmer is happy with the operation of a task, (s)he manually writes the execution token for the compiled init and runtime words into the exec slots for concurrent task testing. 
+      
+      During concurrent testing/debug, task0 may continue to be used as if a j1a, except that memory changes made by running task will be visible. The timing of operation running this way for development from compiled code will be the same regardless of what other tasks are running, unless the operation depends upon some handshaking between tasks. In this way timing critical code can be developed and left running for the remainder of development and modification/debug without ever changing it's timing and operation, yet enabling the programmer to continue to modify the running system.
+      
+      When happy with the entire system including one to three concurrently running tasks, (s)he manually writes the init and exec tokens into those six variables, then tests reboot start up with a CTRL-C, which always reboots all slots. If all is well, (s)he does a `#flash build/nuc.hex`, exits, and rebuilds the system with `make -C icestorm j4a.bin`. When the rebuilt system is booted, it will run as per it's operation after the CTRL-C, but will still be able to be connected to and developed further or debugged, or left standalone for embedded application.
+      
+      It may be worth changing this to reserve slot 0 entirely for the developer, whilst allowing say slot 3 to start and kill the other two.
+      So of those two time critical things could be done in one, and less-time-critical multitasking in the other. It would even be possible then to have the managing task implement a soft-realtime OS with or without preemption on the one slot, whilst handling the io hardware by running a hard-real time scheduler on the other.
   */
 
-  assign io_din =
-    (io_addr_[ 0] ? {8'd0, pmod_in}                                     : 16'd0) |
-    (io_addr_[ 1] ? {8'd0, pmod_dir}                                    : 16'd0) |
-    (io_addr_[ 2] ? {8'd0, LEDS}                                        : 16'd0) |
-    (io_addr_[ 3] ? {13'd0, PIOS}                                       : 16'd0) |
-    (io_addr_[ 4] ? {8'd0, hdr1_in}                                     : 16'd0) |
-    (io_addr_[ 5] ? {8'd0, hdr1_dir}                                    : 16'd0) |
-    (io_addr_[ 6] ? {8'd0, hdr2_in}                                     : 16'd0) |
-    (io_addr_[ 7] ? {8'd0, hdr2_dir}                                    : 16'd0) |
-    (io_addr_[12] ? {8'd0, uart0_data}                                  : 16'd0) |
-    (io_addr_[13] ? {11'd0, random, 1'b0, PIOS_01, uart0_valid, !uart0_busy} : 16'd0);
+  reg [15:0] taskexec;
+  reg [47:0] taskexecn;
+  
+  always @* begin
+    case (io_slot_)
+      2'b00: taskexec = 16'b0;// all tasks start with taskexec zeroed, and all tasks will try to run all code from zero. 
+      2'b01: taskexec = {taskexecn[15:1], 1'b0}; // note *valid* XT's must be even, we set that bit to make tasks run once only.
+      2'b10: taskexec = {taskexecn[31:17], 1'b0};
+      2'b11: taskexec = {taskexecn[47:33], 1'b0};
+    endcase
+  end  
+
+
+  assign io_din = 
+    (io_addr_[ 0] ? {8'd0, pmod_in}                                           : 16'd0)|
+    (io_addr_[ 1] ? {8'd0, pmod_dir}                                          : 16'd0)|
+    (io_addr_[ 2] ? {8'd0, LEDS}                                              : 16'd0)|
+    (io_addr_[ 3] ? {13'd0, PIOS}                                             : 16'd0)|
+    (io_addr_[ 4] ? {8'd0, hdr1_in}                                           : 16'd0)|
+    (io_addr_[ 5] ? {8'd0, hdr1_dir}                                          : 16'd0)|
+    (io_addr_[ 6] ? {8'd0, hdr2_in}                                           : 16'd0)|
+    (io_addr_[ 7] ? {8'd0, hdr2_dir}                                          : 16'd0)|
+    (io_addr_[ 8] ? taskexecn[15:0]                                           : 16'd0)|
+    (io_addr_[ 9] ? taskexecn[31:16]                                          : 16'd0)|
+    (io_addr_[10] ? taskexecn[47:32]                                          : 16'd0)|
+    (io_addr_[12] ? {8'd0, uart0_data}                                        : 16'd0)|
+    (io_addr_[13] ? {11'd0, random, 1'b0, PIOS_01, uart0_valid, !uart0_busy}  : 16'd0)|
+    (io_addr_[14] ? {taskexec}                                                : 16'd0)|
+    (io_addr_[15] ? {14'd0, io_slot_}                                         : 16'd0); 
+// so init code can stop all but one slot, or alternatively, restart their task by reading taskexec then executing it, or else going into a reboot poll loop until given something to do.
+
 
   reg boot, s0, s1;
 
@@ -393,20 +470,44 @@ module top(input pclk,
     .S1(s1)
     );
 
-  always @(posedge clk) begin
+  
+  always@( posedge clk) begin
+  
+    if (!resetq)
+      taskexecn <= 0; // this is so CTRL-C will stop all slots - otherwise they'll just restart themselves after a warm reset.
+    else if (io_wr_ ) begin // any slot can change any other's schedule, except none can mess with slot 0
+      if (io_addr_[8]) taskexecn[15:0] <= dout_;
+      if (io_addr_[9]) taskexecn[31:16] <= dout_;
+      if (io_addr_[10]) taskexecn[47:32] <= dout_;
+      kill_slot_rq <= io_addr_[14] ? dout_[3:0] : 4'b0;
+    end  // it is even possible to assign the same task to multiple slots, although this isn't recommended.
+    else case ({io_rd_ , io_addr_[14], io_slot_}) // if the assigned XT has bit 0 set ( 1 or ) then it will be cleared after being read once.
+        4'b1101:  taskexecn[15:0] <= taskexecn[0] ? 16'b0 : taskexecn[15:0];
+        4'b1110:  taskexecn[31:16] <= taskexecn[16] ? 16'b0 : taskexecn[31:16];
+        4'b1111:  taskexecn[47:32] <= taskexecn[32] ? 16'b0 : taskexecn[47:32];
+    endcase 
+
+  // kill_slot_rq is decoded with [slot], so bit 0 is 00, bit 1 is 01, bit 2 is 10, and bit 3 is 11. 
+ 
+    
+  
     if (io_wr_ & io_addr_[1])
       pmod_dir <= dout_[7:0];
+      
     if (io_wr_ & io_addr_[5])
       hdr1_dir <= dout_[7:0];
+      
     if (io_wr_ & io_addr_[7])
       hdr2_dir <= dout_[7:0];
+      
     if (io_wr_ & io_addr_[11])
       {boot, s1, s0} <= dout_[2:0];
+    
   end
 
-  always @( negedge resetq or posedge clk)
+  always @(negedge resetq or posedge clk)
     if (!resetq)
-      unlocked <= 0;
+      unlocked <= 0; // ram write clock enable
     else
       unlocked <= unlocked | io_wr_;
 

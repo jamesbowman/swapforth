@@ -1,44 +1,43 @@
-meta
-    $3f80 org 
-target
-
 $1000 constant UART-D
 $2000 constant UART-STATUS
 
-
-: b.key
-    begin
-        UART-STATUS io@
-        d# 4 and
-    until
-    UART-D io@
-;
-
-: b.32
-    b.key
-    b.key d# 8 lshift or
-    b.key d# 16 lshift or
-    b.key d# 24 lshift or
-;
-
-: section
-    b.32 b.32
-    begin
-        2dupxor
-    while
-        b.32 over !
-        d# 4 +
-    repeat
-    drop drop
-;
-
-: bootloader
-    begin
-        b.key d# 27 =
-    until
-
-    section section
-;
+\ meta
+\     $3f80 org 
+\ target
+\ 
+\ : b.key
+\     begin
+\         UART-STATUS io@
+\         d# 4 and
+\     until
+\     UART-D io@
+\ ;
+\ 
+\ : b.32
+\     b.key
+\     b.key d# 8 lshift or
+\     b.key d# 16 lshift or
+\     b.key d# 24 lshift or
+\ ;
+\ 
+\ : section
+\     b.32 b.32
+\     begin
+\         2dupxor
+\     while
+\         b.32 over !
+\         d# 4 +
+\     repeat
+\     drop drop
+\ ;
+\ 
+\ : bootloader
+\     begin
+\         b.key d# 27 =
+\     until
+\ 
+\     section section
+\ ;
 
 meta
     4 org 
@@ -731,7 +730,7 @@ header w,
 ;
 
 header c,
-: c,
+: tc,
     here c!
     d# 1 tallot
 ;
@@ -753,12 +752,12 @@ header c,
 
 header s,
 : s,
-    dup c,
+    dup tc,
     bounds
     begin
         2dupxor
     while
-        count c,
+        count tc,
     repeat
     2drop
 ;

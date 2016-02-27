@@ -49,12 +49,6 @@
     @ 32767 and
 ;
 
-: m*
-    2dup xor >r
-    abs swap abs um*
-    r> 0< if dnegate then
-;
-
 include core.fs
 
 : /mod      >r s>d r> sm/rem ;
@@ -101,31 +95,40 @@ include core-ext.fs
 : ms 0 do 5986 0 do loop loop ;
 : leds  4 io! ;
 
-( ALL-MEMORY DUMP                            JCB 16:34 06/07/15)
-
 : new
     s" | marker |" evaluate
 ;
 marker |
 
+: .xt ( xt -- ) \ print XT's address and name, if valid
+    dup .x
+    dup
+    begin
+        2 -
+        dup c@ $20 <
+    until
+    \ confirm by looking up with FIND
+    tuck      ( caddr xt caddr )
+    find      ( caddr xt xt n | caddr xt caddr 0 )
+    0<> and = if
+        count type
+    else
+        drop  \ not valid, so discard
+    then
+;
+
 \ Construct a 4-entry jump table called _
 \ for the four J1 opcodes
 
 ( 3:ALU     ) :noname ." alu: " 2/ .x ;
-( 2:CALL    ) :noname  \ print xt's name
-                  begin
-                      2 -
-                      dup c@ 20 <
-                  until
-                  count type
-              ;
+( 2:CALL    ) :noname [char] C emit space .xt ;
 ( 1:0BRANCH ) :noname [char] Z emit space .x ;
-( 0:JUMP    ) :noname [char] J emit space .x ;
+( 0:JUMP    ) :noname [char] J emit space .xt ;
 create _ , , , ,
 
 : see
     '
-    32 bounds
+    48 bounds
     begin
         cr dup .x
         dup @
