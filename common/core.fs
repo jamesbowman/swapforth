@@ -47,7 +47,7 @@
         dup 0>
     while
         space 1-
-    repeat
+   repeat
     drop
 ;
 
