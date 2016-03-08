@@ -11,8 +11,9 @@ fi
 if false
 then
   make -C icestorm
-  # iceprog icestorm/j1a.bin
-  # python shell.py -h $PORT -p ../common -p ../anstests swapforth.fs # gd2.fs
+  iceprog icestorm/j1a.bin
+  PORT=`icestorm/findserial`
+  python shell.py -h $PORT -p ../common -p ../anstests # swapforth.fs # gd2.fs
   exit
 fi
 
@@ -22,7 +23,8 @@ fi
 # iceprog icestorm/j1a.bin
 # iceprog safe.bin
 PORT=`icestorm/findserial`
-python shell.py -h $PORT
+# PORT=/dev/ttyUSB1
+python shell.py -h $PORT -p ../anstests runtests.fs # old-gd3.fs
 
 exit
 
