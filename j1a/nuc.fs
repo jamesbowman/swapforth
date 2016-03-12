@@ -23,7 +23,7 @@
 
 header 1+       : 1+        d# 1 + ;
 header negate   : negate    invert 1+ ;
-header 1-       : 1-        d# -1 + ;
+header 1-       : 1-        d# 1 - ;
 header 0=       : 0=        d# 0 = ;
 header cell+    : cell+     d# 2 + ;
 
@@ -249,7 +249,6 @@ header words : words
 \     drop cr
 \ ;
 
-header -        : -         negate + ;
 header abs      : abs       dup
                 : ?neg      0< if negate then ;
 header here     : here      dp @i ;
@@ -910,6 +909,7 @@ header decimal
 header 2*       :noname     2*          ;
 header 2/       :noname     2/          ;
 header +        :noname     +           ;
+header -        :noname     -           ;
 header xor      :noname     xor         ;
 header and      :noname     and         ;
 header or       :noname     or          ;

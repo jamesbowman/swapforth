@@ -37,6 +37,9 @@ module j1(
   // stack2 #(.DEPTH(24)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
   // stack2 #(.DEPTH(24)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
 
+  wire [16:0] minus = {1'b1, ~st0} + st1 + 1;
+  wire signedless = st0[15] ^ st1[15] ? st1[15] : minus[16];
+
   always @*
   begin
     // Compute the new value of st0
@@ -53,15 +56,17 @@ module j1(
       9'b0_011_?0100: st0N = st0 | st1;
       9'b0_011_?0101: st0N = st0 ^ st1;
       9'b0_011_?0110: st0N = ~st0;
-      9'b0_011_?0111: st0N = {`WIDTH{(st1 == st0)}};
-      9'b0_011_?1000: st0N = {`WIDTH{($signed(st1) < $signed(st0))}};
+
+      9'b0_011_?0111: st0N = {`WIDTH{(minus == 0)}};                //  =
+      9'b0_011_?1000: st0N = {`WIDTH{(signedless)}};                //  <
+
       9'b0_011_?1001: st0N = {st0[`WIDTH - 1], st0[`WIDTH - 1:1]};
       9'b0_011_?1010: st0N = {st0[`WIDTH - 2:0], 1'b0};
       9'b0_011_?1011: st0N = rst0;
-      9'b0_011_?1100: st0N = io_din;
+      9'b0_011_?1100: st0N = minus[15:0];
       9'b0_011_?1101: st0N = io_din;
       9'b0_011_?1110: st0N = {{(`WIDTH - 5){1'b0}}, dsp};
-      9'b0_011_?1111: st0N = {`WIDTH{(st1 < st0)}};
+      9'b0_011_?1111: st0N = {`WIDTH{(minus[16])}};                 // u<
       default: st0N = {`WIDTH{1'bx}};
     endcase
   end
