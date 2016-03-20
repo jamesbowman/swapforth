@@ -130,6 +130,7 @@ header .x
 header execute
 : execute
     >r
+: noop
 ;
 
 header @
@@ -137,17 +138,19 @@ header @
     h# 2000 or execute
 ;
 
+: var: r> ;                 \ variable defining word
+
 header false    : false d# 0 ;
 header true     : true  d# -1 ;
 header rot      : rot   >r swap r> swap ;
-header -rot     : -rot  swap >r swap r> ;
+header -rot     : -rot  swap >r swap var: ;
 header tuck     : tuck  swap over ;
 header 2drop    : 2drop drop drop ;
 header ?dup     : ?dup  dup if dup then ;
 
 header 2dup     : 2dup  over over ;
 header +!       : +!    tuck @ + swap _! ;
-header 2swap    : 2swap rot >r rot r> ;
+header 2swap    : 2swap rot >r rot var: ;
 header 2over    : 2over >r >r 2dup r> r> 2swap ;
 
 header min      : min   2dup<
@@ -198,8 +201,7 @@ header type
     2drop
 ;
 
-: var: r> ;                 \ variable defining word
-
+create scratch 0 ,
 header base  :noname var: create base     $a ,
 header state :noname var: create state    0 ,
 header >in   :noname var: create >in      0 ,
@@ -250,7 +252,9 @@ header words : words
 \ ;
 
 header abs      : abs       dup
-                : ?neg      0< if negate then ;
+                : ?neg      0<
+                            asm-0branch noop
+                            negate ;
 header here     : here      dp @i ;
 
 header /string
@@ -269,25 +273,28 @@ header aligned
 ;
 
 header d+
-: d+                              ( augend . addend . -- sum . )
-    rot + >r                      ( augend addend)
-    over+                         ( augend sum)
-    tuck swap                     ( sum sum augend)
-    u< negate                     ( sum)
-    r> +                          ( sum . )
+: d+                                ( al ah bl bh )
+    swap >r + swap                  ( h al )
+    r@ + swap                       ( l h )
+    over r> u< -
 ;
 
 header dnegate
 : dnegate
-    invert swap invert swap
-    d# 1. d+
+    invert
+    swap                        ( ~hi lo )
+    negate                      ( ~hi -lo )
+    tuck                        ( -lo ~hi -lo )
+    0= -
 ;
 
 header dabs
 : dabs ( d -- ud )
     dup
 : ?dneg ( d n -- d2 ) \ negate d if n is negative
-    0< if dnegate then
+    0<
+    asm-0branch noop
+    dnegate
 ;
 
 header s>d
@@ -314,8 +321,6 @@ header d0=
 \     [char] # emit
 \     begin again
 \ ;
-
-create scratch 0 ,
 
 header d2*
 : d2*
@@ -574,7 +579,7 @@ header parse-name
     ['] isnotspace?
 : _parse
     xt-skip ( end-word restlen r: start-word )
-    2dup d# 1 min + sourceA @i - >in!
+    2dup 0<> - sourceA @i - >in!
     drop r>
     tuck -
 ;
@@ -611,7 +616,9 @@ header c,
 
 header compile,
 : compile,
-    2/ h# 4000 or w,
+    2/ h# 4000
+: orw,
+    or w,
 ;
 
 
@@ -753,7 +760,7 @@ header-imm again
 
 header-imm until
 : tuntil
-    h# 2000 or w,       \ backward conditional 
+    h# 2000 orw,        \ backward conditional 
 ;
 
 header does>
@@ -932,7 +939,7 @@ header char+    :noname     1+          ;
 header chars    :noname     noop        ;
 
 : jumptable ( u -- ) \ add u to the return address
-    r> + >r ;
+    r> + execute ;
 
 header abort
 : abort
@@ -940,12 +947,14 @@ header abort
     d# 2 execute
 ;
 
-: isvoid ( caddr u -- ) \ any char remains, abort
-    nip
+header '
+:noname
+    parse-name
+    sfind
+    0=
 : ?abort
-    if
-        abort
-    then
+    asm-0branch noop
+    abort
 ;
 
 : consume1 ( caddr u ch -- caddr' u' f )
@@ -954,20 +963,16 @@ header abort
     dup>r negate /string r>
 ;
 
+create signflag 0 ,
+
 : ((doubleAlso))
     h# 0. 2swap
-    [char] - consume1 >r
+    [char] - consume1 signflag _!
     >number
-    [char] . consume1 if
-        isvoid              \ double number
-        r> ?dneg
-        d# 2 exit
-    then
-                            \ single number
-    isvoid drop
-    r> ?neg
-: return1
-    d# 1
+    [char] . consume1 >r            \ 0 is single, -1 double
+    nip ?abort                      \ any chars remain: abort
+    signflag @i ?dneg               \ is negative
+    r> ?dup and                     \ if single, remove high cell
 ;
 
 : base((doubleAlso))
@@ -986,7 +991,7 @@ header abort
     swap d# 2 + is'
 ;
 
-\   (doubleAlso) ( c-addr u -- x 1 | x x 2 )
+\   (doubleAlso) ( c-addr u -- x 0 | x x 1 )
 \               If the string is legal, give a single or double cell number
 \               and size of the number.
 
@@ -1001,7 +1006,7 @@ header abort
         d# 2 base((doubleAlso)) ;
     then
     2dup is'c' if
-        drop 1+ c@ return1 ;
+        drop 1+ c@ false ;
     then
     ((doubleAlso))
 ;
@@ -1016,7 +1021,7 @@ header-imm literal
         invert tliteral
         inline: invert
     else
-        h# 8000 or w,
+        h# 8000 orw,
     then
 ;
 
@@ -1031,13 +1036,6 @@ header-imm postpone
     compile,
 ;
 
-header '
-:noname
-    parse-name
-    sfind
-    0= ?abort
-;
-
 header char
 :noname
     parse-name drop c@
@@ -1045,7 +1043,7 @@ header char
 
 : doubleAlso,
     (doubleAlso)
-    1- if
+    if
         swap tliteral
     then
     tliteral
