@@ -215,7 +215,7 @@ create fineforoptimisation 0 ,
 create tib      #128 allot
 
 : nextword
-    @ d# -2 and
+    @ h# 7ffe and
 ;
 
 header words : words
