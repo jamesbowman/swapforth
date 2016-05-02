@@ -6,8 +6,25 @@
 : kill1 2 $4000 io! ;
 : kill2 4 $4000 io! ;
 : kill3 8 $4000 io! ;
+: slotid $8000 io@ ;
+: once 1+ ;
 
-\ note killx will only work from slot0, if called by numbered slots, they will only kill themselves.
+\ there is no operating system here - just four lots of cpu contexts (PCs, stacks) which always round-robin (fine threading)
+\ as well as an IO device used to hold execution tokens (XT's) in a special register (the taskselect register, $4000),
+\ which delivers a different XT depending upon which context did the read.
+
+\ Note, It always reads as zero for slot zero, the 'programmers' UI thread.
+
+\ It is read by code in swapforth which runs just before init does normally, you normally don't need to read it.
+\ this splits the contexts apart and also implements a rudimentory task scheduler. (that code checks for zero before jumping into it)
+
+\ It will re-run that word until something sets it to zero, so the 'begin again' part is taken care of for you.
+
+\ And if one is added to the XT written there, it will be cleared when accessed the first time.
+\ This alows for running a word to initialise or alter the stack of a non-zero context.
+
+
+\ note killx will work from any slot, but the nonzero slots cannot reset slot zero, only slot zero can.
 
 
 variable display
@@ -21,7 +38,7 @@ variable delay
 ' show assign1 \ assigns show to slot 1. note no loop.
 
 : t2 update delay @ ms ;
-' t2 $200 assign2 \ assigns a timed update to slot 2, also no loop.
+' t2 assign2 \ assigns a timed update to slot 2, also no loop.
 
 \ leds will count upward, but quit will still run.
 \ try:
@@ -39,5 +56,5 @@ kill3 \ selectively resets just the third slot, which does stop it.
 0 assign1 0 assign2 \ ask the other two nicely to stop
 
 : offleds 0 leds ;
-' offleds 1 or assign1 \ Run a word just once, not continously. Good for initialisation and cleanup after changing tasks.
+' offleds once assign1 \ Run a word just once, not repeatedly. Good for initialisation and cleanup after changing tasks.
 \ Valid XT's are always even, the lsb is used to autoclear the taskexec register after it has been read once by the slot running it.
