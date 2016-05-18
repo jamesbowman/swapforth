@@ -4,5 +4,5 @@ make clean
 make -f Makefile
 ls -l *.bin
 xtensa-lx106-elf-objdump -d swapforth > 0
-python esptool2.py --port /dev/white --baud 1000000 write_flash 0 swapforth-0x00000.bin 0x08000 swapforth-0x08000.bin
+python esptool2.py --port /dev/white --baud 921600 write_flash 0 swapforth-0x00000.bin 0x08000 swapforth-0x08000.bin
 # python esptool2.py --port /dev/white --baud 1000000 run
