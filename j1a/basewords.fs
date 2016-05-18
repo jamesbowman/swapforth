@@ -12,7 +12,7 @@
 : T2/       h# 0900 ;
 : T2*       h# 0a00 ;
 : rT        h# 0b00 ;
-: [T]       h# 0c00 ;
+: N-T       h# 0c00 ;
 : io[T]     h# 0d00 ;
 : status    h# 0e00 ;
 : Nu<T      h# 0f00 ;
@@ -39,6 +39,7 @@
 
 :: noop      T                       alu ;
 :: +         T+N                 d-1 alu ;
+:: -         N-T                 d-1 alu ;
 :: xor       T^N                 d-1 alu ;
 :: and       T&N                 d-1 alu ;
 :: or        T|N                 d-1 alu ;

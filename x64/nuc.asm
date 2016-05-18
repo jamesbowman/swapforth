@@ -851,9 +851,9 @@ header  "refill",refill
         _dup
         lit     128
         call    accept
-  call two_dup
-  call type
-  call cr
+  ;; call two_dup
+  ;; call type
+  ;; call cr
         call    source_store
         mov     CELLPTR [CTX + _in],0
 .1:
