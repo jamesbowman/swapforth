@@ -39,14 +39,14 @@
      postpone then
 ; immediate
 
-: >body
-    4 +
-;
-
 : create
     :
-    here >body postpone literal
+    here 4 + postpone literal
     postpone ;
+;
+
+: >body
+    @ 32767 and
 ;
 
 include core.fs
