@@ -60,8 +60,8 @@ module j1b(input wire clk,
 
   // ######   UART   ##########################################
 
-  wire uart0_wr = io_wr_ & io_addr_[12];
-  wire uart0_rd = io_rd_ & io_addr_[12];
+  wire uart0_wr = io_wr_ & ( io_addr_ == 16'h1000 );
+  wire uart0_rd = io_rd_ & ( io_addr_ == 16'h1000 );
   assign uart_w = dout_[7:0];
 
   // always @(posedge clk) begin
@@ -79,7 +79,20 @@ module j1b(input wire clk,
   */
 
   assign io_din =
-    (io_addr_[12] ? {24'd0, uart0_data}                                  : 32'd0) |
-    (io_addr_[13] ? {28'd0, 1'b0, 1'b0, uart0_valid, 1'b1} : 32'd0);
+    (io_addr_ == 16'h1000 ? {24'd0, uart0_data}                                  : 32'd0) |
+    (io_addr_ == 16'h2000 ? {28'd0, 1'b0, 1'b0, uart0_valid, 1'b1} : 32'd0);
+
+   // ###### DUMP MEMORY FUNCTION #############################
+   int fout;
+   int i;   
+   always @(posedge clk) begin
+      if ( io_rd_ & ( io_addr_== 16'h2345 )) begin
+	   fout = $fopen("mem_dump.hex","w");
+           for(i=0;i<=8191;i++)
+		$fdisplay(fout,"%8.8h",ram[i]);
+	   $fclose(fout);
+      end
+   end
 
 endmodule
+
