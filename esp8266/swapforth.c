@@ -131,8 +131,6 @@ uart0_rx_intr_handler(void *para)
   }
 }
 
-#define BAUDRATE  921600
-
 void
 uart_config(uint8 uart_no)
 {
@@ -145,7 +143,7 @@ uart_config(uint8 uart_no)
         PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
     }
 
-    uart_div_modify(uart_no, UART_CLK_FREQ / BAUDRATE);
+    uart_div_modify(uart_no, UART_CLK_FREQ / 1000000);
 
 
     //clear rx and tx fifo,not ready
@@ -183,7 +181,7 @@ void ICACHE_FLASH_ATTR
 user_init()
 {
   system_set_os_print(0);
-  uart_div_modify(0, UART_CLK_FREQ / BAUDRATE);
+  uart_div_modify(0, UART_CLK_FREQ / 1000000);
 
   // wifi_config();
 

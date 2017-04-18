@@ -126,11 +126,13 @@ static void cycle(v3* v)
   dut->clk = 1;
   dut->eval();
 
-  int pc = 4095 & dut->v__DOT___j1__DOT__pc;
-  if (dut->v__DOT___j1__DOT__dstack__DOT__depth > v->ddepth[pc])
-    v->ddepth[pc] = dut->v__DOT___j1__DOT__dstack__DOT__depth;
-  if (dut->v__DOT___j1__DOT__rstack__DOT__depth > v->rdepth[pc])
-    v->rdepth[pc] = dut->v__DOT___j1__DOT__rstack__DOT__depth;
+  int pc = dut->v__DOT___j1__DOT__pc;
+  if (pc < 4096) {
+    if (dut->v__DOT___j1__DOT__dstack__DOT__depth > v->ddepth[pc])
+      v->ddepth[pc] = dut->v__DOT___j1__DOT__dstack__DOT__depth;
+    if (dut->v__DOT___j1__DOT__rstack__DOT__depth > v->rdepth[pc])
+      v->rdepth[pc] = dut->v__DOT___j1__DOT__rstack__DOT__depth;
+  }
 }
 
 PyObject *v3_read(PyObject *_, PyObject *args)

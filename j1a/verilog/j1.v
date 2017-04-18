@@ -16,7 +16,7 @@ module j1(
   output wire [12:0] code_addr,
   input  wire [15:0] insn);
 
-  reg [3:0] dsp, dspN;          // data stack pointer
+  reg [4:0] dsp, dspN;          // data stack pointer
   reg [`WIDTH-1:0] st0, st0N;   // top of data stack
   reg dstkW;                    // data stack write
 
@@ -32,8 +32,10 @@ module j1(
   // The D and R stacks
   wire [`WIDTH-1:0] st1, rst0;
   reg [1:0] dspI, rspI;
-  stack2 #(.DEPTH(15)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
-  stack2 #(.DEPTH(17)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
+  stack2 #(.DEPTH(16)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
+  stack2 #(.DEPTH(19)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
+  // stack2 #(.DEPTH(24)) dstack(.clk(clk), .rd(st1),  .we(dstkW), .wd(st0),   .delta(dspI));
+  // stack2 #(.DEPTH(24)) rstack(.clk(clk), .rd(rst0), .we(rstkW), .wd(rstkD), .delta(rspI));
 
   wire [16:0] minus = {1'b1, ~st0} + st1 + 1;
   wire signedless = st0[15] ^ st1[15] ? st1[15] : minus[16];
@@ -63,7 +65,7 @@ module j1(
       9'b0_011_?1011: st0N = rst0;
       9'b0_011_?1100: st0N = minus[15:0];
       9'b0_011_?1101: st0N = io_din;
-      9'b0_011_?1110: st0N = {{(`WIDTH - 4){1'b0}}, dsp};
+      9'b0_011_?1110: st0N = {{(`WIDTH - 5){1'b0}}, dsp};
       9'b0_011_?1111: st0N = {`WIDTH{(minus[16])}};                 // u<
       default: st0N = {`WIDTH{1'bx}};
     endcase
@@ -92,7 +94,7 @@ module j1(
     4'b0_011:   {dstkW, dspI} = {func_T_N,  {insn[1:0]}};
     default:    {dstkW, dspI} = {1'b0,      2'b00};
     endcase
-    dspN = dsp + {dspI[1], dspI[1], dspI};
+    dspN = dsp + {dspI[1], dspI[1], dspI[1], dspI};
 
     casez ({pc[12], insn[15:13]})
     4'b1_???:   {rstkW, rspI} = {1'b0,      2'b11};
