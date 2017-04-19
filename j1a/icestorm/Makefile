@@ -1,8 +1,8 @@
-VERILOGS = j1a.v async_in_filter.v uart.v ../verilog/j1.v ../verilog/stack2.v
+VERILOGS = j1a.v async_in_filter.v uart.v pll.v ../verilog/j1.v ../verilog/stack2.v
 
 VERILOGS8k = j1a8k.v uart.v async_in_filter.v ../verilog/j1.v ../verilog/stack2.v
 
-VERILOGS8k4 = j4a.v uart.v async_in_filter.v ../verilog/*.v
+VERILOGS8k4 = j4a.v uart.v async_in_filter.v pll.v ../verilog/*.v
 
 SUBDIRS = ..
 
@@ -38,6 +38,8 @@ j1a: j1a.bin
 j4a: j4a.bin
 	sudo iceprog j4a.bin
 
+pll.v:
+	icepll -o 48 -mf pll.v
 
 $(SUBDIRS):
 	$(MAKE) -C $@
@@ -46,6 +48,7 @@ clean:
 	rm -f j1a.blif j1a.txt j1a.bin
 	rm -f j1a8k.blif j1a8k.txt j1a8k.bin
 	rm -f j1a.blif j4a.txt j4a.bin
+	rm -f pll.v
 
 .PHONY: subdirs
 .PHONY: subdirs $(SUBDIRS)
