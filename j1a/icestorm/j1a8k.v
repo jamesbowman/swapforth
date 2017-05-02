@@ -308,8 +308,8 @@ module top(input pclk,
   wire uart0_wr = io_wr_ & io_addr_[12];
   wire uart0_rd = io_rd_ & io_addr_[12];
   wire uart_RXD;
-  inpin _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
-  buart _uart0 (
+  async_in_filter _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
+  buart #(.BAUD(921600)) _uart0 (
      .clk(clk),
      .resetq(1'b1),
      .rx(uart_RXD),

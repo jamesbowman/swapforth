@@ -55,4 +55,10 @@ mackextload:
 
 endif
 
-.PHONY: connect clean bootstrap mackextload mackextunload macconnect
+pcon:
+	$(info Use C-a C-t to toggle reset line as necessary)
+	$(info Use C-a C-x to exit. No shell.py features are available)
+	picocom -b 921600 /dev/ttyUSB1 --imap lfcrlf,crcrlf --omap delbs,crlf --send-cmd "ascii-xfr -s -l 30 -n"
+
+
+.PHONY: connect sim_connect j4a_sim_connect clean bootstrap mackextload mackextunload macconnect linmodload pcon
