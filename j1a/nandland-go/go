@@ -1,0 +1,4 @@
+set -e
+make
+iceprog j1a.bin
+# PYTHONPATH=../..//shell:$PYTHONPATH python ../shell.py -h `./findserial` -p .. -p ../../common -p ../../anstests swapforth.fs debug.fs # spi2.fs
