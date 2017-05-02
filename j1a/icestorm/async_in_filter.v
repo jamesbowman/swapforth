@@ -13,31 +13,31 @@ SB_IO #(.PIN_TYPE(6'b0000_00)) inpin (
     .D_IN_0(onereg));
 reg threereg, tworeg; always @(posedge clk) {threereg,tworeg} <= {tworeg,onereg};
 // triple registering helps prevent metastability when synchronising an undefined signal into a clock domain.
-
+parameter FILTERBITS = 5;
 // Final part is somewhat of a digital moving average glitch filter, with a digital Schmidt trigger output.
 // this one takes 24 ticks to set rd on.
 // saturates after 31 sequential highs.
 // Then will take 24 sequential lows to turn off.
 // Saturating back on zero after the 31st.
-reg [4:0] fltr;
-wire [1:0] tops = fltr[4:3]; // top two bits are used to decide whether to change output state.
+reg [FILTERBITS-1:0] fltr;
+wire [1:0] tops = fltr[FILTERBITS-1:FILTERBITS-2]; // top two bits are used to decide whether to change output state.
 // change the two above to change the timing.
 //  (increase fltr size for slower signals,
 // decrease for faster. should be no less than three bits.)
-wire incr = ~&flrt & threereg;
-wire decr = |flrt & ~threereg;
+wire incr = ~&fltr & threereg;
+wire decr = |fltr & ~threereg;
 wire setr = &tops;
-wire clrr = ~tops[1] & ~tops[0];
+wire clrr = ~|tops;
 always @(posedge clk)
 begin
   case({incr,decr})
-	10: flrt <= flrt + 1;
-	01: flrt <= flrt - 1;
-	default: flrt <= flrt;
+	10: fltr <= fltr + 1;
+	01: fltr <= fltr - 1;
+	default: fltr <= fltr;
   endcase
   case({setr,clrr})
 	10: rd <= 1'b1;
-	01: rd <= 0'b0;
+	01: rd <= 1'b0;
 	default: rd <= rd;
   endcase
 end

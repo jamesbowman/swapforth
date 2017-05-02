@@ -338,7 +338,7 @@ module top(input pclk,
   wire uart0_rd = io_rd_ & io_addr_[12];
   wire uart_RXD;
   async_in_filter _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
-  buart #(.CLOCK_DIVIDE(313)) _uart0 (
+  buart #(.BAUD(921600)) _uart0 (
      .clk(clk),
      .resetq(1'b1),
      .rx(uart_RXD),
