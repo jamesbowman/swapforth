@@ -1,8 +1,8 @@
-VERILOGS = j1a.v async_in_filter.v uart3.v ../verilog/j1.v ../verilog/stack2.v
+VERILOGS = j1a.v async_in_filter.v uart.v ../verilog/j1.v ../verilog/stack2.v
 
-VERILOGS8k = j1a8k.v uart3.v async_in_filter.v ../verilog/j1.v ../verilog/stack2.v
+VERILOGS8k = j1a8k.v uart.v async_in_filter.v ../verilog/j1.v ../verilog/stack2.v
 
-VERILOGS8k4 = j4a.v uart3.v async_in_filter.v ../verilog/*.v
+VERILOGS8k4 = j4a.v uart.v async_in_filter.v ../verilog/*.v
 
 SUBDIRS = ..
 
