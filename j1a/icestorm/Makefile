@@ -1,29 +1,37 @@
-VERILOGS = j1a.v async_in_filter.v uart.v pll.v ../verilog/j1.v ../verilog/stack2.v
+VERILOGS = j1a.v async_in_filter.v uart.v  ../verilog/j1.v ../verilog/stack2.v 
 
-VERILOGS8k = j1a8k.v uart.v async_in_filter.v ../verilog/j1.v ../verilog/stack2.v
+VERILOGS8k = j1a8k.v uart.v async_in_filter.v  ../verilog/j1.v ../verilog/stack2.v
 
-VERILOGS8k4 = j4a.v uart.v async_in_filter.v pll.v ../verilog/*.v
+VERILOGS8k4 = j4a.v uart.v async_in_filter.v  ../verilog/*.v
 
 SUBDIRS = ..
+
+MHZ = 48
 
 all: $(SUBDIRS) j1a.bin
 
 j1a.bin: $(VERILOGS) j1a.pcf Makefile ../build/ram.v
-	yosys  -q -p "synth_ice40 -top top -abc2 -blif j1a.blif" $(VERILOGS)
+	icepll -o $(MHZ) -mf pll.v
+	yosys  -q -p "synth_ice40 -top top -abc2 -blif j1a.blif" $(VERILOGS) pll.v
+	rm pll.v
 	arachne-pnr -p j1a.pcf j1a.blif -o j1a.txt
 	#skipped:# icebox_explain j1a.txt > j1a.ex
 	icepack j1a.txt j1a0.bin
 	icemulti -p0 j1a0.bin > j1a.bin && rm j1a0.bin
 
 j1a8k.bin: $(VERILOGS8k) j1a8k.pcf Makefile ../build/ram.v
-	yosys  -q -p "synth_ice40 -top top -abc2 -blif j1a8k.blif" $(VERILOGS8k)
+	icepll -o $(MHZ) -mf pll.v
+	yosys  -q -p "synth_ice40 -top top -abc2 -blif j1a8k.blif" $(VERILOGS8k) pll.v
+	rm pll.v
 	arachne-pnr -d 8k -p j1a8k.pcf j1a8k.blif -o j1a8k.txt
 	#skipped:# icebox_explain j1a8k.txt > j1a8k.ex
 	icepack j1a8k.txt j1a8k0.bin
 	icemulti -p0 j1a8k0.bin > j1a8k.bin && rm j1a8k0.bin
 
 j4a.bin: $(VERILOGS8k4) j1a8k.pcf Makefile ../build/ram.v
-	yosys  -q -p "synth_ice40 -top top -abc2 -blif j4a.blif" $(VERILOGS8k4)
+	icepll -o $(MHZ) -mf pll.v
+	yosys  -q -p "synth_ice40 -top top -abc2 -blif j4a.blif" $(VERILOGS8k4) pll.v
+	rm pll.v
 	arachne-pnr -d 8k -p j1a8k.pcf j4a.blif -o j4a.txt
 	#skipped:# icebox_explain j4a.txt > j4a.ex
 	icepack j4a.txt j4a0.bin
@@ -37,9 +45,6 @@ j1a: j1a.bin
 
 j4a: j4a.bin
 	sudo iceprog j4a.bin
-
-pll.v:
-	icepll -o 48 -mf pll.v
 
 $(SUBDIRS):
 	$(MAKE) -C $@
