@@ -6,7 +6,7 @@ VERILOGS8k4 = j4a.v uart.v async_in_filter.v  ../verilog/*.v
 
 SUBDIRS = ..
 
-MHZ = 48
+MHZ = 69
 
 all: $(SUBDIRS) j1a.bin
 
