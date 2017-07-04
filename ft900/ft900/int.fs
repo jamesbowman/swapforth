@@ -102,7 +102,7 @@ PUBLICWORDS \ }{
 
 : .ms
     0 <# # # # [char] . hold #s #>
-    11 rtype space
+    11 over - spaces type
 ;
 
 code ns  ( u -- )  \ delay at least u ns
