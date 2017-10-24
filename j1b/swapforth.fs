@@ -172,9 +172,8 @@ create opd          \ 2-bit D stack delta, bits [1:0]
 ( 0:JUMP    ) :noname [char] J emit space . ;
 create J1op , , , ,
 
-: see
-    base @ hex
-    '
+: dis ( addr -- )
+    base @ swap hex
     64 bounds
     begin
         cr dup .
@@ -197,9 +196,36 @@ create J1op , , , ,
     base !
 ;
 
+: see ' dis ;
+
 : environment?
     2drop false
 ;
+
+\ #######   DEFERRED WORDS    #################################
+
+: defer ( "name" -- )
+  : ['] abort compile, postpone ; ;
+
+: defer@ ( xt1 -- xt2 )
+  uw@ 2* ;
+
+: defer! ( xt2 xt1 -- )
+  swap 2/ swap w! ;
+
+: is
+  state @ if
+    POSTPONE ['] POSTPONE defer!
+  else
+    ' defer!
+  then ; immediate
+
+: action-of
+ state @ if
+   POSTPONE ['] POSTPONE defer@
+ else
+   ' defer@
+then ; immediate
 
 \ #######   EVERYTHING ELSE   #################################
 
@@ -216,7 +242,6 @@ include facilityext.fs
 : DONEWORDS ;
 
 include escaped.fs
-include deferred.fs
 include forth2012.fs
 
 include structures.fs

@@ -27,7 +27,15 @@ PUBLICWORDS
 ;
 
 : spi>
-    0 spix
+    1 MOSI io!
+    0 SCK io! 1 SCK io!  MISO io@  7 lshift
+    0 SCK io! 1 SCK io!  MISO io@  6 lshift +
+    0 SCK io! 1 SCK io!  MISO io@  5 lshift +
+    0 SCK io! 1 SCK io!  MISO io@  4 lshift +
+    0 SCK io! 1 SCK io!  MISO io@  3 lshift +
+    0 SCK io! 1 SCK io!  MISO io@  2 lshift +
+    0 SCK io! 1 SCK io!  MISO io@  1 lshift +
+    0 SCK io! 1 SCK io!  MISO io@           +
 ;
 
 : spi-init
@@ -48,9 +56,12 @@ PUBLICWORDS
 
 : blk>spi ( caddr u -- )
     bounds do
-        i c@ >spi
-    loop
+        i @
+        dup >spi
+        8 rshift dup >spi
+        8 rshift dup >spi
+        8 rshift >spi
+    4 +loop
 ;
 
 DONEWORDS
-
