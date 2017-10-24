@@ -79,12 +79,12 @@ like this
   git clone git@github.com:jamesbowman/swapforth.git
   cd swapforth/j1a
   iceprog icestorm/j1a.bin
-  python shell.py -h /dev/ttyUSB0
+  python shell.py -h /dev/ttyUSB1
 \end{Verbatim}
 \end{framed}
 
 \noindent
-(where \mach{/dev/ttyUSB0} is the appropriate port your iCEstick was assigned).
+(where \mach{/dev/ttyUSB1} is the appropriate port your iCEstick was assigned).
 You should see something like
 
 \begin{framed}
@@ -139,7 +139,7 @@ blink
 
 \input{../../doc/easter.tex}
 
-\section{Building from Scratch}
+\section{Building from scratch}
 
 After installing the icestorm tools, run
 
@@ -151,15 +151,16 @@ make -C icestorm
 \noindent
 This will produce \mach{j1a.bin} - but it only contains the very bare-bones system;
 the rest of SwapForth still needs to be compiled.
-To do this, load \mach{j1a.bin} and start the shell:
+To do this, load \mach{j1a.bin} and start the shell
+(assuming your icestorm board's serial appears at \mach{ttyUSB1}):
 
 \begin{framed}
 \begin{Verbatim}
   $ iceprog icestorm/j1a.bin
-  $ python shell.py -h /dev/ttyUSB0 -p ../common/
+  $ python shell.py -h /dev/ttyUSB1 -p ../common/
   Contacting... established
-  Loaded 127 words
-  >
+  Loaded 143 words
+  _
 \end{Verbatim}
 \end{framed}
 
@@ -173,7 +174,18 @@ Then compile the rest of SwapForth and write the finished executable with these 
 \end{Verbatim}
 \end{framed}
 
-Now run \mach{make -C icestorm} again - this compiles an FPGA image with the complete code base built-in.
+Now run \mach{make -C icestorm} again - this compiles an FPGA image with the complete code base built-in,
+which has the full set of words defined:
+
+\begin{framed}
+\begin{Verbatim}
+  $ iceprog icestorm/j1a.bin
+  $ python shell.py -h /dev/ttyUSB1 -p ../common/
+  Contacting... established
+  Loaded 207 words
+  _
+\end{Verbatim}
+\end{framed}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
