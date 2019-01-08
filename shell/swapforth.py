@@ -76,7 +76,7 @@ class TetheredTarget:
         try:
             import serial
         except:
-            print("This tool needs PySerial, but it was not found")
+            print("The PySerial python library modules is not installed. Please install via  pip install --user pyserial")    #("This tool needs PySerial, but it was not found")  /
             sys.exit(1)
         self.ser = serial.Serial(port, speed, timeout=None, rtscts=0)
 
