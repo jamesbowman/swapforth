@@ -18,7 +18,7 @@ module j1b(input wire clk,
   wire [31:0] dout;
   wire [31:0] io_din;
   wire [12:0] code_addr;
-  wire [15:0] insn;
+  reg [15:0] insn;
 
   wire [12:0] codeaddr = {1'b0, code_addr[12:1]};
 
@@ -60,8 +60,8 @@ module j1b(input wire clk,
 
   // ######   UART   ##########################################
 
-  wire uart0_wr = io_wr_ & io_addr_[12];
-  wire uart0_rd = io_rd_ & io_addr_[12];
+  assign uart0_wr = io_wr_ & io_addr_[12];
+  assign uart0_rd = io_rd_ & io_addr_[12];
   assign uart_w = dout_[7:0];
 
   // always @(posedge clk) begin
