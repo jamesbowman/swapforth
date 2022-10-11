@@ -1,4 +1,4 @@
-#noverbose
+\ #noverbose
 \ ANS Forth tests - run all tests
 
 \ Adjust the file paths as appropriate to your system

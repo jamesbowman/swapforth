@@ -259,7 +259,7 @@ header here     : here      dp @i ;
 
 header /string
 : /string
-    dup >r - swap r> + swap
+    dup >r - swap r> + swap         \ XXX
 ;
 
 : 1/string
@@ -638,7 +638,7 @@ header s,
 : (sliteral)
     r>
     count
-    2dup + aligned
+    2dup+ aligned
     >r
 ;
 
@@ -894,7 +894,7 @@ header i
 header j
 : j
     r> r>
-    r> r> 2dup + -rot
+    r> r> 2dup+ -rot
     >r >r
     -rot
     >r execute
@@ -1091,7 +1091,7 @@ header char
 
     begin
         dup 0= if exit then
-        1- 2dup + c@
+        1- 2dup+ c@
         h# C0 and h# 80 <>
     until
 ;
@@ -1113,7 +1113,7 @@ header accept
             over r@ u<
             if
                 tethered @i 0= if dup emit then
-                >r 2dup + r@ swap c! 1+ r>
+                >r 2dup+ r@ swap c! 1+ r>
             then
         then
 

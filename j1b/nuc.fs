@@ -113,8 +113,8 @@ header bl
     emit
 ;
 
-header .x
-: . hex8 space ;
+header .x       : . hex8 space ;
+header .x2      : . hex2 space ;
 
 header false    : false d# 0 ; 
 header true     : true  d# -1 ; 

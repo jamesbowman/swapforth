@@ -32,6 +32,12 @@ def ba(x):
     else:
         return array.array('B', str(x))
 
+def array2bytes(a):
+    if hasattr(array.array, 'tostring'):
+        return a.tostring()
+    else:
+        return a.tobytes()
+
 class ForthException(Exception):
     def __init__(self, value):
         self.value = value
@@ -122,7 +128,7 @@ class SwapForth:
     def pops(self):
         n = self.d.pop()
         a = self.d.pop()
-        return self.ram[a:a+n].tostring().decode("utf-8")
+        return array2bytes(self.ram[a:a+n]).decode("utf-8")
 
     # Start of Forth words
     #
@@ -411,7 +417,7 @@ class SwapForth:
 
     def SFIND(self):
         (a, n) = self.d[-2:]
-        s = self.ram[a:a+n].tostring().decode("utf-8").upper()
+        s = array2bytes(self.ram[a:a+n]).decode("utf-8").upper()
         # print('HERE', s.decode("utf-8"), self.dict)
         if s in self.dict:
             x = self.dict[s]
