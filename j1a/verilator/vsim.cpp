@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "Vj1a.h"
+#include "Vj1a___024root.h"
 #include "verilated.h"
 #define VCD 0
 #if VCD
@@ -60,7 +61,7 @@ Vj1a_init(v3 *self, PyObject *args, PyObject *kwds)
       fprintf(stderr, "invalid hex value at line %d\n", i + 1);
       exit(1);
     }
-    self->dut->v__DOT__ram_prog[i] = v;
+    self->dut->rootp->v__DOT__ram_prog[i] = v;
   }
   memset(self->rdepth, 0, sizeof(self->rdepth));
   memset(self->ddepth, 0, sizeof(self->ddepth));
@@ -126,11 +127,11 @@ static void cycle(v3* v)
   dut->clk = 1;
   dut->eval();
 
-  int pc = 4095 & dut->v__DOT___j1__DOT__pc;
-  if (dut->v__DOT___j1__DOT__dstack__DOT__depth > v->ddepth[pc])
-    v->ddepth[pc] = dut->v__DOT___j1__DOT__dstack__DOT__depth;
-  if (dut->v__DOT___j1__DOT__rstack__DOT__depth > v->rdepth[pc])
-    v->rdepth[pc] = dut->v__DOT___j1__DOT__rstack__DOT__depth;
+  int pc = 4095 & dut->rootp->v__DOT___j1__DOT__pc;
+  if (dut->rootp->v__DOT___j1__DOT__dstack__DOT__depth > v->ddepth[pc])
+    v->ddepth[pc] = dut->rootp->v__DOT___j1__DOT__dstack__DOT__depth;
+  if (dut->rootp->v__DOT___j1__DOT__rstack__DOT__depth > v->rdepth[pc])
+    v->rdepth[pc] = dut->rootp->v__DOT___j1__DOT__rstack__DOT__depth;
 }
 
 PyObject *v3_read(PyObject *_, PyObject *args)

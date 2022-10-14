@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "Vj1b.h"
+#include "Vj1b___024root.h"
 #include "verilated_vcd_c.h"
 
 int main(int argc, char **argv)
@@ -20,7 +21,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "invalid hex value at line %d\n", i + 1);
         exit(1);
       }
-      top->v__DOT__ram[i] = v;
+      top->rootp->v__DOT__ram[i] = v;
     }
 
     top->resetq = 0;
