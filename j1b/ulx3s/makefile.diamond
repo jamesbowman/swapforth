@@ -1,0 +1,31 @@
+# ******* project, board and chip name *******
+PROJECT = swapforth_hex
+BOARD = ulx3s
+# 12 25 45 85
+FPGA_SIZE = 12
+FPGA_PACKAGE = 6bg381c
+# config flash: 1:SPI (standard), 4:QSPI (quad)
+FLASH_SPI = 4
+# chip: is25lp032d is25lp128f s25fl164k
+FLASH_CHIP = is25lp128f
+
+# ******* design files *******
+CONSTRAINTS = ulx3s_v20_segpdi.lpf
+TOP_MODULE = ulx3s_top
+PREFIX = ../verilog
+TOP_MODULE_FILE = $(PREFIX)/$(TOP_MODULE).v
+
+VERILOG_FILES = \
+$(TOP_MODULE_FILE) \
+$(PREFIX)/j1.v \
+$(PREFIX)/ram.v \
+$(PREFIX)/uart.v \
+$(PREFIX)/stack.v \
+
+# *.vhd those files will be converted to *.v files with vhdl2vl (warning overwriting/deleting)
+VHDL_FILES = \
+
+SCRIPTS = ../../../../scripts/
+include $(SCRIPTS)/trellis_path.mk
+include $(SCRIPTS)/diamond_path.mk
+include $(SCRIPTS)/diamond_main.mk
