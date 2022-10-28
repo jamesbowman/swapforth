@@ -2,6 +2,7 @@
 
 module ulx3s_top(
            input wire        clk_25mhz,
+
            input wire [6:0]  btn,
            output wire [7:0] led,
 
@@ -13,9 +14,6 @@ module ulx3s_top(
 
   // Tie GPIO0, keep board from rebooting
   assign wifi_gpio0 = 1'b1;
-
-  // no leds on for now
-  assign led = 0;
 
   wire resetq = btn[0];
 
@@ -97,26 +95,28 @@ module ulx3s_top(
     {io_wr_, io_rd_, mem_addr_, dout_} <= {io_wr, io_rd, mem_addr, dout};
 
   /*      READ            WRITE
-    00xx  GPIO rd         GPIO wr
-    01xx                  GPIO direction
+    0400  buttons rd
+    0404                  LEDs wr
 
-    1008  baudrate        baudrate
     1000  UART RX         UART TX
-    2000  UART status
+    1008  baudrate        baudrate
 
     1010  master freq     snapshot clock
     1014  clock[31:0]
     1018  clock[63:32]
     101c  millisecond uptime
 
+    2000  UART status
   */
 
   reg [63:0] counter_;
 
   always @(posedge fclk) begin
     casez (mem_addr)
-    16'h1008: din <= uart_baud;
+    16'h0400: din <= {27'd0, btn[6:1]};
+
     16'h1000: din <= {24'd0, uart0_data};
+    16'h1008: din <= uart_baud;
     16'h2000: din <= {30'd0, uart0_valid, !uart0_busy};
 
     16'h1010: din <= MHZ * 1000000;
@@ -129,6 +129,7 @@ module ulx3s_top(
 
     if (io_wr_) begin
       casez (mem_addr_)
+        16'h0404: led <= dout_;
         16'h1008: uart_baud <= dout_;
         16'h1010: counter_ <= counter;
       endcase
