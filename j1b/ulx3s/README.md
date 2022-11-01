@@ -14,16 +14,45 @@ USB:
 Now you can use `shell.py` in the parent directory to attach to the Forth
 process over UART. The Verilator bootstrap process will also work for ULX3S.
 
-Currently only J1b itself, UART, buttons and LEDs are supported. Support for
-low-hanging fruit like GPIOs should follow shortly.
+Currently the J1b itself, UART, buttons, LEDs and GPIO ports are supported.
 
+PWR button resets the board.
 
-PWR button resets the board
 
 memory map:
 
+0x00XX: gp GPIOs
+read/write
+either write bit to or read bit from address corresponding to the gp pin numbers
+on the board
+
+0x01XX: gp GPIO in/out direction
+read/write
+set direction of corresponding gp pin; 0 = input (default), 1 = output
+
+example:
+  $001b io@         \ read gn[27]
+  OUTPUT $011b io!  \ set direction of gn[27] to output
+  1 $001b io!       \ set gn[27] to high
+
+
+0x02XX: gn GPIOs
+read/write
+either write bit to or read bit from address corresponding to the gn pin numbers
+on the board
+
+0x03XX: gn GPIO in/out direction
+read/write
+set direction of corresponding gn pin; 0 = input (default), 1 = output
+
+example:
+  $021b io@         \ read gn[27]
+  OUTPUT $031b io!  \ set direction of gn[27] to output
+  1 $021b io!       \ set gn[27] to high
+
+
 0x0400: buttons (excluding PWR)
-direction: in
+read
 each button occupies one bit in the bottom 6 bits
 
 as per silkscreen labels on the board:
@@ -31,13 +60,11 @@ as per silkscreen labels on the board:
  unused     RIGHT LEFT  DOWN  UP    F2    F1
 
 example:
-
   $0400 io@ .
 
 
-
 0x0404: leds
-direction: out
+write
 each led occupies one bit in the bottom 8 bits
 
 as per silkscreen labels on the board:
@@ -53,4 +80,3 @@ example:
     again
   ;
   led-counter
-
