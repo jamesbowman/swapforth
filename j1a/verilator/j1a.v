@@ -57,8 +57,8 @@ module j1a(input wire clk,
 
   // ######   UART   ##########################################
 
-  wire uart0_wr = io_wr_ & io_addr_[12];
-  wire uart0_rd = io_rd_ & io_addr_[12];
+  assign uart0_wr = io_wr_ & io_addr_[12];
+  assign uart0_rd = io_rd_ & io_addr_[12];
   assign uart_w = dout_[7:0];
 
   // always @(posedge clk) begin
