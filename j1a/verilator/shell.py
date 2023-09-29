@@ -6,7 +6,8 @@ import array
 import struct
 import os
 
-sys.path.append("build/lib/python/")
+import site
+site.addsitedir("build/lib/python/")
 import vsimj1a
 
 sys.path.append("../../shell")
