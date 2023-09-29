@@ -19,7 +19,7 @@ module j1a(input wire clk,
   /* verilator lint_off UNUSED */
   wire [12:0] code_addr;
   /* verilator lint_on UNUSED */
-  wire [15:0] insn;
+  reg [15:0] insn;
 
   reg [15:0] ram_prog[0:4095] /* verilator public_flat */;
   always @(posedge clk) begin
@@ -57,8 +57,8 @@ module j1a(input wire clk,
 
   // ######   UART   ##########################################
 
-  wire uart0_wr = io_wr_ & io_addr_[12];
-  wire uart0_rd = io_rd_ & io_addr_[12];
+  assign uart0_wr = io_wr_ & io_addr_[12];
+  assign uart0_rd = io_rd_ & io_addr_[12];
   assign uart_w = dout_[7:0];
 
   // always @(posedge clk) begin
