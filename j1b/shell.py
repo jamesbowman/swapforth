@@ -54,7 +54,7 @@ class TetheredJ1b(swapforth.TetheredTarget):
         for l in lines:
             l = l.split()
             s += [int(b, 16) for b in l[1:17]]
-        s = array.array('B', s).tostring().ljust(32768, chr(0xff))
+        s = array.array('B', s).tobytes().ljust(8192, bytes([0xFF]))
         return array.array('i', s)
 
 if __name__ == '__main__':

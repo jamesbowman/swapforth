@@ -200,12 +200,12 @@ class TetheredTarget:
                     if dest.endswith('.hex'):
                         open(dest, "w").write("".join(["%08x\n" % (x & 0xffffffff) for x in d]))
                     else:
-                        open(dest, "wb").write(array.array("i", d).tostring())
+                        open(dest, "wb").write(array.array("i", d).tobytes())
                 else:
                     if dest.endswith('.hex'):
                         open(dest, "w").write("".join(["%04x\n" % (x & 0xffff) for x in d]))
                     else:
-                        open(dest, "wb").write(array.array("h", d).tostring())
+                        open(dest, "wb").write(array.array("H", d).tobytes())
         elif cmd.startswith('#setclock'):
             n = datetime.utcnow()
             cmd = "decimal %d %d %d %d %d %d >time&date" % (n.second, n.minute, n.hour, n.day, n.month, n.year)
