@@ -164,58 +164,16 @@ module top(input pclk,
 
            input reset
 );
-  localparam MHZ = 12;
 
-/*
-  wire clk, pll_lock;
-  
-  wire pll_reset;
-  assign pll_reset = !reset;
-  wire resetq;  // note port changed, .pcf needs update too.
-  assign resetq = reset & !pll_lock;
-  
-  SB_PLL40_CORE #(.FEEDBACK_PATH("PHASE_AND_DELAY"),
-                  .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
-                  .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
-                  .PLLOUT_SELECT("SHIFTREG_0deg"),
-                  .SHIFTREG_DIV_MODE(1'b0),
-                  .FDA_FEEDBACK(4'b0000),
-                  .FDA_RELATIVE(4'b0000),
-                  .DIVR(4'b1111),
-                  .DIVF(7'b0110001), 
-                  .DIVQ(3'b011), //  1..6
-                  .FILTER_RANGE(3'b001),
-                 ) uut (
-                         .REFERENCECLK(pclk),
-                         //.PLLOUTCORE(clk),
-                         .PLLOUTGLOBAL(clk),
-                         .LOCK(pll_lock),
-                         .RESETB(pll_reset),
-                         .BYPASS(1'b0)
-                        ); // 37.5 MHz, fout = [ fin * (DIVF+1) ] / [ DIVR+1 ], fout must be 16 ..275MHz, fVCO from 533..1066 MHz (!! we're 600 here I think), and phase detector / input clock from 10 .. 133 MH (ok, we're 75 because DIVQ divides by 2^DIVQ, but doesn't affect output otherwise, and input is 12 MHz)
-                        // for some reason this crashes arachne-pnr now. 
-
-  */
   wire clk;
-  wire resetq;
- // assign resetq = reset; // now passed through PLL to keep design in reset until lock. note active low resets.
-  
-  SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
-                  .PLLOUT_SELECT("GENCLK"),
-                  .DIVR(4'b0000),
-                  .DIVF(7'd3),
-                  .DIVQ(3'b000),
-                  .FILTER_RANGE(3'b001),
-                 ) uut (
-                         .REFERENCECLK(pclk),
-                         .PLLOUTCORE(clk),
-                         //.PLLOUTGLOBAL(clk),
-                         .LOCK(resetq),
-                         .RESETB(reset),
-                         .BYPASS(1'b0)
-                        );
+  wire uresetq;
 
-  
+  pll _icepll_generated(.clock_in(pclk), .clock_out(clk), .locked(uresetq));
+
+  reg [2:0] resets; always @(posedge clk) resets <= {resets[1:0],reset};
+
+  reg [1:0] syncreset; reg resetq; always @(posedge clk) {resetq, syncreset} <= {syncreset,uresetq&resets[2]};
+
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
@@ -337,7 +295,7 @@ module top(input pclk,
   wire uart0_wr = io_wr_ & io_addr_[12];
   wire uart0_rd = io_rd_ & io_addr_[12];
   wire uart_RXD;
-  inpin _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
+  async_in_filter _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
   buart _uart0 (
      .clk(clk),
      .resetq(1'b1),
