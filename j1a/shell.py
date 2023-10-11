@@ -18,7 +18,7 @@ class TetheredJ1a(swapforth.TetheredTarget):
         except:
             print("This tool needs PySerial, but it was not found")
             sys.exit(1)
-        self.ser = serial.Serial(port, 4 * 115200, timeout=None, rtscts=0)
+        self.ser = serial.Serial(port, 921600, timeout=None, rtscts=0)
 
     def reset(self, fullreset = True):
         ser = self.ser
