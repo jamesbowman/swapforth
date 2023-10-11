@@ -156,24 +156,10 @@ module top(input pclk, output D1, output D2, output D3, output D4, output D5,
 
            input resetq,
 );
-  localparam MHZ = 12;
-
+  
   wire clk;
-  SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"),
-                  .PLLOUT_SELECT("GENCLK"),
-                  .DIVR(4'b0000),
-                  .DIVF(7'd3),
-                  .DIVQ(3'b000),
-                  .FILTER_RANGE(3'b001),
-                 ) uut (
-                         .REFERENCECLK(pclk),
-                         .PLLOUTCORE(clk),
-                         //.PLLOUTGLOBAL(clk),
-                         // .LOCK(D5),
-                         .RESETB(1'b1),
-                         .BYPASS(1'b0)
-                        );
-
+  pll _icepll_generated(.clock_in(pclk), .clock_out(clk));
+  
   wire io_rd, io_wr;
   wire [15:0] mem_addr;
   wire mem_wr;
@@ -266,7 +252,7 @@ module top(input pclk, output D1, output D2, output D3, output D4, output D5,
   wire uart0_wr = io_wr_ & io_addr_[12];
   wire uart0_rd = io_rd_ & io_addr_[12];
   wire uart_RXD;
-  inpin _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
+  async_in_filter _rcxd(.clk(clk), .pin(RXD), .rd(uart_RXD));
   buart _uart0 (
      .clk(clk),
      .resetq(1'b1),
