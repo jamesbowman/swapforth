@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "Vj1b.h"
+#include "Vj1b___024root.h"
 #include "verilated.h"
 #define VCD 0
 #if VCD
@@ -59,7 +60,7 @@ Vj1b_init(v3 *self, PyObject *args, PyObject *kwds)
       fprintf(stderr, "invalid hex value at line %d\n", i + 1);
       exit(1);
     }
-    self->dut->v__DOT__ram[i] = v;
+    self->dut->rootp->v__DOT__ram[i] = v;
   }
 
   return 0;
